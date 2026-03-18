@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find 'C:\\\\Users\\\\juanj\\\\Documents\\\\Oveja World\\\\oveja-world/src' -type f \\\\\\(-name *login* -o -name *signin* -o -name *auth* \\\\\\))",
+      "Bash(find 'C:\\\\Users\\\\juanj\\\\Documents\\\\Oveja World\\\\oveja-world/src/app' -type f \\\\\\(-name page.* -o -name route.* \\\\\\))",
+      "Bash(openssl rand:*)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"\"email\"\":\"\"test@oveja.com\"\",\"\"password\"\":\"\"password\"\"}')",
+      "Bash(curl:*)",
+      "Bash(netstat -ano)",
+      "Bash(wmic process:*)",
+      "Bash(taskkill /PID 32212 /F)",
+      "Bash(cmd /c \"taskkill /PID 32212 /F\")",
+      "Bash(node -e \":*)"
+    ]
+  }
+}
