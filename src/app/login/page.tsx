@@ -11,12 +11,20 @@ export default function LoginPage() {
   const router = useRouter()
 
   useEffect(() => {
-    if (isAuthenticated) router.replace('/escuela')
+    if (!isAuthenticated) return
+    const stored = localStorage.getItem('user')
+    const u = stored ? JSON.parse(stored) : null
+    router.replace(u?.role === 'admin' ? '/admin' : '/escuela')
   }, [isAuthenticated, router])
 
   const handleLogin = async (credentials: { email: string; password: string }) => {
     const ok = await login(credentials)
-    if (ok) router.push('/escuela')
+    if (ok) {
+      // Los admins van directo al panel
+      const stored = localStorage.getItem('user')
+      const u = stored ? JSON.parse(stored) : null
+      router.push(u?.role === 'admin' ? '/admin' : '/escuela')
+    }
     return ok
   }
 

@@ -50,10 +50,11 @@ export async function POST(req: NextRequest) {
 
   // Registrar completion
   await db.from('completions').insert({
-    user_id: payload.sub,
+    user_id:      payload.sub,
     resource_url: body.url,
-    tipo: body.tipo,
+    tipo:         body.tipo,
     puntos,
+    completed_at: new Date().toISOString(),
   })
 
   // Sumar puntos al usuario

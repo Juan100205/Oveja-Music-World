@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
 
   const { data: user, error } = await db
     .from('users')
-    .select('id, email, role, nivel, puntos, nombre, password_hash, created_at')
+    .select('id, email, role, nivel, puntos, nombre, password_hash, created_at, cursos_acceso, clases_acceso')
     .eq('email', email.toLowerCase())
     .single()
 

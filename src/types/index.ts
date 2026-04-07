@@ -9,6 +9,8 @@ export interface User {
   puntos: number
   nombre?: string
   created_at: string
+  cursos_acceso?: string[]
+  clases_acceso?: string[]
 }
 
 // --- Zone ---

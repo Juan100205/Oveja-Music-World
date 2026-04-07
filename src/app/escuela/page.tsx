@@ -9,6 +9,7 @@ import { CLASES_CONFIG, type ClaseConfig } from '@/data/clases'
 import { GYM_INSTRUMENTOS } from '@/data/gym'
 import { CURSOS } from '@/data/cursos'
 import type { Modulo } from '@/data/cursos'
+import { useAuth } from '@/hooks/useAuth'
 
 // ── Botón reutilizable ─────────────────────────────────────────
 function PillButton({
@@ -135,6 +136,7 @@ function ModulosList({
 // ══════════════════════════════════════════════════════════════
 export default function MapaPage() {
   const router = useRouter()
+  const { user, logout } = useAuth()
 
   // Spline hover
   const [overGym,    setOverGym]    = useState(false)
@@ -146,6 +148,9 @@ export default function MapaPage() {
 
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
+
+  // Logout
+  const [showLogout, setShowLogout] = useState(false)
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
@@ -162,6 +167,15 @@ export default function MapaPage() {
     ? (CURSOS.find(c => c.id === claseSeleccionada.cursoId)?.modulos ?? [])
         .filter(m => !m.nombre.toLowerCase().includes('práctica'))
     : []
+
+  // Filtrar por acceso — admins ven todo
+  const isAdmin = user?.role === 'admin'
+  const clasesVisibles = isAdmin
+    ? CLASES_CONFIG
+    : CLASES_CONFIG.filter(c => user?.clases_acceso?.includes(c.id))
+  const gymVisibles = isAdmin
+    ? GYM_INSTRUMENTOS
+    : GYM_INSTRUMENTOS.filter(g => g.id === 'gym-general' || user?.clases_acceso?.includes(g.id))
 
   return (
     <main className="relative w-full overflow-hidden"
@@ -232,7 +246,11 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {CLASES_CONFIG.map((c, i) => (
+                    {clasesVisibles.length === 0 ? (
+                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                        Sin clases asignadas
+                      </p>
+                    ) : clasesVisibles.map((c, i) => (
                       <InstrCard key={c.id} {...c} delay={i * 0.055} onClick={() => setClaseSeleccionada(c)} />
                     ))}
                   </div>
@@ -276,6 +294,111 @@ export default function MapaPage() {
         )}
       </AnimatePresence>
 
+      {/* ── Botones top-right ── */}
+      <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
+        {user?.role === 'admin' && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.85 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.5 }}
+            whileHover={{ scale: 1.08, boxShadow: '0 0 24px rgba(155,84,249,0.6)' }}
+            whileTap={{ scale: 0.94 }}
+            onClick={() => router.push('/admin')}
+            className="cursor-pointer"
+            style={{
+              background: 'linear-gradient(135deg, #9b54f9, #ec488a)',
+              border: 'none', borderRadius: 999,
+              padding: '9px 18px',
+              color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
+              boxShadow: '0 0 16px rgba(155,84,249,0.4)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <span>⚙️</span>
+            <span>Admin</span>
+          </motion.button>
+        )}
+
+        <motion.button
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.6 }}
+          whileHover={{ scale: 1.06 }}
+          whileTap={{ scale: 0.94 }}
+          onClick={() => setShowLogout(true)}
+          className="cursor-pointer"
+          style={{
+            background: 'rgba(10,10,26,0.6)',
+            backdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 999, padding: '9px 16px',
+            color: 'rgba(255,255,255,0.55)',
+            fontFamily: 'var(--font-body)', fontSize: 13,
+            display: 'flex', alignItems: 'center', gap: 5,
+          }}
+        >
+          <span>↩</span>
+          <span>Salir</span>
+        </motion.button>
+      </div>
+
+      {/* ── Modal logout ── */}
+      <AnimatePresence>
+        {showLogout && (
+          <>
+            <motion.div
+              key="backdrop-logout"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowLogout(false)}
+              className="absolute inset-0 z-40"
+              style={{ background: 'rgba(10,10,26,0.8)', backdropFilter: 'blur(8px)' }}
+            />
+            <motion.div
+              key="modal-logout"
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              className="absolute z-50"
+              style={{
+                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
+                background: 'rgba(14,14,32,0.99)',
+                border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
+                padding: '28px 24px', width: 'min(300px, 90vw)', textAlign: 'center',
+              }}
+            >
+              <p style={{ fontSize: 32, marginBottom: 12 }}>👋</p>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 8 }}>
+                ¿Cerrar sesión?
+              </h3>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24 }}>
+                Volverás a la pantalla de login.
+              </p>
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => setShowLogout(false)}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-body)', fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                  onClick={() => { logout(); router.replace('/login') }}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)',
+                    color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  Salir
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* ════════════════════════════════════════
           PANEL — GYM
       ════════════════════════════════════════ */}
@@ -301,7 +424,11 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {GYM_INSTRUMENTOS.map((g, i) => (
+                    {gymVisibles.length === 0 ? (
+                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                        Sin instrumentos asignados
+                      </p>
+                    ) : gymVisibles.map((g, i) => (
                       <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => router.push(`/escuela/gym/${g.id}`)} />
                     ))}
                   </div>
