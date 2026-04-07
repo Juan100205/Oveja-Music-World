@@ -68,6 +68,16 @@ export const LEVEL_CONFIG: LevelConfig[] = [
 
 export const PUNTOS_POR_VIDEO = 20
 
+export const PUNTOS_POR_TIPO: Record<string, number> = {
+  video:       20,
+  juego:       10,
+  drive:        5,
+  pdf:          5,
+  imagen:       5,
+  herramienta:  5,
+  otro:         5,
+}
+
 // --- API responses ---
 export interface ApiError {
   error: string

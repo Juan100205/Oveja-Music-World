@@ -1,0 +1,18 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e4]:
+      - generic [ref=e5]:
+        - heading "Oveja Music" [level=1] [ref=e6]
+        - paragraph [ref=e7]: Accede a tu escuela de música
+      - generic [ref=e8]:
+        - generic [ref=e9]: Email
+        - textbox "Email" [ref=e10]:
+          - /placeholder: tu@email.com
+      - generic [ref=e11]:
+        - generic [ref=e12]: Contraseña
+        - textbox "Contraseña" [ref=e13]:
+          - /placeholder: ••••••
+      - button "INGRESAR →" [ref=e14]
+  - button "Open Next.js Dev Tools" [ref=e20] [cursor=pointer]:
+    - img [ref=e21]
+  - alert [ref=e24]

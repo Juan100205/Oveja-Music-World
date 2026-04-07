@@ -1,0 +1,29 @@
+- generic [active] [ref=e1]:
+  - main [ref=e2]:
+    - generic [ref=e3]:
+      - button "← Volver" [ref=e4] [cursor=pointer]
+      - generic [ref=e5]: 📂
+      - paragraph [ref=e6]: Test
+      - link "↗ Abrir en Drive" [ref=e7] [cursor=pointer]:
+        - /url: https://drive.google.com/file/d/test/view
+    - iframe [ref=e9]:
+      - generic [ref=f1e3]:
+        - link "Logotipo de Google Drive" [ref=f1e5] [cursor=pointer]:
+          - /url: /
+          - generic "Logotipo de Google" [ref=f1e6]
+          - generic [ref=f1e7]: Drive
+        - generic [ref=f1e8]:
+          - paragraph [ref=f1e9]: Lo sentimos, el archivo que has solicitado no existe.
+          - paragraph [ref=f1e10]: Asegúrate de que la URL es correcta y de que el archivo existe.
+          - generic [ref=f1e11]:
+            - paragraph [ref=f1e12]:
+              - strong [ref=f1e13]: Haz cosas con Google Drive
+            - paragraph [ref=f1e14]: Las aplicaciones para Google Drive hacen que resulte sencillo crear, almacenar y compartir online documentos, hojas de cálculo, presentaciones y mucho más.
+            - paragraph [ref=f1e15]:
+              - text: Encontrarás más información en
+              - link "drive.google.com/start/apps" [ref=f1e16] [cursor=pointer]:
+                - /url: https://drive.google.com/start/apps
+              - text: .
+  - button "Open Next.js Dev Tools" [ref=e15] [cursor=pointer]:
+    - img [ref=e16]
+  - alert [ref=e19]

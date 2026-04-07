@@ -60,6 +60,18 @@ h1, h2, h3, h4 {
   background: linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%);
 }
 
+/* ── Ocultar controles móviles de Spline en desktop ── */
+@media (min-width: 768px) {
+  spline-viewer::part(controls),
+  spline-viewer::part(logo),
+  canvas + div,
+  [class*="spline"] [class*="control"],
+  [class*="spline"] [class*="mobile"],
+  [class*="spline"] [class*="logo"] {
+    display: none !important;
+  }
+}
+
 /* ── Utility glow ── */
 .om-glow-pink  { box-shadow: 0 0 24px rgba(236,72,138,0.4); }
 .om-glow-blue  { box-shadow: 0 0 24px rgba(61,184,250,0.4); }

@@ -3,15 +3,18 @@
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
 
-export default function IrAClaseButton() {
+interface Props {
+  label: string
+  href: string
+}
+
+export default function IrAClaseButton({ label, href }: Props) {
   const router = useRouter()
 
   return (
     <motion.button
-      onClick={() => router.push('/escuela/clase')}
-      initial={{ opacity: 0, y: 24 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.7, duration: 0.45, ease: 'easeOut' }}
+      onClick={() => router.push(href)}
+      initial={false}
       whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }}
       whileTap={{ scale: 0.95 }}
       className="cursor-pointer"
@@ -28,7 +31,7 @@ export default function IrAClaseButton() {
         letterSpacing: '0.02em',
       }}
     >
-      Ir a Clase →
+      {label}
     </motion.button>
   )
 }

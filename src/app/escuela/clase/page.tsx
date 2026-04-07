@@ -1,7 +1,8 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
+import { flushSync } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
 import LevelBar from '@/components/school/LevelBar'
@@ -28,6 +29,14 @@ export default function ClasePage() {
   const [videos, setVideos]                 = useState<Video[]>([])
   const [loadingVideos, setLoadingVideos]   = useState(false)
   const [puntosActuales, setPuntosActuales] = useState(0)
+  const [isInClass, setIsInClass]           = useState(false)
+  const [isOutingClass, setIsOutingClass]   = useState(false)
+
+  const handleVariableChange = useCallback((name: string, value: unknown) => {
+    const isTrue = value === true || String(value).toLowerCase() === 'true'
+    if (name === 'isInClass')     flushSync(() => setIsInClass(isTrue))
+    if (name === 'isOutingClass') flushSync(() => setIsOutingClass(isTrue))
+  }, [])
 
   useEffect(() => {
     if (!loading && !isAuthenticated) router.replace('/login')
@@ -76,7 +85,7 @@ export default function ClasePage() {
     <main style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#0a0a1a' }}>
 
         {/* ── Spline de fondo ── */}
-        <SplineScene scene={SCENE_CLASE} />
+        <SplineScene scene={SCENE_CLASE} onVariableChange={handleVariableChange} />
 
         {/* ── Header flotante ── */}
         <div
@@ -115,6 +124,68 @@ export default function ClasePage() {
             </button>
           </div>
         </div>
+
+        {/* ── Botón "Tomar Lecciones" ── */}
+        <AnimatePresence>
+          {isInClass && !salasOpen && !zonaActiva && (
+            <motion.button
+              key="lecciones-btn"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSalasOpen(true)}
+              className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 16,
+                padding: '14px 36px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)',
+                color: '#fff',
+                boxShadow: '0 0 32px rgba(236,72,138,0.4)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Tomar Lecciones →
+            </motion.button>
+          )}
+        </AnimatePresence>
+
+        {/* ── Botón "Cambiar de Nivel" ── */}
+        <AnimatePresence>
+          {isOutingClass && !salasOpen && !zonaActiva && (
+            <motion.button
+              key="cambiar-nivel-btn"
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 16 }}
+              transition={{ duration: 0.3, ease: 'easeOut' }}
+              whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(61,184,250,0.55)' }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => setSalasOpen(true)}
+              className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
+              style={{
+                fontFamily: 'var(--font-display)',
+                fontWeight: 700,
+                fontSize: 16,
+                padding: '14px 36px',
+                borderRadius: 999,
+                border: 'none',
+                background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)',
+                color: '#fff',
+                boxShadow: '0 0 32px rgba(61,184,250,0.4)',
+                letterSpacing: '0.02em',
+              }}
+            >
+              Cambiar de Nivel →
+            </motion.button>
+          )}
+        </AnimatePresence>
 
         {/* ── Botón "Salas" flotante ── */}
         <AnimatePresence>

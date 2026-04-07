@@ -24,6 +24,7 @@ export function useAuth(): UseAuthReturn {
     error: null,
   })
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     const token = localStorage.getItem('token')
     const userStr = localStorage.getItem('user')
@@ -41,6 +42,7 @@ export function useAuth(): UseAuthReturn {
       setState(s => ({ ...s, loading: false }))
     }
   }, [])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const login = useCallback(async (credentials: LoginCredentials): Promise<boolean> => {
     setState(s => ({ ...s, loading: true, error: null }))

@@ -10,7 +10,21 @@
       "Bash(wmic process:*)",
       "Bash(taskkill /PID 32212 /F)",
       "Bash(cmd /c \"taskkill /PID 32212 /F\")",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(npm run:*)",
+      "Bash(npm install:*)",
+      "Bash(taskkill:*)",
+      "Bash(node scripts/create-admin.mjs)",
+      "Bash(npx tsc:*)",
+      "Bash(grep -r \"getVariables\" node_modules/@splinetool/runtime/build/*.d.ts)",
+      "Bash(cmd /c \"taskkill /PID 20528 /F\")",
+      "Bash(cmd /c \"npx kill-port 3000\")",
+      "Bash(cmd:*)",
+      "Bash(rm:*)",
+      "Bash(cat src/app/escuela/clase/[instrumento]/[modulo]/page.tsx)",
+      "Bash(node -e ':*)",
+      "mcp__playwright__browser_navigate",
+      "mcp__playwright__browser_take_screenshot"
     ]
   }
 }
