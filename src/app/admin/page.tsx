@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2 } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 
@@ -255,38 +256,39 @@ export default function AdminPage() {
     <main style={{ minHeight: '100vh', background: '#0a0a1a', color: '#fff' }}>
 
       {/* ── Top bar ─────────────────────────────────────────── */}
-      <div style={{
+      <div className="admin-topbar" style={{
         position: 'sticky', top: 0, zIndex: 50,
         background: 'rgba(10,10,26,0.92)', backdropFilter: 'blur(16px)',
         borderBottom: '1px solid rgba(255,255,255,0.07)',
-        padding: '14px 20px',
+        padding: '12px 16px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-        flexWrap: 'wrap', gap: 10,
+        flexWrap: 'wrap', gap: 8,
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <div className="admin-brand" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <motion.button
             whileHover={{ x: -3 }} whileTap={{ scale: 0.95 }}
             onClick={() => router.push('/escuela')}
             style={{
               background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 999, padding: '6px 14px',
+              borderRadius: 999, padding: '6px 12px',
               color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-body)', fontSize: 13, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
-            ← Escuela
+            <ArrowLeft size={13} strokeWidth={1.5} /> <span className="admin-back-label">Escuela</span>
           </motion.button>
           <div>
-            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>
+            <h1 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17, color: '#fff', margin: 0 }}>
               Panel Admin
             </h1>
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
+            <p className="admin-subtitle" style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
               {activeTab === 'usuarios' ? `${users.length} usuarios` : 'Gestión de contenido'}
             </p>
           </div>
         </div>
 
         {/* ── Tabs ──────────────────────────────────────────────── */}
-        <div style={{
+        <div className="admin-tabs" style={{
           display: 'flex', gap: 4,
           background: 'rgba(255,255,255,0.05)',
           border: '1px solid rgba(255,255,255,0.08)',
@@ -297,16 +299,20 @@ export default function AdminPage() {
               key={tab}
               onClick={() => setActiveTab(tab)}
               style={{
-                padding: '7px 18px', borderRadius: 9, border: 'none',
+                padding: '7px 16px', borderRadius: 9, border: 'none',
                 background: activeTab === tab ? 'rgba(236,72,138,0.2)' : 'transparent',
                 color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
                 fontFamily: 'var(--font-display)', fontWeight: activeTab === tab ? 700 : 400,
                 fontSize: 13, cursor: 'pointer',
                 borderBottom: activeTab === tab ? '2px solid #ec488a' : '2px solid transparent',
                 transition: 'all 0.15s',
+                display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              {tab === 'usuarios' ? '👥 Usuarios' : '📚 Contenido'}
+              {tab === 'usuarios'
+                ? <><Users size={14} strokeWidth={1.5} /> Usuarios</>
+                : <><BookOpen size={14} strokeWidth={1.5} /> Contenido</>
+              }
             </button>
           ))}
         </div>
@@ -320,13 +326,14 @@ export default function AdminPage() {
             style={{
               background: 'linear-gradient(135deg, #ec488a, #9b54f9)',
               border: 'none', borderRadius: 999,
-              padding: '10px 20px',
+              padding: '9px 16px',
               color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700,
-              fontSize: 14, cursor: 'pointer',
+              fontSize: 13, cursor: 'pointer',
               boxShadow: '0 0 20px rgba(236,72,138,0.35)',
+              display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
-            + Nuevo usuario
+            <UserPlus size={14} strokeWidth={1.5} /> <span className="admin-new-label">Nuevo usuario</span>
           </motion.button>
           )}
 
@@ -337,7 +344,7 @@ export default function AdminPage() {
             style={{
               background: 'rgba(255,255,255,0.07)',
               border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 999, padding: '10px 16px',
+              borderRadius: 999, padding: '9px 14px',
               color: 'rgba(255,255,255,0.55)',
               fontFamily: 'var(--font-body)', fontSize: 13,
               cursor: 'pointer',
@@ -347,6 +354,17 @@ export default function AdminPage() {
           </motion.button>
         </div>
       </div>
+
+      <style>{`
+        @media (max-width: 640px) {
+          .admin-topbar { padding: 10px 14px !important; }
+          .admin-brand { flex: 1 !important; min-width: 0; }
+          .admin-subtitle { display: none !important; }
+          .admin-tabs { order: 3; width: 100% !important; justify-content: stretch !important; }
+          .admin-tabs button { flex: 1 !important; justify-content: center !important; }
+          .admin-new-label { display: none !important; }
+        }
+      `}</style>
 
       {/* ── Error global ─────────────────────────────────────── */}
       <AnimatePresence>
@@ -361,7 +379,7 @@ export default function AdminPage() {
             }}
           >
             <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#ff7eb3' }}>{error}</span>
-            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: 16 }}>✕</button>
+            <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}><X size={14} strokeWidth={1.5} /></button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -445,11 +463,11 @@ export default function AdminPage() {
                         style={{
                           background: 'rgba(236,72,138,0.12)', border: '1px solid rgba(236,72,138,0.2)',
                           borderRadius: 999, width: 28, height: 28,
-                          color: '#ec488a', cursor: 'pointer', fontSize: 13,
+                          color: '#ec488a', cursor: 'pointer',
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                         }}
                       >
-                        ×
+                        <Trash2 size={13} strokeWidth={1.5} />
                       </motion.button>
                     )}
                   </div>
@@ -556,7 +574,7 @@ export default function AdminPage() {
                 <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>
                   Nuevo usuario
                 </h2>
-                <button onClick={() => setShowCreate(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 999, width: 32, height: 32, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', fontSize: 14 }}>✕</button>
+                <button onClick={() => setShowCreate(false)} style={{ background: 'rgba(255,255,255,0.08)', border: 'none', borderRadius: 999, width: 32, height: 32, color: 'rgba(255,255,255,0.5)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 480, margin: '0 auto' }}>
@@ -679,7 +697,9 @@ export default function AdminPage() {
                 padding: '28px 24px', width: 'min(340px, 90vw)', textAlign: 'center',
               }}
             >
-              <p style={{ fontSize: 32, marginBottom: 12 }}>⚠️</p>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(236,72,138,0.1)', border: '1px solid rgba(236,72,138,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <AlertTriangle size={24} strokeWidth={1.5} style={{ color: '#ec488a' }} />
+              </div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 8 }}>
                 ¿Eliminar usuario?
               </h3>
@@ -737,7 +757,9 @@ export default function AdminPage() {
                 padding: '28px 24px', width: 'min(320px, 90vw)', textAlign: 'center',
               }}
             >
-              <p style={{ fontSize: 32, marginBottom: 12 }}>👋</p>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <LogOut size={24} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.6)' }} />
+              </div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 8 }}>
                 ¿Cerrar sesión?
               </h3>

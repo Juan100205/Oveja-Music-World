@@ -14,7 +14,7 @@ export default function LoginPage() {
     if (!isAuthenticated) return
     const stored = localStorage.getItem('user')
     const u = stored ? JSON.parse(stored) : null
-    router.replace(u?.role === 'admin' ? '/admin' : '/escuela')
+    router.replace(u?.role === 'admin' ? '/admin' : u?.role === 'teacher' ? '/teacher' : '/escuela')
   }, [isAuthenticated, router])
 
   const handleLogin = async (credentials: { email: string; password: string }) => {
@@ -23,7 +23,7 @@ export default function LoginPage() {
       // Los admins van directo al panel
       const stored = localStorage.getItem('user')
       const u = stored ? JSON.parse(stored) : null
-      router.push(u?.role === 'admin' ? '/admin' : '/escuela')
+      router.push(u?.role === 'admin' ? '/admin' : u?.role === 'teacher' ? '/teacher' : '/escuela')
     }
     return ok
   }
@@ -44,7 +44,7 @@ export default function LoginPage() {
         initial={{ opacity: 0, y: 30, scale: 0.95 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative w-full max-w-sm rounded-3xl p-12"
+        className="relative w-full max-w-sm rounded-3xl p-6 sm:p-12"
         style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}
       >
         <LoginForm onSubmit={handleLogin} loading={loading} serverError={error} />

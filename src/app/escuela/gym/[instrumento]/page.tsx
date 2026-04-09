@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState, useCallback } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import { GYM_INSTRUMENTOS, type GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
@@ -220,7 +221,7 @@ function IframeViewer({ url, label, tipo, onClose }: {
               className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
               style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}
             >
-              ✕
+              <X size={14} strokeWidth={1.5} />
             </motion.button>
           </div>
 
@@ -278,6 +279,30 @@ export default function GymSalaPage() {
       >
         ← Mapa
       </motion.button>
+
+      {/* ── Hint: pisa el tapete ── */}
+      <AnimatePresence>
+        {!isTrainning && !panelOpen && !salidaOpen && (
+          <motion.p
+            key="hint-tapete-gym"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.55, 0.35, 0.55] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 3, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none"
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 13,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#3db8fa',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            pisa el tapete para iniciar
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* ── isTrainning → Entrenar ── */}
       <AnimatePresence>
@@ -342,7 +367,7 @@ export default function GymSalaPage() {
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige una sección</p>
                     </div>
                     <button onClick={cerrarPanel} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
                   <div className="flex flex-col gap-3">
@@ -388,7 +413,7 @@ export default function GymSalaPage() {
                       ← Secciones
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
                   <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fff', marginBottom: 16 }}>
@@ -451,7 +476,7 @@ export default function GymSalaPage() {
               <div className="flex items-center justify-between mb-6">
                 <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>¿A dónde quieres ir?</h2>
                 <button onClick={() => setSalidaOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
               </div>
 
               <motion.button
@@ -528,7 +553,7 @@ export default function GymSalaPage() {
                   <motion.button whileHover={{ scale: 1.1, rotate: 90 }} onClick={() => setVideoActivo(null)}
                     className="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                     style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}>
-                    ✕
+                    <X size={14} strokeWidth={1.5} />
                   </motion.button>
                 </div>
                 <div className="w-full rounded-3xl overflow-hidden"

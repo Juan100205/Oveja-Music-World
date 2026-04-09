@@ -134,7 +134,7 @@ function ZonaSelect({
         }}
       >
         {ZONA_LABELS[value]}
-        <ChevronDown size={10} strokeWidth={2} style={{ opacity: 0.6 }} />
+        <ChevronDown size={10} strokeWidth={1.5} style={{ opacity: 0.6 }} />
       </button>
 
       {open && createPortal(
@@ -247,7 +247,7 @@ function SmallBtn({
         whiteSpace: 'nowrap' as const,
       }}
     >
-      {Icon && <Icon size={13} strokeWidth={1.8} />}
+      {Icon && <Icon size={13} strokeWidth={1.5} />}
       {label && <span>{label}</span>}
     </motion.button>
   )
@@ -472,7 +472,7 @@ function RecursoRow({
         background: `${TIPO_COLOR[recurso.tipo]}12`,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
       }}>
-        <TipoIcon size={13} strokeWidth={1.8} color={TIPO_COLOR[recurso.tipo]} />
+        <TipoIcon size={13} strokeWidth={1.5} color={TIPO_COLOR[recurso.tipo]} />
       </div>
 
       <div style={{ flex: 1, minWidth: 0 }}>
@@ -502,11 +502,13 @@ function RecursoRow({
 function SeccionPanel({
   seccion,
   token,
+  apiBase,
   onUpdate,
   onDelete,
 }: {
   seccion: Seccion
   token: string
+  apiBase: string
   onUpdate: (updated: Seccion) => void
   onDelete: () => void
 }) {
@@ -516,14 +518,14 @@ function SeccionPanel({
   const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
   const renameSec = useCallback(async (nombre: string) => {
-    const res = await fetch(`/api/admin/content/secciones/${seccion.id}`, {
+    const res = await fetch(`${apiBase}/secciones/${seccion.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
     if (res.ok) onUpdate({ ...seccion, nombre })
   }, [seccion, onUpdate, authHeaders])
 
   const changeZona = useCallback(async (zona: string) => {
-    const res = await fetch(`/api/admin/content/secciones/${seccion.id}`, {
+    const res = await fetch(`${apiBase}/secciones/${seccion.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ zona }),
     })
     if (res.ok) onUpdate({ ...seccion, zona: (zona || null) as Seccion['zona'] })
@@ -531,7 +533,7 @@ function SeccionPanel({
 
   const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string }) => {
     if (editingRecurso === 'new') {
-      const res = await fetch('/api/admin/content/recursos', {
+      const res = await fetch(`${apiBase}/recursos`, {
         method: 'POST', headers: authHeaders,
         body: JSON.stringify({ seccion_id: seccion.id, ...data }),
       })
@@ -539,7 +541,7 @@ function SeccionPanel({
       const { recurso } = await res.json()
       onUpdate({ ...seccion, recursos: [...seccion.recursos, recurso] })
     } else if (editingRecurso) {
-      const res = await fetch(`/api/admin/content/recursos/${editingRecurso.id}`, {
+      const res = await fetch(`${apiBase}/recursos/${editingRecurso.id}`, {
         method: 'PATCH', headers: authHeaders, body: JSON.stringify(data),
       })
       if (!res.ok) throw new Error('Error al actualizar recurso')
@@ -550,7 +552,7 @@ function SeccionPanel({
 
   const deleteRecurso = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar este recurso?')) return
-    const res = await fetch(`/api/admin/content/recursos/${id}`, {
+    const res = await fetch(`${apiBase}/recursos/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) onUpdate({ ...seccion, recursos: seccion.recursos.filter(r => r.id !== id) })
@@ -566,7 +568,7 @@ function SeccionPanel({
         }}
         onClick={() => setOpen(o => !o)}
       >
-        <ChevronRight size={13} strokeWidth={2} style={{ color: 'rgba(255,255,255,0.25)', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }} />
+        <ChevronRight size={13} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.25)', transition: 'transform 0.2s', transform: open ? 'rotate(90deg)' : 'none', flexShrink: 0 }} />
         <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.85)', flex: 1 }}
           onClick={e => e.stopPropagation()}>
           <InlineEdit value={seccion.nombre} onSave={renameSec} placeholder="Nombre de sección" />
@@ -627,12 +629,14 @@ function SeccionPanel({
 function ModuloPanel({
   modulo,
   token,
+  apiBase,
   zonaFilter,
   onUpdate,
   onDelete,
 }: {
   modulo: Modulo
   token: string
+  apiBase: string
   zonaFilter: 'escuela' | 'gym'
   onUpdate: (updated: Modulo) => void
   onDelete: () => void
@@ -656,7 +660,7 @@ function ModuloPanel({
   const authHeaders = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }
 
   const renameModulo = useCallback(async (nombre: string) => {
-    const res = await fetch(`/api/admin/content/modulos/${modulo.id}`, {
+    const res = await fetch(`${apiBase}/modulos/${modulo.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
     if (res.ok) onUpdate({ ...modulo, nombre })
@@ -665,7 +669,7 @@ function ModuloPanel({
   const addSeccion = async () => {
     if (!newSecNombre.trim()) return
     setSaving(true)
-    const res = await fetch('/api/admin/content/secciones', {
+    const res = await fetch(`${apiBase}/secciones`, {
       method: 'POST', headers: authHeaders,
       body: JSON.stringify({ modulo_id: modulo.id, nombre: newSecNombre.trim(), zona: newSecZona || null }),
     })
@@ -685,7 +689,7 @@ function ModuloPanel({
 
   const deleteSeccion = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar esta sección y todos sus recursos?')) return
-    const res = await fetch(`/api/admin/content/secciones/${id}`, {
+    const res = await fetch(`${apiBase}/secciones/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) onUpdate({ ...modulo, secciones: modulo.secciones.filter(s => s.id !== id) })
@@ -746,6 +750,7 @@ function ModuloPanel({
                   key={s.id}
                   seccion={s}
                   token={token}
+                  apiBase={apiBase}
                   onUpdate={updateSeccion}
                   onDelete={() => deleteSeccion(s.id)}
                 />
@@ -794,12 +799,14 @@ function CursoEditor({
   cursoEmoji,
   cursoColor,
   token,
+  apiBase,
 }: {
   cursoId: string
   cursoNombre: string
   cursoEmoji: string
   cursoColor: string
   token: string
+  apiBase: string
 }) {
   const [curso, setCurso] = useState<CursoCompleto | null>(null)
   const [loading, setLoading] = useState(true)
@@ -818,7 +825,7 @@ function CursoEditor({
     let cancelled = false
     setLoading(true)
     setError(null)
-    fetch(`/api/admin/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
+    fetch(`${apiBase}?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { if (!cancelled) setCurso(d.curso ?? null) })
       .catch(() => { if (!cancelled) setError('Error al cargar') })
@@ -829,7 +836,7 @@ function CursoEditor({
   const addModulo = async () => {
     if (!newModNombre.trim() || !curso) return
     setSaving(true)
-    const res = await fetch('/api/admin/content/modulos', {
+    const res = await fetch(`${apiBase}/modulos`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({ curso_id: curso.id, nombre: newModNombre.trim() }),
@@ -849,7 +856,7 @@ function CursoEditor({
 
   const deleteModulo = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar este módulo y todo su contenido?')) return
-    const res = await fetch(`/api/admin/content/modulos/${id}`, {
+    const res = await fetch(`${apiBase}/modulos/${id}`, {
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) setCurso(c => c ? { ...c, modulos: c.modulos.filter(m => m.id !== id) } : c)
@@ -981,6 +988,7 @@ function CursoEditor({
           key={m.id}
           modulo={m}
           token={token}
+          apiBase={apiBase}
           zonaFilter={zonaTab}
           onUpdate={updateModulo}
           onDelete={() => deleteModulo(m.id)}
@@ -1031,15 +1039,38 @@ const INSTRUMENTOS_PRINCIPALES = [
 // ══════════════════════════════════════════════════════════════
 // CONTENT MANAGER — Componente raíz
 // ══════════════════════════════════════════════════════════════
-export default function ContentManager({ token }: { token: string }) {
-  const [selectedId, setSelectedId] = useState(INSTRUMENTOS_PRINCIPALES[0].id)
-  const selected = INSTRUMENTOS_PRINCIPALES.find(i => i.id === selectedId)!
+export default function ContentManager({
+  token,
+  apiBase = '/api/admin/content',
+  allowedCursoIds,
+}: {
+  token: string
+  apiBase?: string
+  allowedCursoIds?: string[]
+}) {
+  const instrumentos = allowedCursoIds
+    ? INSTRUMENTOS_PRINCIPALES.filter(i => allowedCursoIds.includes(i.id))
+    : INSTRUMENTOS_PRINCIPALES
+
+  const [selectedId, setSelectedId] = useState(instrumentos[0]?.id ?? '')
+  const selected = instrumentos.find(i => i.id === selectedId) ?? instrumentos[0]
+
+  if (instrumentos.length === 0) {
+    return (
+      <div style={{ padding: 60, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
+        <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
+          <Music2 size={24} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.2)' }} />
+        </div>
+        <p>No tienes cursos asignados todavía.</p>
+      </div>
+    )
+  }
 
   return (
-    <div style={{ display: 'flex', gap: 0, minHeight: 'calc(100vh - 80px)' }}>
+    <div className="cm-root" style={{ display: 'flex', gap: 0, minHeight: 'calc(100vh - 80px)' }}>
 
-      {/* ── Sidebar — 6 instrumentos fijos ───────────────────── */}
-      <div style={{
+      {/* ── Sidebar — instrumentos ────────────────────────────── */}
+      <div className="cm-sidebar" style={{
         width: 220, flexShrink: 0,
         borderRight: '1px solid rgba(255,255,255,0.06)',
         padding: '20px 0',
@@ -1053,7 +1084,7 @@ export default function ContentManager({ token }: { token: string }) {
           Instrumentos
         </p>
 
-        {INSTRUMENTOS_PRINCIPALES.map(inst => {
+        {instrumentos.map(inst => {
           const active = selectedId === inst.id
           return (
             <button
@@ -1087,18 +1118,48 @@ export default function ContentManager({ token }: { token: string }) {
       </div>
 
       {/* ── Editor principal ──────────────────────────────────── */}
-      <div style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
-        <CursoEditor
-          key={selectedId}
-          cursoId={selectedId}
-          cursoNombre={selected.nombre}
-          cursoEmoji={selected.emoji}
-          cursoColor={selected.color}
-          token={token}
-        />
+      <div className="cm-main" style={{ flex: 1, padding: '28px 32px', overflowY: 'auto' }}>
+        {selected && (
+          <CursoEditor
+            key={selectedId}
+            cursoId={selectedId}
+            cursoNombre={selected.nombre}
+            cursoEmoji={selected.emoji}
+            cursoColor={selected.color}
+            token={token}
+            apiBase={apiBase}
+          />
+        )}
       </div>
 
-      <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
+      <style>{`
+        @keyframes spin { to { transform: rotate(360deg) } }
+        @media (max-width: 640px) {
+          .cm-root { flex-direction: column !important; }
+          .cm-sidebar {
+            width: 100% !important;
+            flex-direction: row !important;
+            overflow-x: auto;
+            overflow-y: hidden;
+            border-right: none !important;
+            border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+            padding: 10px 12px !important;
+            gap: 6px !important;
+            scrollbar-width: none;
+          }
+          .cm-sidebar::-webkit-scrollbar { display: none; }
+          .cm-sidebar > p { display: none !important; }
+          .cm-sidebar > button {
+            flex-shrink: 0 !important;
+            flex-direction: row !important;
+            border-left: none !important;
+            padding: 8px 14px !important;
+            border-radius: 20px !important;
+            white-space: nowrap;
+          }
+          .cm-main { padding: 16px !important; }
+        }
+      `}</style>
     </div>
   )
 }

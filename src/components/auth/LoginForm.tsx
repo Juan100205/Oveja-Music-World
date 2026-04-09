@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { ArrowRight, Mail, Lock } from 'lucide-react'
 import { validateLoginCredentials } from '@/lib/auth'
 import type { LoginCredentials } from '@/types'
 
@@ -54,8 +55,8 @@ export default function LoginForm({ onSubmit, loading = false, serverError }: Lo
 
       {/* Email */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="email" style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--om-text)' }}>
-          Email
+        <label htmlFor="email" style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--om-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Mail size={13} strokeWidth={1.5} style={{ opacity: 0.5 }} /> Email
         </label>
         <input
           id="email"
@@ -81,8 +82,8 @@ export default function LoginForm({ onSubmit, loading = false, serverError }: Lo
 
       {/* Password */}
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--om-text)' }}>
-          Contraseña
+        <label htmlFor="password" style={{ fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 500, color: 'var(--om-text)', display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Lock size={13} strokeWidth={1.5} style={{ opacity: 0.5 }} /> Contraseña
         </label>
         <input
           id="password"
@@ -121,7 +122,9 @@ export default function LoginForm({ onSubmit, loading = false, serverError }: Lo
           border: 'none',
         }}
       >
-        {loading ? 'Ingresando...' : 'INGRESAR →'}
+        <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+        {loading ? 'Ingresando...' : <><span>Ingresar</span><ArrowRight size={15} strokeWidth={1.5} /></>}
+      </span>
       </motion.button>
 
     </form>

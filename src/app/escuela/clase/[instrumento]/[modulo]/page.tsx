@@ -4,6 +4,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
+import { X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import { CLASES_CONFIG } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
@@ -259,7 +260,7 @@ function IframeViewer({ url, label, tipo, onClose }: {
               className="flex-shrink-0 w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
               style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}
             >
-              ✕
+              <X size={14} strokeWidth={1.5} />
             </motion.button>
           </div>
 
@@ -414,7 +415,7 @@ export default function ModuloPage() {
       {/* ── Nombre del módulo (top center) ── */}
       {modulo && (
         <div
-          className="absolute top-5 left-1/2 -translate-x-1/2 z-20"
+          className="mod-label absolute top-5 left-1/2 -translate-x-1/2 z-20"
           style={{
             background: 'rgba(10,10,26,0.6)',
             backdropFilter: 'blur(12px)',
@@ -431,6 +432,30 @@ export default function ModuloPage() {
           {clase?.emoji} {modulo.nombre}
         </div>
       )}
+
+      {/* ── Hint: pisa el tapete ── */}
+      <AnimatePresence>
+        {!isInClass && !seccionesOpen && (
+          <motion.p
+            key="hint-tapete"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.55, 0.35, 0.55] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 3, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none"
+            style={{
+              fontFamily: 'var(--font-body)',
+              fontSize: 13,
+              letterSpacing: '0.12em',
+              textTransform: 'uppercase',
+              color: '#3db8fa',
+              whiteSpace: 'nowrap',
+            }}
+          >
+            pisa el tapete para iniciar
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* ── Botón Tomar Lecciones (isInClass) ── */}
       <AnimatePresence>
@@ -519,7 +544,7 @@ export default function ModuloPage() {
                       </p>
                     </div>
                     <button onClick={cerrarPanel} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
                   <div className="flex flex-col gap-3">
@@ -569,7 +594,7 @@ export default function ModuloPage() {
                       ← Secciones
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
                   <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fff', marginBottom: 16 }}>
@@ -642,7 +667,7 @@ export default function ModuloPage() {
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>¿A dónde quieres ir?</p>
                 </div>
                 <button onClick={() => setSalidaOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
               </div>
 
               <motion.button
@@ -735,7 +760,7 @@ export default function ModuloPage() {
                     onClick={() => setVideoActivo(null)}
                     className="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                     style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}>
-                    ✕
+                    <X size={14} strokeWidth={1.5} />
                   </motion.button>
                 </div>
                 <div className="w-full rounded-3xl overflow-hidden"
@@ -778,6 +803,11 @@ export default function ModuloPage() {
         )}
       </AnimatePresence>
 
+      <style>{`
+        @media (max-width: 640px) {
+          .mod-label { max-width: calc(100vw - 140px) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        }
+      `}</style>
     </main>
   )
 }

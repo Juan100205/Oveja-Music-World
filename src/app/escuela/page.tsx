@@ -4,6 +4,7 @@ import { useState, useCallback } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
+import { ArrowLeft, ChevronRight, Settings, LogOut, X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import { CLASES_CONFIG, type ClaseConfig } from '@/data/clases'
 import { GYM_INSTRUMENTOS } from '@/data/gym'
@@ -124,7 +125,7 @@ function ModulosList({
               </p>
             </div>
           </div>
-          <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18 }}>›</span>
+          <ChevronRight size={16} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
         </motion.button>
       ))}
     </div>
@@ -243,7 +244,7 @@ export default function MapaPage() {
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
                     </div>
                     <button onClick={cerrarClases} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {clasesVisibles.length === 0 ? (
@@ -268,15 +269,15 @@ export default function MapaPage() {
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-6">
                     <motion.button whileHover={{ x: -3 }} onClick={() => setClaseSeleccionada(null)}
-                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer' }}>
-                      ← Clases
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowLeft size={13} strokeWidth={1.5} /> Clases
                     </motion.button>
                     <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
                     <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', flex: 1 }}>
                       {claseSeleccionada.emoji} {claseSeleccionada.nombre}
                     </h2>
                     <button onClick={cerrarClases} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
                   {modulosClase.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
@@ -314,7 +315,7 @@ export default function MapaPage() {
               display: 'flex', alignItems: 'center', gap: 6,
             }}
           >
-            <span>⚙️</span>
+            <Settings size={14} strokeWidth={1.5} />
             <span>Admin</span>
           </motion.button>
         )}
@@ -337,7 +338,7 @@ export default function MapaPage() {
             display: 'flex', alignItems: 'center', gap: 5,
           }}
         >
-          <span>↩</span>
+          <LogOut size={14} strokeWidth={1.5} />
           <span>Salir</span>
         </motion.button>
       </div>
@@ -364,7 +365,9 @@ export default function MapaPage() {
                 padding: '28px 24px', width: 'min(300px, 90vw)', textAlign: 'center',
               }}
             >
-              <p style={{ fontSize: 32, marginBottom: 12 }}>👋</p>
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <LogOut size={24} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.6)' }} />
+              </div>
               <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 8 }}>
                 ¿Cerrar sesión?
               </h3>
@@ -421,7 +424,7 @@ export default function MapaPage() {
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
                     </div>
                     <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     {gymVisibles.length === 0 ? (
