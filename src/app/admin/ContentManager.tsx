@@ -6,7 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import {
   Piano, Drum, Guitar, Mic, Music2, BookOpen,
   GraduationCap, Dumbbell,
-  Trash2, Pencil, ChevronRight, ChevronDown, Plus, X,
+  Trash2, Pencil, ChevronRight, ChevronDown, Plus, X, Check,
   Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link,
   type LucideIcon,
 } from 'lucide-react'
@@ -395,7 +395,7 @@ function RecursoModal({
                     fontFamily: 'var(--font-body)', fontSize: 12, cursor: 'pointer',
                   }}
                 >
-                  {TIPO_ICON[t]} {t}
+                  {(() => { const Icon = TIPO_ICON[t]; return Icon ? <Icon size={12} style={{ display: 'inline', marginRight: 4 }} /> : null; })()} {t}
                 </button>
               ))}
             </div>
@@ -1020,12 +1020,12 @@ function CursoEditor({
 
 // ── Instrumentos principales (sidebar fijo) ───────────────────
 const INSTRUMENTOS_PRINCIPALES = [
-  { id: 'piano',            nombre: 'Piano',             Icon: Piano,       color: '#ec488a' },
-  { id: 'bateria',          nombre: 'Batería',            Icon: Drum,        color: '#3db8fa' },
-  { id: 'guitarra-adultos', nombre: 'Guitarra',           Icon: Guitar,      color: '#ffa737' },
-  { id: 'violin',           nombre: 'Violín',             Icon: Music2,      color: '#9b54f9' },
-  { id: 'canto',            nombre: 'Canto',              Icon: Mic,         color: '#ec488a' },
-  { id: 'ciudad-musical',   nombre: 'Iniciación Musical', Icon: BookOpen,    color: '#3db8fa' },
+  { id: 'piano',            nombre: 'Piano',             Icon: Piano,       color: '#ec488a', emoji: '🎹' },
+  { id: 'bateria',          nombre: 'Batería',            Icon: Drum,        color: '#3db8fa', emoji: '🥁' },
+  { id: 'guitarra-adultos', nombre: 'Guitarra',           Icon: Guitar,      color: '#ffa737', emoji: '🎸' },
+  { id: 'violin',           nombre: 'Violín',             Icon: Music2,      color: '#9b54f9', emoji: '🎻' },
+  { id: 'canto',            nombre: 'Canto',              Icon: Mic,         color: '#ec488a', emoji: '🎤' },
+  { id: 'ciudad-musical',   nombre: 'Iniciación Musical', Icon: BookOpen,    color: '#3db8fa', emoji: '🎵' },
 ]
 
 // ══════════════════════════════════════════════════════════════
