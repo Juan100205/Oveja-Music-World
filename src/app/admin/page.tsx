@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAuth } from '@/hooks/useAuth'
+import ContentManager from './ContentManager'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface AdminUser {
@@ -93,6 +94,7 @@ export default function AdminPage() {
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
 
+  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido'>('usuarios')
   const [users,      setUsers]      = useState<AdminUser[]>([])
   const [fetching,   setFetching]   = useState(true)
   const [saving,     setSaving]     = useState<string | null>(null)
@@ -259,6 +261,7 @@ export default function AdminPage() {
         borderBottom: '1px solid rgba(255,255,255,0.07)',
         padding: '14px 20px',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+        flexWrap: 'wrap', gap: 10,
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <motion.button
@@ -277,12 +280,39 @@ export default function AdminPage() {
               Panel Admin
             </h1>
             <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {users.length} usuarios
+              {activeTab === 'usuarios' ? `${users.length} usuarios` : 'Gestión de contenido'}
             </p>
           </div>
         </div>
 
+        {/* ── Tabs ──────────────────────────────────────────────── */}
+        <div style={{
+          display: 'flex', gap: 4,
+          background: 'rgba(255,255,255,0.05)',
+          border: '1px solid rgba(255,255,255,0.08)',
+          borderRadius: 12, padding: 4,
+        }}>
+          {(['usuarios', 'contenido'] as const).map(tab => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              style={{
+                padding: '7px 18px', borderRadius: 9, border: 'none',
+                background: activeTab === tab ? 'rgba(236,72,138,0.2)' : 'transparent',
+                color: activeTab === tab ? '#fff' : 'rgba(255,255,255,0.4)',
+                fontFamily: 'var(--font-display)', fontWeight: activeTab === tab ? 700 : 400,
+                fontSize: 13, cursor: 'pointer',
+                borderBottom: activeTab === tab ? '2px solid #ec488a' : '2px solid transparent',
+                transition: 'all 0.15s',
+              }}
+            >
+              {tab === 'usuarios' ? '👥 Usuarios' : '📚 Contenido'}
+            </button>
+          ))}
+        </div>
+
         <div style={{ display: 'flex', gap: 8 }}>
+          {activeTab === 'usuarios' && (
           <motion.button
             whileHover={{ scale: 1.04, boxShadow: '0 0 32px rgba(236,72,138,0.5)' }}
             whileTap={{ scale: 0.95 }}
@@ -298,6 +328,7 @@ export default function AdminPage() {
           >
             + Nuevo usuario
           </motion.button>
+          )}
 
           <motion.button
             whileHover={{ scale: 1.04 }}
@@ -335,7 +366,13 @@ export default function AdminPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Lista de usuarios ─────────────────────────────────── */}
+      {/* ── Tab: Contenido ───────────────────────────────────── */}
+      {activeTab === 'contenido' && token && (
+        <ContentManager token={token} />
+      )}
+
+      {/* ── Tab: Usuarios ─────────────────────────────────────── */}
+      {activeTab === 'usuarios' && (
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 800, margin: '0 auto' }}>
 
         {fetching ? (
@@ -484,6 +521,7 @@ export default function AdminPage() {
           })
         )}
       </div>
+      )} {/* fin activeTab === 'usuarios' */}
 
       {/* ════════════════════════════════════════
           MODAL — Crear usuario

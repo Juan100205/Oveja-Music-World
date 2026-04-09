@@ -24,7 +24,8 @@
       "Bash(cat src/app/escuela/clase/[instrumento]/[modulo]/page.tsx)",
       "Bash(node -e ':*)",
       "mcp__playwright__browser_navigate",
-      "mcp__playwright__browser_take_screenshot"
+      "mcp__playwright__browser_take_screenshot",
+      "Bash(node -e \"const l = require\\('lucide-react'\\); const icons = ['Piano','Drum','Guitar','Mic','Music','Music2','Music3','Music4','GraduationCap','Dumbbell','Trash2','Pencil','ChevronRight','ChevronDown','Plus','X','Check','Play','FolderOpen','Gamepad2','FileText','Image','Wrench','Link','BookOpen']; icons.forEach\\(i => console.log\\(i, l[i] ? 'OK' : 'MISSING'\\)\\);\")"
     ]
   }
 }

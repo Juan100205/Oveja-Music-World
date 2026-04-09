@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "seed:content": "tsx scripts/seed-content.ts"
   },
   "dependencies": {
     "@splinetool/react-spline": "^4.1.0",
@@ -19,6 +20,7 @@
     "bcryptjs": "^3.0.3",
     "framer-motion": "^12.36.0",
     "jsonwebtoken": "^9.0.3",
+    "lucide-react": "^1.7.0",
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
@@ -35,12 +37,14 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "^16.6.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jest": "^30.3.0",
     "jest-environment-jsdom": "^30.3.0",
     "tailwindcss": "^4",
     "ts-jest": "^29.4.6",
+    "tsx": "^4.21.0",
     "typescript": "^5"
   }
 }
