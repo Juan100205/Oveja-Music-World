@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
@@ -8,16 +8,25 @@ import {
   GraduationCap, Dumbbell,
   Trash2, Pencil, ChevronRight, ChevronDown, Plus, X, Check,
   Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link,
+  Zap, Clock,
   type LucideIcon,
 } from 'lucide-react'
 
 // ── Tipos ──────────────────────────────────────────────────────
+interface InteractionPoint {
+  id:         string
+  at_seconds: number
+  mensaje:    string
+  tipo:       'practica' | 'reflexion' | 'reto'
+}
+
 interface Recurso {
-  id: string
-  url: string
-  tipo: string
-  label: string | null
-  orden: number
+  id:            string
+  url:           string
+  tipo:          string
+  label:         string | null
+  orden:         number
+  interacciones: InteractionPoint[]
 }
 
 interface Seccion {
@@ -308,17 +317,51 @@ function InlineEdit({
   )
 }
 
+// ── Helpers para InteractionPoints ────────────────────────────
+const INTERACTION_TIPOS = ['practica', 'reflexion', 'reto'] as const
+type InteractionTipo = typeof INTERACTION_TIPOS[number]
+
+const INTERACTION_COLOR: Record<InteractionTipo, string> = {
+  practica:  '#ec488a',
+  reflexion: '#3db8fa',
+  reto:      '#ffa737',
+}
+
+const INTERACTION_EMOJI: Record<InteractionTipo, string> = {
+  practica:  '🎵',
+  reflexion: '🧘',
+  reto:      '🔥',
+}
+
+const MENSAJES_DEFAULT: Record<InteractionTipo, string> = {
+  practica:  '¡Pausa! Ahora practica lo que acabas de ver 🎵',
+  reflexion: '¿Entendiste el concepto? Tómate un momento para asimilar esto 🧘',
+  reto:      '🔥 Reto: ¿Puedes hacerlo sin ver el video?',
+}
+
+function isYouTubeUrl(url: string) {
+  return /youtube\.com|youtu\.be/.test(url)
+}
+
+function formatSeconds(s: number): string {
+  const m = Math.floor(s / 60)
+  const sec = s % 60
+  return `${m}:${String(sec).padStart(2, '0')}`
+}
+
 // ── Modal Editar/Crear Recurso ─────────────────────────────────
 function RecursoModal({
   recurso,
   seccionId,
   onSave,
   onClose,
+  authHeaders,
 }: {
   recurso?: Recurso
   seccionId: string
-  onSave: (data: { url: string; tipo: Tipo; label: string }) => Promise<void>
+  onSave: (data: { url: string; tipo: Tipo; label: string; interacciones: InteractionPoint[] }) => Promise<void>
   onClose: () => void
+  authHeaders: Record<string, string>
 }) {
   const [url,   setUrl]   = useState(recurso?.url   ?? '')
   const [tipo,  setTipo]  = useState<Tipo>((recurso?.tipo as Tipo) ?? 'video')
@@ -326,16 +369,64 @@ function RecursoModal({
   const [saving, setSaving] = useState(false)
   const [err,    setErr]    = useState<string | null>(null)
 
+  // ── Interaction points state ───────────────────────────────
+  const [interactions, setInteractions] = useState<InteractionPoint[]>(
+    recurso?.interacciones ?? []
+  )
+  const [newAt,      setNewAt]      = useState<string>('')
+  const [newMensaje, setNewMensaje] = useState<string>('')
+  const [newTipoInt, setNewTipoInt] = useState<InteractionTipo>('practica')
+  const [autoLoading, setAutoLoading] = useState(false)
+
+  const isYT   = useMemo(() => tipo === 'video' && isYouTubeUrl(url), [tipo, url])
+  const sorted = useMemo(
+    () => [...interactions].sort((a, b) => a.at_seconds - b.at_seconds),
+    [interactions]
+  )
+
+  const addInteraction = () => {
+    const secs = parseInt(newAt, 10)
+    if (!newAt || isNaN(secs) || secs < 0) return
+    const msg = newMensaje.trim() || MENSAJES_DEFAULT[newTipoInt]
+    setInteractions(prev => [
+      ...prev,
+      { id: crypto.randomUUID(), at_seconds: secs, mensaje: msg, tipo: newTipoInt },
+    ])
+    setNewAt('')
+    setNewMensaje('')
+  }
+
+  const removeInteraction = (id: string) =>
+    setInteractions(prev => prev.filter(p => p.id !== id))
+
   const handleSave = async () => {
     if (!url.trim()) { setErr('La URL es requerida'); return }
     setSaving(true)
     try {
-      await onSave({ url: url.trim(), tipo, label: label.trim() })
+      await onSave({ url: url.trim(), tipo, label: label.trim(), interacciones: interactions })
       onClose()
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'Error al guardar')
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleAutoGenerate = async () => {
+    setAutoLoading(true)
+    try {
+      const res = await fetch('/api/admin/content/recursos/auto-interact', {
+        method: 'POST',
+        headers: authHeaders,
+      })
+      const data = await res.json()
+      if (res.ok) {
+        alert(`✅ Auto-generado: ${data.updated} videos actualizados, ${data.skipped} ya tenían interacciones`)
+      } else {
+        alert(`Error: ${data.error}`)
+      }
+    } finally {
+      setAutoLoading(false)
     }
   }
 
@@ -418,6 +509,162 @@ function RecursoModal({
               }}
             />
           </div>
+
+          {/* ── Interaction Points (solo para videos YouTube) ── */}
+          {isYT && (
+            <div style={{
+              background: 'rgba(236,72,138,0.06)',
+              border: '1px solid rgba(236,72,138,0.2)',
+              borderRadius: 12, padding: 16,
+            }}>
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+                  <Zap size={14} color="#ec488a" strokeWidth={1.8} />
+                  <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#fff' }}>
+                    Interacciones del video
+                  </span>
+                  <span style={{
+                    fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.4)',
+                    background: 'rgba(255,255,255,0.07)', borderRadius: 999, padding: '2px 7px',
+                  }}>
+                    {sorted.length}
+                  </span>
+                </div>
+                {/* Auto-generar para todos */}
+                <motion.button
+                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                  onClick={handleAutoGenerate}
+                  disabled={autoLoading}
+                  style={{
+                    background: 'rgba(155,84,249,0.15)',
+                    border: '1px solid rgba(155,84,249,0.4)',
+                    borderRadius: 8, padding: '4px 10px',
+                    color: '#c084ff', fontFamily: 'var(--font-body)', fontSize: 11,
+                    cursor: autoLoading ? 'not-allowed' : 'pointer', opacity: autoLoading ? 0.6 : 1,
+                    display: 'flex', alignItems: 'center', gap: 5,
+                  }}
+                >
+                  <Zap size={11} strokeWidth={1.8} />
+                  {autoLoading ? 'Generando...' : 'Auto-generar todos'}
+                </motion.button>
+              </div>
+
+              {/* List of configured interactions */}
+              {sorted.length > 0 && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 12 }}>
+                  {sorted.map(pt => (
+                    <div key={pt.id} style={{
+                      display: 'flex', alignItems: 'center', gap: 8,
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.07)',
+                      borderRadius: 8, padding: '7px 10px',
+                    }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>
+                        {INTERACTION_EMOJI[pt.tipo as InteractionTipo] ?? '⚡'}
+                      </span>
+                      <div style={{
+                        display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0,
+                        background: `${INTERACTION_COLOR[pt.tipo as InteractionTipo]}22`,
+                        border: `1px solid ${INTERACTION_COLOR[pt.tipo as InteractionTipo]}44`,
+                        borderRadius: 6, padding: '2px 7px',
+                      }}>
+                        <Clock size={10} color={INTERACTION_COLOR[pt.tipo as InteractionTipo]} />
+                        <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 11, color: INTERACTION_COLOR[pt.tipo as InteractionTipo] }}>
+                          {formatSeconds(pt.at_seconds)}
+                        </span>
+                      </div>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.7)', flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {pt.mensaje}
+                      </span>
+                      <button
+                        onClick={() => removeInteraction(pt.id)}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,82,82,0.6)', flexShrink: 0, padding: 2 }}
+                      >
+                        <X size={12} strokeWidth={1.8} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Add new interaction */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginBottom: 2 }}>
+                  Agregar pausa interactiva:
+                </p>
+
+                {/* Tipo selector */}
+                <div style={{ display: 'flex', gap: 6 }}>
+                  {INTERACTION_TIPOS.map(t => (
+                    <button
+                      key={t}
+                      onClick={() => setNewTipoInt(t)}
+                      style={{
+                        padding: '4px 10px', borderRadius: 7,
+                        border: `1px solid ${newTipoInt === t ? INTERACTION_COLOR[t] : 'rgba(255,255,255,0.1)'}`,
+                        background: newTipoInt === t ? `${INTERACTION_COLOR[t]}20` : 'transparent',
+                        color: newTipoInt === t ? INTERACTION_COLOR[t] : 'rgba(255,255,255,0.4)',
+                        fontFamily: 'var(--font-body)', fontSize: 11, cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', gap: 4,
+                      }}
+                    >
+                      <span>{INTERACTION_EMOJI[t]}</span> {t}
+                    </button>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8 }}>
+                  {/* Tiempo mm:ss helper */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
+                    <Clock size={12} color="rgba(255,255,255,0.4)" />
+                    <input
+                      type="number"
+                      value={newAt}
+                      onChange={e => setNewAt(e.target.value)}
+                      placeholder="seg"
+                      min={0}
+                      style={{
+                        width: 68, background: 'rgba(255,255,255,0.06)',
+                        border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+                        padding: '7px 10px', color: '#fff',
+                        fontFamily: 'var(--font-body)', fontSize: 12, outline: 'none',
+                      }}
+                    />
+                    {newAt && !isNaN(parseInt(newAt)) && (
+                      <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
+                        = {formatSeconds(parseInt(newAt))}
+                      </span>
+                    )}
+                  </div>
+                  {/* Mensaje */}
+                  <input
+                    value={newMensaje}
+                    onChange={e => setNewMensaje(e.target.value)}
+                    placeholder={MENSAJES_DEFAULT[newTipoInt]}
+                    style={{
+                      flex: 1, background: 'rgba(255,255,255,0.06)',
+                      border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
+                      padding: '7px 10px', color: '#fff',
+                      fontFamily: 'var(--font-body)', fontSize: 12, outline: 'none',
+                    }}
+                  />
+                  <motion.button
+                    whileHover={{ scale: 1.08 }} whileTap={{ scale: 0.93 }}
+                    onClick={addInteraction}
+                    style={{
+                      background: 'rgba(236,72,138,0.2)',
+                      border: '1px solid rgba(236,72,138,0.4)',
+                      borderRadius: 8, padding: '7px 12px',
+                      color: '#ec488a', cursor: 'pointer', flexShrink: 0,
+                    }}
+                  >
+                    <Plus size={14} strokeWidth={1.8} />
+                  </motion.button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {err && (
             <p style={{ color: '#ff5252', fontFamily: 'var(--font-body)', fontSize: 13 }}>{err}</p>
@@ -522,16 +769,16 @@ function SeccionPanel({
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
     if (res.ok) onUpdate({ ...seccion, nombre })
-  }, [seccion, onUpdate, authHeaders])
+  }, [apiBase, seccion, onUpdate, authHeaders])
 
   const changeZona = useCallback(async (zona: string) => {
     const res = await fetch(`${apiBase}/secciones/${seccion.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ zona }),
     })
     if (res.ok) onUpdate({ ...seccion, zona: (zona || null) as Seccion['zona'] })
-  }, [seccion, onUpdate, authHeaders])
+  }, [apiBase, seccion, onUpdate, authHeaders])
 
-  const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string }) => {
+  const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string; interacciones: InteractionPoint[] }) => {
     if (editingRecurso === 'new') {
       const res = await fetch(`${apiBase}/recursos`, {
         method: 'POST', headers: authHeaders,
@@ -548,7 +795,7 @@ function SeccionPanel({
       const { recurso } = await res.json()
       onUpdate({ ...seccion, recursos: seccion.recursos.map(r => r.id === recurso.id ? recurso : r) })
     }
-  }, [editingRecurso, seccion, onUpdate, authHeaders])
+  }, [apiBase, editingRecurso, seccion, onUpdate, authHeaders])
 
   const deleteRecurso = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar este recurso?')) return
@@ -556,7 +803,7 @@ function SeccionPanel({
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) onUpdate({ ...seccion, recursos: seccion.recursos.filter(r => r.id !== id) })
-  }, [seccion, onUpdate, token])
+  }, [apiBase, seccion, onUpdate, token])
 
   return (
     <div style={{ ...glass, overflow: 'hidden', marginBottom: 6 }}>
@@ -618,6 +865,7 @@ function SeccionPanel({
           recurso={editingRecurso === 'new' ? undefined : editingRecurso}
           seccionId={seccion.id}
           onSave={handleSaveRecurso}
+          authHeaders={authHeaders}
           onClose={() => setEditingRecurso(null)}
         />
       )}
@@ -664,7 +912,7 @@ function ModuloPanel({
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
     if (res.ok) onUpdate({ ...modulo, nombre })
-  }, [modulo, onUpdate, authHeaders])
+  }, [apiBase, modulo, onUpdate, authHeaders])
 
   const addSeccion = async () => {
     if (!newSecNombre.trim()) return
@@ -693,7 +941,7 @@ function ModuloPanel({
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) onUpdate({ ...modulo, secciones: modulo.secciones.filter(s => s.id !== id) })
-  }, [modulo, onUpdate, token])
+  }, [apiBase, modulo, onUpdate, token])
 
   return (
     <div style={{
@@ -815,6 +1063,7 @@ function CursoEditor({
   const [newModNombre, setNewModNombre] = useState('')
   const [saving, setSaving] = useState(false)
   const [zonaTab, setZonaTab] = useState<'escuela' | 'gym'>('escuela')
+  const [autoLoading, setAutoLoading] = useState(false)
 
   const authHeaders = useCallback(() => ({
     Authorization: `Bearer ${token}`,
@@ -823,15 +1072,13 @@ function CursoEditor({
 
   useEffect(() => {
     let cancelled = false
-    setLoading(true)
-    setError(null)
     fetch(`${apiBase}?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => { if (!cancelled) setCurso(d.curso ?? null) })
       .catch(() => { if (!cancelled) setError('Error al cargar') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [cursoId, token])
+  }, [apiBase, cursoId, token])
 
   const addModulo = async () => {
     if (!newModNombre.trim() || !curso) return
@@ -860,7 +1107,7 @@ function CursoEditor({
       method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
     })
     if (res.ok) setCurso(c => c ? { ...c, modulos: c.modulos.filter(m => m.id !== id) } : c)
-  }, [token])
+  }, [apiBase, token])
 
   if (loading) return (
     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: 200 }}>
@@ -950,7 +1197,40 @@ function CursoEditor({
         </div>
 
         {/* Botón añadir módulo */}
-        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <motion.button
+            whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+            onClick={async () => {
+              setAutoLoading(true)
+              try {
+                const res = await fetch('/api/admin/content/recursos/auto-interact', {
+                  method: 'POST',
+                  headers: authHeaders(),
+                })
+                const data = await res.json()
+                if (res.ok) {
+                  alert(`✅ Auto-generado: ${data.updated} videos actualizados, ${data.skipped} ya tenían interacciones`)
+                } else {
+                  alert(`Error: ${data.error}`)
+                }
+              } finally {
+                setAutoLoading(false)
+              }
+            }}
+            disabled={autoLoading}
+            style={{
+              background: 'rgba(155,84,249,0.15)',
+              border: '1px solid rgba(155,84,249,0.4)',
+              borderRadius: 10, padding: '9px 18px',
+              color: '#c084ff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
+              cursor: autoLoading ? 'not-allowed' : 'pointer', opacity: autoLoading ? 0.6 : 1,
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Zap size={14} strokeWidth={1.8} />
+            {autoLoading ? 'Generando...' : 'Auto-generar interacciones YouTube'}
+          </motion.button>
+          
           <motion.button
             whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             onClick={() => setAddingModulo(true)}

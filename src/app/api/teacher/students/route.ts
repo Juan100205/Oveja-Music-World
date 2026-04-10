@@ -10,7 +10,7 @@ export async function GET(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  let query = db
+  const query = db
     .from('users')
     .select('id, email, nombre, nivel, puntos, cursos_acceso, created_at')
     .eq('role', 'student')

@@ -41,12 +41,18 @@ export function useProgress() {
           },
           body: JSON.stringify({ url, tipo }),
         })
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({ error: res.statusText }))
+          console.error('[useProgress] API error:', res.status, err)
+          return null
+        }
         const data: CompleteResult = await res.json()
         if (!data.ya_completado) {
           setCompleted(prev => new Set([...prev, url]))
         }
         return data
-      } catch {
+      } catch (err) {
+        console.error('[useProgress] completeResource failed:', err)
         return null
       }
     },

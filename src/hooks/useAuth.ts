@@ -13,6 +13,7 @@ interface AuthState {
 interface UseAuthReturn extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
   logout: () => void
+  updateUser: (patch: Partial<Omit<User, 'password_hash'>>) => void
   isAuthenticated: boolean
 }
 
@@ -76,10 +77,20 @@ export function useAuth(): UseAuthReturn {
     setState({ user: null, token: null, loading: false, error: null })
   }, [])
 
+  const updateUser = useCallback((patch: Partial<Omit<User, 'password_hash'>>) => {
+    setState(prev => {
+      if (!prev.user) return prev
+      const updated = { ...prev.user, ...patch }
+      localStorage.setItem('user', JSON.stringify(updated))
+      return { ...prev, user: updated }
+    })
+  }, [])
+
   return {
     ...state,
     login,
     logout,
+    updateUser,
     isAuthenticated: !!state.token && !!state.user,
   }
 }

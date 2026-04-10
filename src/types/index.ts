@@ -53,6 +53,16 @@ export interface JWTPayload {
   exp?: number
 }
 
+// --- Video Interactions ---
+export type InteractionTipo = 'practica' | 'reflexion' | 'reto'
+
+export interface InteractionPoint {
+  id: string             // client-generated uuid, used for list key/delete
+  at_seconds: number     // seconds from video start to trigger pause
+  mensaje: string        // text shown in the overlay
+  tipo: InteractionTipo  // visual variant
+}
+
 // --- Gamification ---
 export interface LevelConfig {
   nivel: number

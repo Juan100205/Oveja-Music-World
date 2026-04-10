@@ -10,7 +10,12 @@ import { CLASES_CONFIG } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Seccion, Recurso } from '@/data/cursos'
 import { useProgress } from '@/hooks/useProgress'
+import { useAuth } from '@/hooks/useAuth'
 import { PUNTOS_POR_TIPO } from '@/types'
+import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
+import { useYouTubePlayer } from '@/hooks/useYouTubePlayer'
+import { InteractionOverlay } from '@/components/video/InteractionOverlay'
+import type { InteractionPoint } from '@/types'
 
 const SCENE_CLASSROOM = 'https://prod.spline.design/646pGt79P6qgQp6p/scene.splinecode'
 
@@ -333,6 +338,7 @@ export default function ModuloPage() {
   const router = useRouter()
 
   const { isCompleted, completeResource } = useProgress()
+  const { user, updateUser } = useAuth()
 
   const [isInClass,     setIsInClass]     = useState(false)
   const [isOutingClass, setIsOutingClass] = useState(false)
@@ -344,36 +350,59 @@ export default function ModuloPage() {
   const [toast, setToast] = useState<{ pts: number; subioNivel: boolean; id: number } | null>(null)
   const toastCountRef = useRef(0)
 
-  const videoActivoRef = useRef(videoActivo)
-  useEffect(() => { videoActivoRef.current = videoActivo }, [videoActivo])
+  // ── Interacciones YouTube (cargadas desde API) ─────────────────
+  const [interacciones, setInteracciones] = useState<InteractionPoint[]>([])
+  const [loadingInteracciones, setLoadingInteracciones] = useState(false)
 
-  // Detectar fin de video YouTube via postMessage
-  useEffect(() => {
-    const handler = (event: MessageEvent) => {
-      if (!['https://www.youtube.com', 'https://www.youtube-nocookie.com'].includes(event.origin)) return
-      try {
-        const data = JSON.parse(event.data)
-        if (data.event === 'onStateChange' && data.info === 0) {
-          const current = videoActivoRef.current
-          if (!current) return
-          completeResource(current.url, 'video').then(result => {
-            if (result && !result.ya_completado) {
-              setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-            }
-          })
-        }
-      } catch {}
+  const ytIdActivo = videoActivo ? getYouTubeId(videoActivo.url) : null
+  const openVideo = useCallback(async (url: string, label?: string) => {
+    setVideoActivo({ url, label })
+    setLoadingInteracciones(true)
+    try {
+      const res = await fetch(`/api/content/interactions?url=${encodeURIComponent(url)}`)
+      const data = await res.json()
+      setInteracciones(Array.isArray(data?.interacciones) ? data.interacciones : [])
+    } catch {
+      setInteracciones([])
+    } finally {
+      setLoadingInteracciones(false)
     }
-    window.addEventListener('message', handler)
-    return () => window.removeEventListener('message', handler)
-  }, [completeResource])
+  }, [])
+
+  const closeVideo = useCallback(() => {
+    setVideoActivo(null)
+    setInteracciones([])
+    setLoadingInteracciones(false)
+  }, [])
+
+  const {
+    containerRef,
+    playerReady,
+    interactionPending,
+    dismissInteraction,
+    setOnVideoEnded,
+  } = useYouTubePlayer(ytIdActivo, interacciones)
+
+  useEffect(() => {
+    if (!videoActivo?.url) return
+    setOnVideoEnded(() => {
+      completeResource(videoActivo.url, 'video').then(result => {
+        if (result && !result.ya_completado) {
+          setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+          if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+        }
+      })
+    })
+    return () => setOnVideoEnded(null)
+  }, [videoActivo?.url, completeResource, updateUser, setOnVideoEnded])
 
   const handleOpenResource = useCallback(async (url: string, tipo: string) => {
     const result = await completeResource(url, tipo)
     if (result && !result.ya_completado) {
       setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+      if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
     }
-  }, [completeResource])
+  }, [completeResource, updateUser])
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
@@ -391,6 +420,14 @@ export default function ModuloPage() {
     <main style={{ width: '100vw', height: '100vh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
       <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
+
+      {/* ── Panel de progreso de nivel ── */}
+      <LevelProgressPanel
+        puntos={user?.puntos ?? 0}
+        nivel={user?.nivel ?? 1}
+        modulo={modulo ?? null}
+        isCompleted={isCompleted}
+      />
 
       {/* ── Botón fijo ← Mapa ── */}
       <motion.button
@@ -612,7 +649,7 @@ export default function ModuloPage() {
                             recurso={recurso}
                             ytId={ytId}
                             completed={isCompleted(recurso.url)}
-                            onClick={() => setVideoActivo({ url: recurso.url, label: recurso.label })}
+                            onClick={() => openVideo(recurso.url, recurso.label)}
                           />
                         )
                       }
@@ -737,7 +774,7 @@ export default function ModuloPage() {
             <motion.div key="video-backdrop"
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               transition={{ duration: 0.25 }}
-              onClick={() => setVideoActivo(null)}
+              onClick={closeVideo}
               className="absolute inset-0 z-50"
               style={{ background: 'rgba(5,5,18,0.92)', backdropFilter: 'blur(16px)' }}
             />
@@ -757,20 +794,60 @@ export default function ModuloPage() {
                     </p>
                   )}
                   <motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
-                    onClick={() => setVideoActivo(null)}
+                    onClick={closeVideo}
                     className="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                     style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}>
                     <X size={14} strokeWidth={1.5} />
                   </motion.button>
                 </div>
-                <div className="w-full rounded-3xl overflow-hidden"
+                <div className="w-full rounded-3xl overflow-hidden relative"
                   style={{ aspectRatio: '16/9', boxShadow: '0 0 80px rgba(236,72,138,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <iframe
-                    src={`https://www.youtube-nocookie.com/embed/${getYouTubeId(videoActivo.url)}?autoplay=1&rel=0&enablejsapi=1&origin=${encodeURIComponent(window.location.origin)}`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen className="w-full h-full" style={{ border: 'none', display: 'block' }}
-                  />
+                  <div ref={containerRef} className="w-full h-full" />
+                  <InteractionOverlay interaction={interactionPending} onContinue={dismissInteraction} />
                 </div>
+
+                {/* Marcar como visto — fallback manual cuando el video no dispara el evento de fin */}
+                {!isCompleted(videoActivo.url) ? (
+                  <motion.button
+                    whileHover={{ scale: 1.04 }}
+                    whileTap={{ scale: 0.96 }}
+                    onClick={async () => {
+                      const result = await completeResource(videoActivo.url, 'video')
+                      if (result && !result.ya_completado) {
+                        setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+                        if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+                      }
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl cursor-pointer"
+                    style={{
+                      background: 'rgba(52,211,153,0.1)',
+                      border: '1px solid rgba(52,211,153,0.3)',
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(52,211,153,0.9)',
+                    }}
+                  >
+                    <span>✓</span>
+                    <span>Marcar como visto · +{PUNTOS_POR_TIPO.video} pts</span>
+                  </motion.button>
+                ) : (
+                  <div className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl"
+                    style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}>
+                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(52,211,153,0.6)' }}>
+                      ✓ Video completado
+                    </span>
+                  </div>
+                )}
+
+                {/* Estado player / interacciones (micro UI) */}
+                {ytIdActivo && (
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                      {playerReady ? 'Player listo' : 'Cargando player...'}
+                    </span>
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
+                      {loadingInteracciones ? 'Cargando interacciones...' : `${interacciones.length} interacciones`}
+                    </span>
+                  </div>
+                )}
               </div>
             </motion.div>
           </>

@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const cursoId = req.nextUrl.searchParams.get('id')
 
   if (!cursoId) {
-    let query = db.from('cursos').select('id, nombre, emoji, orden').order('orden')
+    const query = db.from('cursos').select('id, nombre, emoji, orden').order('orden')
     const { data, error } = await query
     if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 

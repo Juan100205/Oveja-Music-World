@@ -18,9 +18,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const body = await req.json()
 
   const updates: Record<string, unknown> = {}
-  if (body.url  !== undefined) updates.url   = body.url.trim()
-  if (body.tipo !== undefined) updates.tipo  = body.tipo
-  if (body.label !== undefined) updates.label = body.label?.trim() || null
+  if (body.url          !== undefined) updates.url          = body.url.trim()
+  if (body.tipo         !== undefined) updates.tipo         = body.tipo
+  if (body.label        !== undefined) updates.label        = body.label?.trim() || null
+  if (body.interacciones !== undefined) updates.interacciones = Array.isArray(body.interacciones)
+    ? body.interacciones
+    : []
 
   if (Object.keys(updates).length === 0)
     return NextResponse.json({ error: 'Nada que actualizar' }, { status: 400 })
