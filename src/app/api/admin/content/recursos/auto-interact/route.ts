@@ -1,4 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { fetchTranscript } from 'youtube-transcript'
+import { extractYoutubeId } from '@/lib/youtube'
+import {
+  computeInteractionTimestampsFromTranscriptSegments,
+  fallbackInteractionTimestamps,
+} from '@/lib/youtube-silence-interactions'
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import type { InteractionPoint, InteractionTipo } from '@/types'
@@ -14,7 +20,6 @@ function isYouTubeUrl(url: string): boolean {
   return /youtube\.com|youtu\.be/.test(url)
 }
 
-// Pool of messages per type
 const MENSAJES: Record<InteractionTipo, string[]> = {
   practica: [
     '¡Pausa! Ahora practica lo que acabas de ver 🎵',
@@ -40,11 +45,9 @@ function pickRandom<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)]
 }
 
-function generateInteracciones(): InteractionPoint[] {
+function mapTimesToInteractions(timestamps: number[]): InteractionPoint[] {
   const tipos: InteractionTipo[] = ['practica', 'reflexion', 'reto']
-  const tiempos = [55, 150]   // ~1 min y ~2.5 min — seguros para videos cortos
-
-  return tiempos.map((at_seconds, i) => ({
+  return timestamps.map((at_seconds, i) => ({
     id:         crypto.randomUUID(),
     at_seconds,
     tipo:       tipos[i % tipos.length],
@@ -52,14 +55,49 @@ function generateInteracciones(): InteractionPoint[] {
   }))
 }
 
+/**
+ * Usa subtítulos de YouTube: los huecos largos entre líneas ≈ pausas / silencio / solo música.
+ */
+async function buildInteraccionesForVideoUrl(url: string): Promise<InteractionPoint[]> {
+  const vid = extractYoutubeId(url)
+  if (!vid) {
+    return mapTimesToInteractions(fallbackInteractionTimestamps())
+  }
+
+  let segments: Array<{ offset: number; duration: number }> | null = null
+  try {
+    segments = await fetchTranscript(vid, { lang: 'es' })
+  } catch {
+    try {
+      segments = await fetchTranscript(vid)
+    } catch {
+      segments = null
+    }
+  }
+
+  if (!segments?.length) {
+    return mapTimesToInteractions(fallbackInteractionTimestamps())
+  }
+
+  const times = computeInteractionTimestampsFromTranscriptSegments(segments)
+  if (times.length === 0) {
+    return mapTimesToInteractions(fallbackInteractionTimestamps())
+  }
+
+  return mapTimesToInteractions(times)
+}
+
+function delay(ms: number): Promise<void> {
+  return new Promise(r => setTimeout(r, ms))
+}
+
 // POST /api/admin/content/recursos/auto-interact
-// Assigns random interactions to all YouTube videos that have none yet.
+// Rellena interacciones en videos YouTube sin interacciones, usando huecos largos en subtítulos.
 export async function POST(req: NextRequest) {
   if (!adminGuard(req)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const db = getSupabaseAdmin()
 
-  // Fetch all video-type recursos with empty/null interacciones
   const { data: recursos, error } = await db
     .from('recursos')
     .select('id, url, interacciones')
@@ -78,15 +116,20 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ updated: 0, skipped: (recursos ?? []).length })
   }
 
-  // Bulk update — one by one (Supabase doesn't support bulk JSONB update easily)
   let updated = 0
-  for (const recurso of targets) {
-    const { error: upErr } = await db
-      .from('recursos')
-      .update({ interacciones: generateInteracciones() })
-      .eq('id', recurso.id)
-
-    if (!upErr) updated++
+  for (let i = 0; i < targets.length; i++) {
+    const recurso = targets[i]
+    try {
+      const interacciones = await buildInteraccionesForVideoUrl(recurso.url)
+      const { error: upErr } = await db
+        .from('recursos')
+        .update({ interacciones })
+        .eq('id', recurso.id)
+      if (!upErr) updated++
+    } catch {
+      // siguiente recurso
+    }
+    if (i < targets.length - 1) await delay(120)
   }
 
   return NextResponse.json({

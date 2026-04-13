@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
 import { LEVEL_CONFIG } from '@/types'
 import { calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
 import type { Modulo } from '@/data/cursos'
+import { useAuth } from '@/hooks/useAuth'
 
 // ── Badge config per level ────────────────────────────────────────
 const BADGE: {
@@ -22,6 +23,18 @@ const BADGE: {
   { emoji: '👑', color: 'rgba(155,84,249,0.15)',  border: 'rgba(155,84,249,0.45)',  glow: 'rgba(155,84,249,0.35)',  label: 'Maestro'      },
 ]
 
+interface RankingEntry {
+  posicion: number
+  id: string
+  nombre: string
+  puntos: number
+  nivel: number
+  es_yo: boolean
+}
+
+const NIVEL_LABELS = ['', 'Principiante', 'Aprendiz', 'Intermedio', 'Avanzado', 'Maestro']
+const NIVEL_COLORS = ['', 'rgba(52,211,153,0.9)', 'rgba(251,191,36,0.9)', 'rgba(61,184,250,0.9)', 'rgba(255,167,55,0.9)', 'rgba(155,84,249,0.9)']
+
 interface Props {
   puntos: number
   nivel: number
@@ -30,7 +43,37 @@ interface Props {
 }
 
 export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props) {
-  const [open, setOpen] = useState(false)
+  const { token } = useAuth()
+  const [open, setOpen]           = useState(false)
+  const [tab, setTab]             = useState<'progreso' | 'ranking'>('progreso')
+  const [ranking, setRanking]     = useState<RankingEntry[]>([])
+  const [rankLoading, setRankLoading] = useState(false)
+  const [rankError, setRankError] = useState<string | null>(null)
+
+  const fetchRanking = useCallback(async () => {
+    if (!token) return
+    setRankLoading(true)
+    setRankError(null)
+    try {
+      const res = await fetch('/api/ranking', {
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error')
+      setRanking(data.ranking ?? [])
+    } catch (e) {
+      setRankError(e instanceof Error ? e.message : 'Error al cargar ranking')
+    } finally {
+      setRankLoading(false)
+    }
+  }, [token])
+
+  // Cargar ranking cuando se cambia al tab
+  useEffect(() => {
+    if (open && tab === 'ranking' && ranking.length === 0 && !rankLoading) {
+      fetchRanking()
+    }
+  }, [open, tab, ranking.length, rankLoading, fetchRanking])
 
   const idx           = Math.max(0, Math.min(nivel - 1, BADGE.length - 1))
   const badge         = BADGE[idx]
@@ -116,12 +159,12 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
                 style={{ background: 'rgba(255,255,255,0.18)' }} />
 
               {/* Header row */}
-              <div className="flex items-center justify-between mb-5">
+              <div className="flex items-center justify-between mb-4">
                 <h2 style={{
                   fontFamily: 'var(--font-display)', fontWeight: 700,
                   fontSize: 18, color: '#fff',
                 }}>
-                  Mi Progreso
+                  {tab === 'progreso' ? 'Mi Progreso' : '🏆 Ranking'}
                 </h2>
                 <motion.button
                   whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
@@ -132,6 +175,30 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
                   <X size={13} strokeWidth={1.8} />
                 </motion.button>
               </div>
+
+              {/* Tabs */}
+              <div className="flex gap-2 mb-5">
+                {(['progreso', 'ranking'] as const).map(t => (
+                  <button
+                    key={t}
+                    onClick={() => setTab(t)}
+                    style={{
+                      padding: '6px 16px', borderRadius: 999, border: 'none', cursor: 'pointer',
+                      fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12,
+                      background: tab === t ? 'rgba(236,72,138,0.18)' : 'rgba(255,255,255,0.06)',
+                      color: tab === t ? '#ec488a' : 'rgba(255,255,255,0.4)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {t === 'progreso' ? '📊 Progreso' : '🏆 Ranking'}
+                  </button>
+                ))}
+              </div>
+
+              {/* ══════════════════════════════════════════
+                  TAB: PROGRESO
+              ══════════════════════════════════════════ */}
+              {tab === 'progreso' && (<>
 
               {/* ── Current level card ─────────────────────── */}
               <div className="rounded-2xl p-4 mb-5"
@@ -355,6 +422,125 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
                   })}
                 </div>
               </div>
+
+              </>)}
+
+              {/* ══════════════════════════════════════════
+                  TAB: RANKING
+              ══════════════════════════════════════════ */}
+              {tab === 'ranking' && (
+                <div>
+                  {rankLoading && (
+                    <div style={{ display: 'flex', justifyContent: 'center', padding: '40px 0' }}>
+                      <div style={{
+                        width: 30, height: 30, borderRadius: '50%',
+                        border: '3px solid rgba(236,72,138,0.25)',
+                        borderTopColor: '#ec488a',
+                        animation: 'spin 0.8s linear infinite',
+                      }} />
+                    </div>
+                  )}
+
+                  {rankError && (
+                    <div style={{ textAlign: 'center', padding: '32px 0' }}>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,82,82,0.8)', marginBottom: 12 }}>
+                        {rankError}
+                      </p>
+                      <button
+                        onClick={fetchRanking}
+                        style={{
+                          padding: '7px 18px', borderRadius: 999, border: '1px solid rgba(236,72,138,0.3)',
+                          background: 'rgba(236,72,138,0.1)', color: '#ec488a',
+                          fontFamily: 'var(--font-body)', fontSize: 12, cursor: 'pointer',
+                        }}
+                      >
+                        Reintentar
+                      </button>
+                    </div>
+                  )}
+
+                  {!rankLoading && !rankError && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {ranking.map((entry, i) => {
+                        const nivelColor = NIVEL_COLORS[entry.nivel] ?? 'rgba(255,255,255,0.5)'
+                        const medalEmoji = entry.posicion === 1 ? '🥇' : entry.posicion === 2 ? '🥈' : entry.posicion === 3 ? '🥉' : null
+                        return (
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: i * 0.03 }}
+                            style={{
+                              display: 'flex', alignItems: 'center', gap: 12,
+                              padding: '10px 14px', borderRadius: 14,
+                              background: entry.es_yo
+                                ? 'rgba(236,72,138,0.12)'
+                                : 'rgba(255,255,255,0.04)',
+                              border: `1px solid ${entry.es_yo ? 'rgba(236,72,138,0.35)' : 'rgba(255,255,255,0.07)'}`,
+                              boxShadow: entry.es_yo ? '0 0 16px rgba(236,72,138,0.15)' : 'none',
+                            }}
+                          >
+                            {/* Posición */}
+                            <div style={{
+                              width: 28, textAlign: 'center', flexShrink: 0,
+                              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+                            }}>
+                              {medalEmoji ?? (
+                                <span style={{ color: 'rgba(255,255,255,0.3)', fontSize: 12 }}>
+                                  {entry.posicion}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Nombre + nivel */}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <p style={{
+                                fontFamily: 'var(--font-display)', fontWeight: entry.es_yo ? 700 : 500,
+                                fontSize: 13, color: entry.es_yo ? '#ec488a' : '#fff',
+                                margin: 0, lineHeight: 1.2,
+                                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+                              }}>
+                                {entry.nombre}{entry.es_yo ? ' (tú)' : ''}
+                              </p>
+                              <span style={{
+                                fontFamily: 'var(--font-body)', fontSize: 10,
+                                color: nivelColor,
+                              }}>
+                                {NIVEL_LABELS[entry.nivel] ?? `Nivel ${entry.nivel}`}
+                              </span>
+                            </div>
+
+                            {/* Puntos */}
+                            <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                              <p style={{
+                                fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                                color: entry.es_yo ? '#ec488a' : '#fff', margin: 0,
+                              }}>
+                                {entry.puntos.toLocaleString()}
+                              </p>
+                              <p style={{
+                                fontFamily: 'var(--font-body)', fontSize: 10,
+                                color: 'rgba(255,255,255,0.3)', margin: 0,
+                              }}>pts</p>
+                            </div>
+                          </motion.div>
+                        )
+                      })}
+
+                      {ranking.length === 0 && (
+                        <p style={{
+                          textAlign: 'center', padding: '40px 0',
+                          fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.3)',
+                        }}>
+                          No hay datos de ranking todavía
+                        </p>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </motion.div>
           </>
         )}

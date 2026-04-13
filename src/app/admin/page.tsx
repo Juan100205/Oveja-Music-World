@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2 } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 
@@ -20,6 +20,30 @@ interface AdminUser {
   created_at: string
 }
 
+// ── Tipos y constantes de instrumentos ────────────────────────
+interface Instrumento {
+  id: string; nombre: string; emoji: string; descripcion: string | null
+  color: string; glow: string; zona: string; curso_id: string | null
+  orden: number; activo: boolean
+}
+
+const COLOR_PRESETS = [
+  { color: '#ec488a', glow: 'rgba(236,72,138,0.4)',  label: 'Rosa'     },
+  { color: '#3db8fa', glow: 'rgba(61,184,250,0.4)',   label: 'Azul'     },
+  { color: '#9b54f9', glow: 'rgba(155,84,249,0.4)',   label: 'Púrpura'  },
+  { color: '#ffa737', glow: 'rgba(255,167,55,0.4)',   label: 'Naranja'  },
+  { color: '#34d399', glow: 'rgba(52,211,153,0.4)',   label: 'Verde'    },
+  { color: '#f43f5e', glow: 'rgba(244,63,94,0.4)',    label: 'Rojo'     },
+  { color: '#facc15', glow: 'rgba(250,204,21,0.4)',   label: 'Amarillo' },
+  { color: '#64748b', glow: 'rgba(100,116,139,0.4)',  label: 'Gris'     },
+]
+
+const EMPTY_INSTR_FORM = {
+  nombre: '', emoji: '🎵', descripcion: '', color: '#ec488a',
+  glow: 'rgba(236,72,138,0.4)', zona: 'clase', curso_id: '',
+  crear_curso_vacio: true,
+}
+
 // ── Mapa de cursos disponibles ─────────────────────────────────
 const CURSOS_MAP = [
   { cursoId: 'piano',          claseId: 'piano',        label: 'Piano',      emoji: '🎹', color: '#ec488a' },
@@ -28,6 +52,7 @@ const CURSOS_MAP = [
   { cursoId: 'violin',         claseId: 'violin',       label: 'Violín',     emoji: '🎻', color: '#9b54f9' },
   { cursoId: 'ciudad-musical', claseId: 'introduccion', label: 'Iniciación', emoji: '🎵', color: '#3db8fa' },
   { cursoId: 'canto',          claseId: 'canto',        label: 'Canto',      emoji: '🎤', color: '#ffa737' },
+  { cursoId: 'ukelele',        claseId: 'ukelele',      label: 'Ukelele',    emoji: '🎶', color: '#34d399' },
 ]
 
 const ROLES = [
@@ -95,7 +120,7 @@ export default function AdminPage() {
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
 
-  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido'>('usuarios')
+  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido' | 'instrumentos'>('usuarios')
   const [users,      setUsers]      = useState<AdminUser[]>([])
   const [fetching,   setFetching]   = useState(true)
   const [saving,     setSaving]     = useState<string | null>(null)
@@ -103,6 +128,92 @@ export default function AdminPage() {
   const [deleteId,   setDeleteId]   = useState<string | null>(null)
   const [error,      setError]      = useState<string | null>(null)
   const [showLogout, setShowLogout] = useState(false)
+
+  // ── Instrumentos ───────────────────────────────────────────
+  const [instrumentos,    setInstrumentos]    = useState<Instrumento[]>([])
+  const [fetchingInstrs,  setFetchingInstrs]  = useState(false)
+  const [hasFetchedInstrs,setHasFetchedInstrs]= useState(false)   // ← evita loop infinito con tabla vacía
+  const [showNewInstr,    setShowNewInstr]    = useState(false)
+  const [instrForm,       setInstrForm]       = useState(EMPTY_INSTR_FORM)
+  const [creatingInstr,   setCreatingInstr]   = useState(false)
+  const [instrFormError,  setInstrFormError]  = useState<string | null>(null)
+  const [instrToDelete, setInstrToDelete] = useState<Instrumento | null>(null)
+  const [confirmDeleteText, setConfirmDeleteText] = useState('')
+
+  const fetchInstrumentos = useCallback(async () => {
+    if (!token) return
+    setFetchingInstrs(true)
+    try {
+      const res = await fetch('/api/admin/instrumentos', { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (res.ok) setInstrumentos(data.instrumentos ?? [])
+    } catch { /* ignore */ }
+    finally {
+      setFetchingInstrs(false)
+      setHasFetchedInstrs(true)   // marcar como cargado aunque esté vacío
+    }
+  }, [token])
+
+  // Cargar instrumentos al autenticarse (necesario para CURSOS_MAP dinámico en la pestaña usuarios)
+  // hasFetchedInstrs evita recargas innecesarias
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin' && !hasFetchedInstrs && !fetchingInstrs) {
+      fetchInstrumentos()
+    }
+  }, [isAuthenticated, user, hasFetchedInstrs, fetchingInstrs, fetchInstrumentos])
+
+  const handleCreateInstr = async () => {
+    setInstrFormError(null)
+    if (!instrForm.nombre.trim()) { setInstrFormError('El nombre es requerido'); return }
+    setCreatingInstr(true)
+    try {
+      const res = await fetch('/api/admin/instrumentos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({
+          nombre:      instrForm.nombre,
+          emoji:       instrForm.emoji || '🎵',
+          descripcion: instrForm.descripcion || null,
+          color:       instrForm.color,
+          glow:        instrForm.glow,
+          zona:        instrForm.zona,
+          curso_id:    instrForm.curso_id || null,
+          crear_curso_vacio: instrForm.crear_curso_vacio,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setInstrFormError(data.error); return }
+      setInstrumentos(prev => [...prev, data.instrumento])
+      setShowNewInstr(false)
+      setInstrForm(EMPTY_INSTR_FORM)
+    } catch { setInstrFormError('Error de conexión') }
+    finally { setCreatingInstr(false) }
+  }
+
+  const handleDeleteInstr = async () => {
+    if (!instrToDelete) return
+    if (confirmDeleteText !== instrToDelete.nombre) {
+      setError('El nombre no coincide')
+      return
+    }
+    try {
+      const res = await fetch(`/api/admin/instrumentos/${instrToDelete.id}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setInstrumentos(prev => prev.filter(i => i.id !== instrToDelete.id))
+        setInstrToDelete(null)
+        setConfirmDeleteText('')
+      }
+      else setError('Error al eliminar instrumento')
+    } catch { setError('Error de conexión') }
+  }
+
+  const cancelDeleteInstr = () => {
+    setInstrToDelete(null)
+    setConfirmDeleteText('')
+  }
 
   // ── Form crear usuario ─────────────────────────────────────
   const emptyForm = { nombre: '', email: '', password: '', role: 'student', cursos: [] as string[] }
@@ -138,6 +249,12 @@ export default function AdminPage() {
   useEffect(() => {
     if (isAuthenticated && user?.role === 'admin') fetchUsers()
   }, [isAuthenticated, user, fetchUsers])
+
+  // ── Mapa de cursos activo (estáticos + dinámicos de DB) ───────
+  const dynCursosMap = instrumentos
+    .filter(i => !CURSOS_MAP.some(c => c.claseId === i.id))
+    .map(i => ({ cursoId: i.curso_id ?? i.id, claseId: i.id, label: i.nombre, emoji: i.emoji, color: i.color }))
+  const activeCursosMap = [...CURSOS_MAP, ...dynCursosMap]
 
   // ── Toggle curso ───────────────────────────────────────────
   const toggleCurso = useCallback(async (userId: string, cursoId: string, claseId: string) => {
@@ -209,7 +326,7 @@ export default function AdminPage() {
     if (form.password.length < 6) { setFormError('La contraseña debe tener al menos 6 caracteres'); return }
 
     const cursos_acceso = form.cursos
-    const clases_acceso = CURSOS_MAP.filter(c => form.cursos.includes(c.cursoId)).map(c => c.claseId)
+    const clases_acceso = activeCursosMap.filter(c => form.cursos.includes(c.cursoId)).map(c => c.claseId)
 
     setCreating(true)
     try {
@@ -282,7 +399,7 @@ export default function AdminPage() {
               Panel Admin
             </h1>
             <p className="admin-subtitle" style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {activeTab === 'usuarios' ? `${users.length} usuarios` : 'Gestión de contenido'}
+              {activeTab === 'usuarios' ? `${users.length} usuarios` : activeTab === 'contenido' ? 'Gestión de contenido' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
@@ -294,7 +411,7 @@ export default function AdminPage() {
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 12, padding: 4,
         }}>
-          {(['usuarios', 'contenido'] as const).map(tab => (
+          {(['usuarios', 'contenido', 'instrumentos'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -309,9 +426,9 @@ export default function AdminPage() {
                 display: 'flex', alignItems: 'center', gap: 6,
               }}
             >
-              {tab === 'usuarios'
-                ? <><Users size={14} strokeWidth={1.5} /> Usuarios</>
-                : <><BookOpen size={14} strokeWidth={1.5} /> Contenido</>
+              {tab === 'usuarios'     ? <><Users    size={14} strokeWidth={1.5} /> Usuarios</>
+             : tab === 'contenido'   ? <><BookOpen  size={14} strokeWidth={1.5} /> Contenido</>
+             :                         <><Music     size={14} strokeWidth={1.5} /> Instrumentos</>
               }
             </button>
           ))}
@@ -334,6 +451,25 @@ export default function AdminPage() {
             }}
           >
             <UserPlus size={14} strokeWidth={1.5} /> <span className="admin-new-label">Nuevo usuario</span>
+          </motion.button>
+          )}
+
+          {activeTab === 'instrumentos' && (
+          <motion.button
+            whileHover={{ scale: 1.04, boxShadow: '0 0 32px rgba(155,84,249,0.5)' }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => { setShowNewInstr(true); setInstrFormError(null); setInstrForm(EMPTY_INSTR_FORM) }}
+            style={{
+              background: 'linear-gradient(135deg, #9b54f9, #3db8fa)',
+              border: 'none', borderRadius: 999,
+              padding: '9px 16px',
+              color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700,
+              fontSize: 13, cursor: 'pointer',
+              boxShadow: '0 0 20px rgba(155,84,249,0.35)',
+              display: 'flex', alignItems: 'center', gap: 6,
+            }}
+          >
+            <Music size={14} strokeWidth={1.5} /> <span className="admin-new-label">Nuevo instrumento</span>
           </motion.button>
           )}
 
@@ -388,6 +524,340 @@ export default function AdminPage() {
       {activeTab === 'contenido' && token && (
         <ContentManager token={token} />
       )}
+
+      {/* ── Tab: Instrumentos ────────────────────────────────── */}
+      {activeTab === 'instrumentos' && (
+        <div style={{ padding: '24px 20px', maxWidth: 860, margin: '0 auto' }}>
+
+          {fetchingInstrs ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
+              Cargando instrumentos...
+            </div>
+          ) : instrumentos.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px 0' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>🎵</div>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                No hay instrumentos registrados todavía.
+              </p>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
+                Usa el botón &quot;Nuevo instrumento&quot; para agregar.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {instrumentos.map(inst => (
+                <motion.div
+                  key={inst.id}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 14,
+                    padding: '14px 18px', borderRadius: 14,
+                    background: 'rgba(255,255,255,0.03)',
+                    border: `1px solid ${inst.color}33`,
+                  }}
+                >
+                  {/* Emoji + color dot */}
+                  <div style={{
+                    width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+                    background: `${inst.color}18`,
+                    border: `1px solid ${inst.color}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 22,
+                  }}>
+                    {inst.emoji}
+                  </div>
+
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', margin: 0 }}>
+                        {inst.nombre}
+                      </p>
+                      <span style={{
+                        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontFamily: 'var(--font-body)',
+                        background: inst.zona === 'clase' ? 'rgba(61,184,250,0.15)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.15)' : 'rgba(255,255,255,0.08)',
+                        color: inst.zona === 'clase' ? '#3db8fa' : inst.zona === 'gym' ? '#c084ff' : 'rgba(255,255,255,0.5)',
+                        border: `1px solid ${inst.zona === 'clase' ? 'rgba(61,184,250,0.3)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                      }}>
+                        {inst.zona === 'clase' ? '🏫 Clase' : inst.zona === 'gym' ? '🏋️ Gym' : '↔ Ambos'}
+                      </span>
+                      {inst.curso_id && (
+                        <span style={{ fontSize: 10, fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.3)' }}>
+                          → curso: {inst.curso_id}
+                        </span>
+                      )}
+                    </div>
+                    {inst.descripcion && (
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
+                        {inst.descripcion}
+                      </p>
+                    )}
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.2)', margin: '3px 0 0' }}>
+                      id: {inst.id}
+                    </p>
+                  </div>
+
+                  {/* Color swatch */}
+                  <div style={{
+                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
+                    background: inst.color, boxShadow: `0 0 8px ${inst.glow}`,
+                  }} />
+
+                  {/* Delete */}
+                  <motion.button
+                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                    onClick={() => setInstrToDelete(inst)}
+                    style={{
+                      width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                      background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
+                      color: 'rgba(255,82,82,0.7)', cursor: 'pointer',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    }}
+                  >
+                    <Trash2 size={13} strokeWidth={1.5} />
+                  </motion.button>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Modal: Nuevo Instrumento ──────────────────────────── */}
+      <AnimatePresence>
+        {showNewInstr && (
+          <>
+            <motion.div
+              key="instr-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => setShowNewInstr(false)}
+              style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'rgba(5,5,18,0.85)', backdropFilter: 'blur(12px)' }}
+            />
+            <motion.div
+              key="instr-modal"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
+              className="fixed inset-0 m-auto h-fit z-[101]"
+              style={{
+                width: 'min(480px, 90vw)',
+                background: 'rgba(12,12,28,0.99)',
+                border: '1px solid rgba(155,84,249,0.25)',
+                borderRadius: 20, padding: '28px 24px',
+                boxShadow: '0 0 60px rgba(155,84,249,0.2)',
+                maxHeight: '92vh', overflowY: 'auto',
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', margin: 0 }}>
+                  🎵 Nuevo Instrumento
+                </h2>
+                <button onClick={() => setShowNewInstr(false)} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', display: 'flex', alignItems: 'center' }}>
+                  <X size={18} strokeWidth={1.5} />
+                </button>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+                {/* Nombre */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+                    Nombre <span style={{ color: '#ec488a' }}>*</span>
+                  </label>
+                  <input
+                    value={instrForm.nombre}
+                    onChange={e => setInstrForm(f => ({ ...f, nombre: e.target.value }))}
+                    placeholder="Ej: Ukulele, Saxofón, Flauta..."
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 12, boxSizing: 'border-box',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14, outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Emoji */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+                    Emoji
+                  </label>
+                  <input
+                    value={instrForm.emoji}
+                    onChange={e => setInstrForm(f => ({ ...f, emoji: e.target.value }))}
+                    placeholder="🎵"
+                    style={{
+                      width: 80, padding: '10px 14px', borderRadius: 12, textAlign: 'center',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#fff', fontFamily: 'var(--font-body)', fontSize: 22, outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Descripción */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+                    Descripción corta
+                  </label>
+                  <input
+                    value={instrForm.descripcion}
+                    onChange={e => setInstrForm(f => ({ ...f, descripcion: e.target.value }))}
+                    placeholder="Ej: Técnica, ritmo y melodía"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 12, boxSizing: 'border-box',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14, outline: 'none',
+                    }}
+                  />
+                </div>
+
+                {/* Color */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>
+                    Color <span style={{ color: '#ec488a' }}>*</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {COLOR_PRESETS.map(p => (
+                      <button
+                        key={p.color}
+                        onClick={() => setInstrForm(f => ({ ...f, color: p.color, glow: p.glow }))}
+                        title={p.label}
+                        style={{
+                          width: 34, height: 34, borderRadius: '50%', border: 'none', cursor: 'pointer',
+                          background: p.color,
+                          boxShadow: instrForm.color === p.color ? `0 0 14px ${p.glow}, 0 0 0 3px rgba(255,255,255,0.8)` : `0 0 8px ${p.glow}`,
+                          transform: instrForm.color === p.color ? 'scale(1.15)' : 'scale(1)',
+                          transition: 'all 0.15s',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.3)', marginTop: 6 }}>
+                    Seleccionado: <span style={{ color: instrForm.color }}>{instrForm.color}</span>
+                  </p>
+                </div>
+
+                {/* Zona */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 8 }}>
+                    Zona <span style={{ color: '#ec488a' }}>*</span>
+                  </label>
+                  <div style={{ display: 'flex', gap: 8 }}>
+                    {(['clase', 'gym', 'ambos'] as const).map(z => (
+                      <button
+                        key={z}
+                        onClick={() => setInstrForm(f => ({ ...f, zona: z }))}
+                        style={{
+                          padding: '7px 16px', borderRadius: 999, cursor: 'pointer',
+                          fontFamily: 'var(--font-body)', fontSize: 12,
+                          background: instrForm.zona === z
+                            ? (z === 'clase' ? 'rgba(61,184,250,0.25)' : z === 'gym' ? 'rgba(155,84,249,0.25)' : 'rgba(255,255,255,0.12)')
+                            : 'rgba(255,255,255,0.05)',
+                          color: instrForm.zona === z
+                            ? (z === 'clase' ? '#3db8fa' : z === 'gym' ? '#c084ff' : '#fff')
+                            : 'rgba(255,255,255,0.35)',
+                          border: `1px solid ${instrForm.zona === z ? (z === 'clase' ? 'rgba(61,184,250,0.4)' : z === 'gym' ? 'rgba(155,84,249,0.4)' : 'rgba(255,255,255,0.2)') : 'rgba(255,255,255,0.08)'}`,
+                        }}
+                      >
+                        {z === 'clase' ? '🏫 Clase' : z === 'gym' ? '🏋️ Gym' : '↔ Ambos'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Curso ID (opcional) */}
+                <div>
+                  <label style={{ display: 'block', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginBottom: 6 }}>
+                    ID de Curso (opcional)
+                  </label>
+                  <input
+                    value={instrForm.curso_id}
+                    onChange={e => setInstrForm(f => ({ ...f, curso_id: e.target.value }))}
+                    placeholder="Ej: ukulele-adultos"
+                    style={{
+                      width: '100%', padding: '10px 14px', borderRadius: 12, boxSizing: 'border-box',
+                      background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.1)',
+                      color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14, outline: 'none',
+                    }}
+                  />
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+                    Si lo dejas vacío y marcas la opción de abajo, se genera un id de curso desde el nombre.
+                  </p>
+                </div>
+
+                <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={instrForm.crear_curso_vacio}
+                    onChange={e => setInstrForm(f => ({ ...f, crear_curso_vacio: e.target.checked }))}
+                    style={{ marginTop: 3, accentColor: '#9b54f9' }}
+                  />
+                  <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.55)', lineHeight: 1.45 }}>
+                    <strong style={{ color: '#fff' }}>Crear curso vacío en Contenido</strong>
+                    <br />
+                    Se crea la fila en la base de datos para que en la pestaña Contenido puedas añadir módulos y recursos desde cero. Desmárcalo solo si ya existe un curso y lo enlazas arriba.
+                  </span>
+                </label>
+
+                {/* Preview */}
+                <div style={{
+                  padding: '12px 16px', borderRadius: 12,
+                  background: `${instrForm.color}12`,
+                  border: `1px solid ${instrForm.color}33`,
+                  display: 'flex', alignItems: 'center', gap: 12,
+                }}>
+                  <div style={{
+                    width: 44, height: 44, borderRadius: 12, flexShrink: 0,
+                    background: `${instrForm.color}20`, border: `1px solid ${instrForm.color}44`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22,
+                  }}>
+                    {instrForm.emoji || '🎵'}
+                  </div>
+                  <div>
+                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#fff', margin: 0 }}>
+                      {instrForm.nombre || 'Nombre del instrumento'}
+                    </p>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.4)', margin: '2px 0 0' }}>
+                      {instrForm.descripcion || 'Descripción'}
+                    </p>
+                  </div>
+                </div>
+
+                {instrFormError && (
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#ff7eb3', margin: 0 }}>
+                    {instrFormError}
+                  </p>
+                )}
+
+                <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
+                    onClick={handleCreateInstr}
+                    disabled={creatingInstr}
+                    style={{
+                      flex: 1, padding: '12px', borderRadius: 12, border: 'none',
+                      background: creatingInstr ? 'rgba(155,84,249,0.3)' : 'linear-gradient(135deg, #9b54f9, #3db8fa)',
+                      color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700,
+                      fontSize: 14, cursor: creatingInstr ? 'not-allowed' : 'pointer',
+                    }}
+                  >
+                    {creatingInstr ? 'Creando...' : '✓ Crear Instrumento'}
+                  </motion.button>
+                  <button
+                    onClick={() => setShowNewInstr(false)}
+                    style={{
+                      padding: '12px 20px', borderRadius: 12,
+                      border: '1px solid rgba(255,255,255,0.1)',
+                      background: 'transparent', color: 'rgba(255,255,255,0.4)',
+                      fontFamily: 'var(--font-body)', fontSize: 13, cursor: 'pointer',
+                    }}
+                  >Cancelar</button>
+                </div>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
 
       {/* ── Tab: Usuarios ─────────────────────────────────────── */}
       {activeTab === 'usuarios' && (
@@ -495,7 +965,7 @@ export default function AdminPage() {
                     CURSOS CON ACCESO
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                    {CURSOS_MAP.map(c => {
+                    {activeCursosMap.map(c => {
                       const active = u.cursos_acceso?.includes(c.cursoId)
                       return (
                         <motion.button
@@ -611,7 +1081,7 @@ export default function AdminPage() {
                     CURSOS CON ACCESO
                   </label>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                    {CURSOS_MAP.map(c => {
+                    {activeCursosMap.map(c => {
                       const active = form.cursos.includes(c.cursoId)
                       return (
                         <motion.button
@@ -690,9 +1160,9 @@ export default function AdminPage() {
             <motion.div
               key="modal-del"
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              className="fixed inset-0 m-auto h-fit z-[201]"
               style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                zIndex: 201, background: 'rgba(14,14,32,0.99)',
+                background: 'rgba(14,14,32,0.99)',
                 border: '1px solid rgba(236,72,138,0.25)', borderRadius: 20,
                 padding: '28px 24px', width: 'min(340px, 90vw)', textAlign: 'center',
               }}
@@ -750,9 +1220,9 @@ export default function AdminPage() {
             <motion.div
               key="modal-logout"
               initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              className="fixed inset-0 m-auto h-fit z-[201]"
               style={{
-                position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                zIndex: 201, background: 'rgba(14,14,32,0.99)',
+                background: 'rgba(14,14,32,0.99)',
                 border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
                 padding: '28px 24px', width: 'min(320px, 90vw)', textAlign: 'center',
               }}
@@ -788,6 +1258,127 @@ export default function AdminPage() {
                   }}
                 >
                   Salir
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          MODAL — Confirmar eliminar instrumento (tipo GitHub)
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {instrToDelete && (
+          <>
+            <motion.div
+              key="backdrop-del-instr"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={cancelDeleteInstr}
+              style={{ position: 'fixed', inset: 0, background: 'rgba(10,10,26,0.85)', backdropFilter: 'blur(10px)', zIndex: 200 }}
+            />
+            <motion.div
+              key="modal-del-instr"
+              initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+              className="fixed inset-0 m-auto h-fit z-[201]"
+              style={{
+                background: 'linear-gradient(180deg, rgba(18,18,35,0.99) 0%, rgba(14,14,32,0.99) 100%)',
+                border: '1px solid rgba(255,82,82,0.3)', borderRadius: 16,
+                padding: '32px 28px', width: 'min(420px, 90vw)',
+              }}
+            >
+              {/* Header con icono */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 20 }}>
+                <div style={{
+                  width: 44, height: 44, borderRadius: 12,
+                  background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.25)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}>
+                  <AlertTriangle size={22} strokeWidth={1.5} style={{ color: '#ff5252' }} />
+                </div>
+                <div>
+                  <h3 style={{
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', margin: 0,
+                  }}>
+                    Eliminar instrumento
+                  </h3>
+                  <p style={{
+                    fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', margin: '4px 0 0',
+                  }}>
+                    Esta acción es irreversible
+                  </p>
+                </div>
+              </div>
+
+              {/* Alert box */}
+              <div style={{
+                padding: '14px 16px', borderRadius: 10,
+                background: 'rgba(255,82,82,0.06)', border: '1px solid rgba(255,82,82,0.15)',
+                marginBottom: 20,
+              }}>
+                <p style={{
+                  fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.7)',
+                  margin: 0, lineHeight: 1.5,
+                }}>
+                  <strong style={{ color: '#ff5252' }}>Atención:</strong> Se eliminarán todos los datos asociados a <strong style={{ color: '#fff' }}>{instrToDelete.nombre}</strong>, incluyendo su configuración y curso vinculado.
+                </p>
+              </div>
+
+              {/* Input de confirmación */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{
+                  display: 'block', fontFamily: 'var(--font-body)', fontSize: 13,
+                  color: 'rgba(255,255,255,0.6)', marginBottom: 8,
+                }}>
+                  Escribe <strong style={{ color: '#ff5252', fontFamily: 'var(--font-display)' }}>{instrToDelete.nombre}</strong> para confirmar:
+                </label>
+                <input
+                  type="text"
+                  value={confirmDeleteText}
+                  onChange={(e) => setConfirmDeleteText(e.target.value)}
+                  placeholder={instrToDelete.nombre}
+                  style={{
+                    width: '100%', padding: '12px 16px', borderRadius: 10,
+                    background: 'rgba(0,0,0,0.3)', border: `1px solid ${confirmDeleteText === instrToDelete.nombre ? 'rgba(255,82,82,0.5)' : 'rgba(255,255,255,0.1)'}`,
+                    color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14,
+                    outline: 'none', transition: 'border-color 0.2s',
+                  }}
+                  autoFocus
+                />
+              </div>
+
+              {/* Botones */}
+              <div style={{ display: 'flex', gap: 12 }}>
+                <button
+                  onClick={cancelDeleteInstr}
+                  style={{
+                    flex: 1, padding: '12px 0', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.7)', fontFamily: 'var(--font-body)', fontSize: 14,
+                    cursor: 'pointer', transition: 'all 0.2s',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <motion.button
+                  whileHover={confirmDeleteText === instrToDelete.nombre ? { scale: 1.02 } : {}}
+                  whileTap={confirmDeleteText === instrToDelete.nombre ? { scale: 0.98 } : {}}
+                  onClick={handleDeleteInstr}
+                  disabled={confirmDeleteText !== instrToDelete.nombre}
+                  style={{
+                    flex: 1, padding: '12px 0', borderRadius: 999,
+                    background: confirmDeleteText === instrToDelete.nombre
+                      ? 'linear-gradient(135deg, #ff5252, #c03535)'
+                      : 'rgba(255,82,82,0.2)',
+                    border: 'none',
+                    color: confirmDeleteText === instrToDelete.nombre ? '#fff' : 'rgba(255,255,255,0.4)',
+                    fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                    cursor: confirmDeleteText === instrToDelete.nombre ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s',
+                  }}
+                >
+                  Eliminar permanentemente
                 </motion.button>
               </div>
             </motion.div>

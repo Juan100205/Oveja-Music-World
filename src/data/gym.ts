@@ -21,15 +21,6 @@ function getModulos(cursoId: string, moduloIds?: string[]): Modulo[] {
 
 export const GYM_INSTRUMENTOS: GymInstrumento[] = [
   {
-    id: 'gym-general',
-    nombre: 'Gym Musical',
-    emoji: '🏋️',
-    descripcion: 'Ejercicios generales, metrónomo y ritmo',
-    color: 'linear-gradient(135deg, #3db8fa, #9b54f9)',
-    glow: 'rgba(61,184,250,0.45)',
-    modulos: getModulos('gym-musical'),
-  },
-  {
     id: 'bateria',
     nombre: 'Batería',
     emoji: '🥁',
@@ -84,5 +75,15 @@ export const GYM_INSTRUMENTOS: GymInstrumento[] = [
     glow: 'rgba(255,167,55,0.45)',
     // Nivel 1 de guitarra niños (tiene Scratch + videos de práctica)
     modulos: getModulos('guitarra-ninos', ['guitarra-ninos-nivel-1']),
+  },
+  {
+    id: 'introduccion',
+    nombre: 'Introducción Musical',
+    emoji: '🎵',
+    descripcion: 'Ejercicios de ritmo y teoría musical',
+    color: 'linear-gradient(135deg, #3db8fa, #9b54f9)',
+    glow: 'rgba(100,150,255,0.45)',
+    // Módulos de práctica de Ciudad Musical
+    modulos: getModulos('ciudad-musical'),
   },
 ]

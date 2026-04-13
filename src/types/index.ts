@@ -95,3 +95,42 @@ export interface ApiError {
   error: string
   status: number
 }
+
+// --- Video Cards ---
+export type CardTipo = 'texto' | 'boton' | 'countdown' | 'quiz'
+
+interface VideoCardBase {
+  id: string
+  tiempo: number  // segundos dentro del video
+  tipo: CardTipo
+}
+
+export interface VideoCardTexto extends VideoCardBase {
+  tipo: 'texto'
+  texto: string
+}
+
+export interface VideoCardBoton extends VideoCardBase {
+  tipo: 'boton'
+  texto: string
+  boton_label: string
+}
+
+export interface VideoCardCountdown extends VideoCardBase {
+  tipo: 'countdown'
+  instruccion: string
+  duracion: number  // segundos
+}
+
+export interface VideoCardQuiz extends VideoCardBase {
+  tipo: 'quiz'
+  pregunta: string
+  opciones: string[]
+  respuesta_correcta: number | null
+}
+
+export type VideoCard =
+  | VideoCardTexto
+  | VideoCardBoton
+  | VideoCardCountdown
+  | VideoCardQuiz

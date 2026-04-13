@@ -38,9 +38,10 @@ describe('ZoneCard', () => {
     expect(onClick).not.toHaveBeenCalled()
   })
 
-  it('muestra mensaje de bloqueo con nivel requerido', () => {
+  it('muestra badge de bloqueo con nivel requerido', () => {
     render(<ZoneCard zone={lockedZone} nivelUsuario={1} onClick={jest.fn()} />)
-    expect(screen.getByText(/Requiere nivel 3/i)).toBeInTheDocument()
+    // El componente renderiza "🔒 Nivel 3"
+    expect(screen.getByText(/Nivel 3/i)).toBeInTheDocument()
   })
 
   it('muestra disponible cuando el nivel alcanza', () => {

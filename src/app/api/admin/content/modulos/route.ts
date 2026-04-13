@@ -22,9 +22,11 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Calcular orden (al final)
-  const { count } = await db
+  const { count, error: countError } = await db
     .from('modulos').select('*', { count: 'exact', head: true }).eq('curso_id', curso_id)
+
+  if (countError)
+    return NextResponse.json({ error: 'Error al calcular el orden del módulo' }, { status: 500 })
 
   const id = `${curso_id}-modulo-${Date.now()}`
 

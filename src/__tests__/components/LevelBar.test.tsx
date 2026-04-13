@@ -22,7 +22,8 @@ describe('LevelBar', () => {
 
   it('muestra puntos faltantes cuando no es nivel máximo', () => {
     render(<LevelBar puntos={0} />)
-    expect(screen.getByText(/100 puntos para el siguiente nivel/i)).toBeInTheDocument()
+    // El componente renderiza "100 puntos para nivel 2"
+    expect(screen.getByText(/100 puntos para nivel 2/i)).toBeInTheDocument()
   })
 
   it('no muestra faltantes en nivel máximo', () => {

@@ -6,6 +6,9 @@ import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
+import TapeteCard from '@/components/ui/TapeteCard'
+import { useAuth } from '@/hooks/useAuth'
+import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { GYM_INSTRUMENTOS, type GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
@@ -245,6 +248,8 @@ function IframeViewer({ url, label, tipo, onClose }: {
 export default function GymSalaPage() {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
+  const { token } = useAuth()
+  const { gym: allGym } = useInstrumentos(token)
 
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
@@ -253,6 +258,8 @@ export default function GymSalaPage() {
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
+  const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
+  const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
@@ -260,7 +267,7 @@ export default function GymSalaPage() {
     if (name === 'isOutingGym') flushSync(() => setIsOutingGym(isTrue))
   }, [])
 
-  const gymInstr = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
+  const gymInstr = allGym.find(g => g.id === instrumento)
   const secciones = gymInstr ? getSecciones(gymInstr) : []
 
   const cerrarPanel = () => { setPanelOpen(false); setSeccionActiva(null) }
@@ -269,6 +276,8 @@ export default function GymSalaPage() {
     <main style={{ width: '100vw', height: '100vh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
       <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} />
+
+      <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
       {/* ── Botón fijo ← Mapa ── */}
       <motion.button
@@ -441,7 +450,7 @@ export default function GymSalaPage() {
                           recurso={recurso}
                           index={i}
                           onClick={() => {
-                            window.open(recurso.url, '_blank', 'noopener,noreferrer')
+                            setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
                           }}
                         />
                       )
@@ -496,7 +505,7 @@ export default function GymSalaPage() {
               </div>
 
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {GYM_INSTRUMENTOS.map((g, i) => {
+                {allGym.map((g, i) => {
                   const esActual = g.id === instrumento
                   return (
                     <motion.button key={g.id}

@@ -3,9 +3,10 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GraduationCap, Users, BookOpen, Music, LogOut } from 'lucide-react'
+import { GraduationCap, Users, BookOpen, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from '@/app/admin/ContentManager'
+import { useInstrumentos } from '@/hooks/useInstrumentos'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface Student {
@@ -15,7 +16,14 @@ interface Student {
   nivel: number
   puntos: number
   cursos_acceso: string[]
+  clases_acceso?: string[]
   created_at: string
+}
+
+interface Draft {
+  nivel: number
+  puntos: number
+  clases: string[]
 }
 
 // ── Helpers visuales ───────────────────────────────────────────
@@ -68,10 +76,17 @@ function NivelBar({ nivel, puntos }: { nivel: number; puntos: number }) {
 export default function TeacherPage() {
   const { user, token, logout } = useAuth()
   const router = useRouter()
+  const { clases } = useInstrumentos(token ?? null)
   const [tab, setTab] = useState<'clases' | 'estudiantes'>('clases')
   const [students, setStudents] = useState<Student[]>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [errorStudents, setErrorStudents] = useState<string | null>(null)
+
+  // ── Edit state ────────────────────────────────────────────────
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  const [saving, setSaving] = useState<string | null>(null)
+  const [saveError, setSaveError] = useState<Record<string, string>>({})
 
   // Guard: solo docentes y admins
   useEffect(() => {
@@ -102,6 +117,57 @@ export default function TeacherPage() {
   useEffect(() => {
     if (tab === 'estudiantes') fetchStudents()
   }, [tab, fetchStudents])
+
+  function openEdit(s: Student) {
+    if (editingId === s.id) { setEditingId(null); return }
+    setEditingId(s.id)
+    setSaveError(prev => { const n = { ...prev }; delete n[s.id]; return n })
+    setDrafts(prev => ({
+      ...prev,
+      [s.id]: {
+        nivel:  s.nivel,
+        puntos: s.puntos,
+        clases: s.clases_acceso ? [...s.clases_acceso] : [],
+      },
+    }))
+  }
+
+  function patchDraft(id: string, patch: Partial<Draft>) {
+    setDrafts(prev => ({ ...prev, [id]: { ...prev[id], ...patch } }))
+  }
+
+  async function saveStudent(id: string) {
+    if (!token) return
+    const draft = drafts[id]
+    if (!draft) return
+    setSaving(id)
+    setSaveError(prev => { const n = { ...prev }; delete n[id]; return n })
+    try {
+      const res = await fetch(`/api/teacher/students/${id}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          nivel:          draft.nivel,
+          puntos:         draft.puntos,
+          clases_acceso:  draft.clases,
+        }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error ?? 'Error al guardar')
+      setStudents(prev => prev.map(s => s.id === id ? { ...s, ...data.student } : s))
+      setEditingId(null)
+    } catch (e) {
+      setSaveError(prev => ({
+        ...prev,
+        [id]: e instanceof Error ? e.message : 'Error al guardar',
+      }))
+    } finally {
+      setSaving(null)
+    }
+  }
 
   if (!user || (user.role !== 'teacher' && user.role !== 'admin')) return null
 
@@ -233,7 +299,11 @@ export default function TeacherPage() {
                   <span style={{ textAlign: 'right' }}>Cursos</span>
                 </div>
 
-                {students.map(s => (
+                {students.map(s => {
+                  const isEditing = editingId === s.id
+                  const draft = drafts[s.id]
+                  const isSaving = saving === s.id
+                  return (
                   <motion.div
                     key={s.id}
                     className="student-row"
@@ -241,48 +311,227 @@ export default function TeacherPage() {
                     animate={{ opacity: 1, y: 0 }}
                     style={{
                       background: 'rgba(255,255,255,0.03)',
-                      border: '1px solid rgba(255,255,255,0.07)',
+                      border: `1px solid ${isEditing ? 'rgba(236,72,138,0.3)' : 'rgba(255,255,255,0.07)'}`,
                       borderRadius: 14, padding: '14px 16px',
-                      display: 'grid', gridTemplateColumns: '1fr 180px 80px',
-                      alignItems: 'center', gap: 16,
                     }}
                   >
-                    {/* Info */}
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                        background: `${avatarColor(s.email)}22`,
-                        border: `1px solid ${avatarColor(s.email)}44`,
-                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                        fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
-                        color: avatarColor(s.email),
-                      }}>
-                        {initials(s)}
+                    {/* ── Main row ── */}
+                    <div style={{
+                      display: 'grid', gridTemplateColumns: '1fr 180px 80px',
+                      alignItems: 'center', gap: 16,
+                    }}>
+                      {/* Info */}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                          background: `${avatarColor(s.email)}22`,
+                          border: `1px solid ${avatarColor(s.email)}44`,
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                          color: avatarColor(s.email),
+                        }}>
+                          {initials(s)}
+                        </div>
+                        <div>
+                          <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, margin: 0 }}>
+                            {s.nombre ?? '—'}
+                          </p>
+                          <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
+                            {s.email}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, fontWeight: 500, margin: 0 }}>
-                          {s.nombre ?? '—'}
-                        </p>
-                        <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: 0 }}>
-                          {s.email}
-                        </p>
+
+                      {/* Nivel y puntos */}
+                      <NivelBar nivel={s.nivel} puntos={s.puntos} />
+
+                      {/* Editar */}
+                      <div style={{ textAlign: 'right' }}>
+                        <button
+                          onClick={() => openEdit(s)}
+                          style={{
+                            padding: '4px 12px', borderRadius: 8,
+                            border: '1px solid rgba(236,72,138,0.3)',
+                            background: isEditing ? 'rgba(236,72,138,0.15)' : 'transparent',
+                            color: '#ec488a', cursor: 'pointer',
+                            fontFamily: 'var(--font-body)', fontSize: 12, fontWeight: 500,
+                          }}
+                        >
+                          Editar
+                        </button>
                       </div>
                     </div>
 
-                    {/* Nivel y puntos */}
-                    <NivelBar nivel={s.nivel} puntos={s.puntos} />
-
-                    {/* Cantidad de cursos */}
-                    <div style={{ textAlign: 'right' }}>
-                      <span style={{
-                        fontFamily: 'var(--font-body)', fontSize: 12,
-                        color: 'rgba(255,255,255,0.35)',
+                    {/* ── Edit panel ── */}
+                    {isEditing && draft && (
+                      <div data-testid={`edit-panel-${s.id}`} style={{
+                        marginTop: 16, padding: '16px', borderRadius: 10,
+                        background: 'rgba(0,0,0,0.3)',
+                        border: '1px solid rgba(255,255,255,0.07)',
+                        display: 'flex', flexDirection: 'column', gap: 16,
                       }}>
-                        {(s.cursos_acceso ?? []).length} curso{(s.cursos_acceso ?? []).length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
+                        {/* Nivel */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', width: 60 }}>Nivel</span>
+                          <button
+                            data-testid={`nivel-down-${s.id}`}
+                            disabled={draft.nivel <= 1}
+                            onClick={() => patchDraft(s.id, { nivel: Math.max(1, draft.nivel - 1) })}
+                            style={{
+                              width: 30, height: 30, borderRadius: 6,
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.05)',
+                              color: draft.nivel <= 1 ? 'rgba(255,255,255,0.2)' : '#fff',
+                              cursor: draft.nivel <= 1 ? 'not-allowed' : 'pointer',
+                              fontFamily: 'var(--font-body)', fontSize: 16, lineHeight: 1,
+                            }}
+                          >−</button>
+                          <span
+                            data-testid={`nivel-value-${s.id}`}
+                            style={{
+                              fontFamily: 'var(--font-display)', fontSize: 18, fontWeight: 700,
+                              color: NIVEL_COLORS[draft.nivel] ?? '#fff',
+                              minWidth: 24, textAlign: 'center',
+                            }}
+                          >{draft.nivel}</span>
+                          <button
+                            data-testid={`nivel-up-${s.id}`}
+                            disabled={draft.nivel >= 5}
+                            onClick={() => patchDraft(s.id, { nivel: Math.min(5, draft.nivel + 1) })}
+                            style={{
+                              width: 30, height: 30, borderRadius: 6,
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.05)',
+                              color: draft.nivel >= 5 ? 'rgba(255,255,255,0.2)' : '#fff',
+                              cursor: draft.nivel >= 5 ? 'not-allowed' : 'pointer',
+                              fontFamily: 'var(--font-body)', fontSize: 16, lineHeight: 1,
+                            }}
+                          >+</button>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
+                            {NIVEL_LABELS[draft.nivel]}
+                          </span>
+                        </div>
+
+                        {/* Puntos */}
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', width: 60 }}>Puntos</span>
+                          <button
+                            data-testid={`puntos-down-${s.id}`}
+                            onClick={() => patchDraft(s.id, { puntos: Math.max(0, draft.puntos - 10) })}
+                            style={{
+                              width: 30, height: 30, borderRadius: 6,
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.05)',
+                              color: '#fff', cursor: 'pointer',
+                              fontFamily: 'var(--font-body)', fontSize: 13,
+                            }}
+                          >−10</button>
+                          <input
+                            data-testid={`puntos-input-${s.id}`}
+                            type="number"
+                            min={0}
+                            value={draft.puntos}
+                            onChange={e => {
+                              const v = parseInt(e.target.value, 10)
+                              patchDraft(s.id, { puntos: isNaN(v) ? 0 : Math.max(0, v) })
+                            }}
+                            style={{
+                              width: 80, padding: '4px 8px', borderRadius: 6,
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.05)',
+                              color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14,
+                              textAlign: 'center',
+                            }}
+                          />
+                          <button
+                            data-testid={`puntos-up-${s.id}`}
+                            onClick={() => patchDraft(s.id, { puntos: draft.puntos + 10 })}
+                            style={{
+                              width: 30, height: 30, borderRadius: 6,
+                              border: '1px solid rgba(255,255,255,0.15)',
+                              background: 'rgba(255,255,255,0.05)',
+                              color: '#fff', cursor: 'pointer',
+                              fontFamily: 'var(--font-body)', fontSize: 13,
+                            }}
+                          >+10</button>
+                        </div>
+
+                        {/* Clases chips */}
+                        <div>
+                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 8 }}>
+                            Clases acceso
+                          </span>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                            {clases.map(c => {
+                              const active = draft.clases.includes(c.id)
+                              return (
+                                <button
+                                  key={c.id}
+                                  data-testid={`clase-chip-${c.id}`}
+                                  data-active={active ? 'true' : 'false'}
+                                  onClick={() => {
+                                    const next = active
+                                      ? draft.clases.filter(x => x !== c.id)
+                                      : [...draft.clases, c.id]
+                                    patchDraft(s.id, { clases: next })
+                                  }}
+                                  style={{
+                                    padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
+                                    border: `1px solid ${active ? '#ec488a' : 'rgba(255,255,255,0.12)'}`,
+                                    background: active ? 'rgba(236,72,138,0.18)' : 'rgba(255,255,255,0.04)',
+                                    color: active ? '#ec488a' : 'rgba(255,255,255,0.4)',
+                                    fontFamily: 'var(--font-body)', fontSize: 12,
+                                    transition: 'all 0.15s',
+                                  }}
+                                >
+                                  {c.emoji} {c.nombre}
+                                </button>
+                              )
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Error */}
+                        {saveError[s.id] && (
+                          <p data-testid={`edit-error-${s.id}`} style={{
+                            fontFamily: 'var(--font-body)', fontSize: 13,
+                            color: '#ff5252', margin: 0,
+                          }}>
+                            {saveError[s.id]}
+                          </p>
+                        )}
+
+                        {/* Actions */}
+                        <div style={{ display: 'flex', gap: 10 }}>
+                          <button
+                            onClick={() => saveStudent(s.id)}
+                            disabled={isSaving}
+                            style={{
+                              padding: '7px 20px', borderRadius: 8, cursor: isSaving ? 'not-allowed' : 'pointer',
+                              border: 'none',
+                              background: isSaving ? 'rgba(236,72,138,0.3)' : '#ec488a',
+                              color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 600,
+                            }}
+                          >
+                            {isSaving ? 'Guardando…' : 'Guardar'}
+                          </button>
+                          <button
+                            onClick={() => setEditingId(null)}
+                            style={{
+                              padding: '7px 16px', borderRadius: 8, cursor: 'pointer',
+                              border: '1px solid rgba(255,255,255,0.12)',
+                              background: 'transparent',
+                              color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-body)', fontSize: 13,
+                            }}
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </motion.div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </motion.div>

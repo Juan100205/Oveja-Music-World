@@ -28,7 +28,10 @@
       "Bash(node -e \"const l = require\\('lucide-react'\\); const icons = ['Piano','Drum','Guitar','Mic','Music','Music2','Music3','Music4','GraduationCap','Dumbbell','Trash2','Pencil','ChevronRight','ChevronDown','Plus','X','Check','Play','FolderOpen','Gamepad2','FileText','Image','Wrench','Link','BookOpen']; icons.forEach\\(i => console.log\\(i, l[i] ? 'OK' : 'MISSING'\\)\\);\")",
       "Bash(cat jest.config.ts)",
       "Bash(cat jest.config.js)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(npx vercel:*)",
+      "Bash(npx eslint:*)",
+      "Bash(node:*)"
     ]
   }
 }

@@ -10,6 +10,13 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
+    "test:api": "jest --config=jest.config.api.ts",
+    "test:lib": "jest --testPathPatterns=src/__tests__/lib --env=node",
+    "test:hooks": "jest --testPathPatterns=src/__tests__/hooks --env=node",
+    "test:components": "jest --testPathPatterns=src/__tests__/components --env=jsdom",
+    "test:pages": "jest --testPathPatterns=src/__tests__/pages --env=jsdom",
+    "test:e2e": "jest --testPathPatterns=src/__tests__/e2e --env=jsdom",
+    "test:ci": "jest --ci --coverage --maxWorkers=2",
     "seed:content": "tsx scripts/seed-content.ts"
   },
   "dependencies": {
@@ -24,7 +31,8 @@
     "next": "16.1.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "react-player": "^3.4.0"
+    "react-player": "^3.4.0",
+    "youtube-transcript": "^1.3.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

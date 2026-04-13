@@ -6,11 +6,173 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronRight, Settings, LogOut, X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
-import { CLASES_CONFIG, type ClaseConfig } from '@/data/clases'
-import { GYM_INSTRUMENTOS } from '@/data/gym'
+import TapeteCard from '@/components/ui/TapeteCard'
+import type { ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Modulo } from '@/data/cursos'
 import { useAuth } from '@/hooks/useAuth'
+import { useInstrumentos } from '@/hooks/useInstrumentos'
+
+function WasdKey({ label, wide, width, height }: { label: React.ReactNode; wide?: boolean; width?: number; height?: number }) {
+  return (
+    <div
+      style={{
+        width: width ?? (wide ? 72 : 44),
+        height: height ?? 44,
+        borderRadius: 8,
+        background: 'rgba(255,255,255,0.07)',
+        border: '1px solid rgba(255,255,255,0.18)',
+        boxShadow: '0 4px 0 rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.12)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontFamily: 'var(--font-display)',
+        fontWeight: 700,
+        fontSize: wide ? 12 : 16,
+        color: '#fff',
+        textShadow: '0 0 10px rgba(61,184,250,0.8)',
+        letterSpacing: '0.04em',
+        userSelect: 'none',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
+function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
+  return (
+    <>
+      {/* Card */}
+      <motion.div
+        key="wasd-card"
+        initial={{ opacity: 0, x: '-100%' }}
+        animate={{ opacity: 1, x: 0 }}
+        exit={{ opacity: 0, x: '-100%' }}
+        transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+        className="absolute z-50"
+        style={{
+          bottom: 100, left: 0,
+          width: 'min(320px, 85vw)',
+          background: 'rgba(10,10,26,0.97)',
+          borderTop: '1px solid rgba(61,184,250,0.25)',
+          borderRight: '1px solid rgba(61,184,250,0.25)',
+          borderBottom: '1px solid rgba(61,184,250,0.25)',
+          borderLeft: 'none',
+          borderTopRightRadius: 20,
+          borderBottomRightRadius: 20,
+          borderTopLeftRadius: 0,
+          borderBottomLeftRadius: 0,
+          boxShadow: '8px 0 40px rgba(61,184,250,0.12), 12px 0 60px rgba(155,84,249,0.08)',
+          padding: '24px 20px 20px',
+          textAlign: 'center',
+          overflow: 'hidden',
+        }}
+      >
+        {/* Glow accent top */}
+        <div style={{
+          position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
+          width: 180, height: 2,
+          background: 'linear-gradient(90deg, transparent, rgba(61,184,250,0.7), transparent)',
+        }} />
+
+        {/* Sheep + title */}
+        <motion.div
+          animate={{ y: [0, -5, 0] }}
+          transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
+          style={{ fontSize: 44, lineHeight: 1, marginBottom: 12 }}
+        >
+          🐑
+        </motion.div>
+
+        <h2 style={{
+          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18,
+          color: '#fff', marginBottom: 4, letterSpacing: '0.02em',
+        }}>
+          ¡Mueve la oveja!
+        </h2>
+        <p style={{
+          fontFamily: 'var(--font-body)', fontSize: 13,
+          color: 'rgba(255,255,255,0.45)', marginBottom: 24, lineHeight: 1.5,
+        }}>
+          Usa el teclado para explorar el mundo
+        </p>
+
+        {/* WASD keyboard */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, marginBottom: 28 }}>
+
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
+            {/* WASD */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                <WasdKey label="W" width={38} height={38} />
+              </div>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                <WasdKey label="A" width={38} height={38} />
+                <WasdKey label="S" width={38} height={38} />
+                <WasdKey label="D" width={38} height={38} />
+              </div>
+            </div>
+
+            <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.08)' }} />
+
+            {/* Arrows */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                <WasdKey label="↑" width={38} height={38} />
+              </div>
+              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
+                <WasdKey label="←" width={38} height={38} />
+                <WasdKey label="↓" width={38} height={38} />
+                <WasdKey label="→" width={38} height={38} />
+              </div>
+            </div>
+          </div>
+
+          {/* Label */}
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+            WASD o flechas para moverte
+          </p>
+
+          {/* Divider */}
+          <div style={{ width: '60%', height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
+
+          {/* Spacebar */}
+          <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+            <WasdKey label="ESPACIO" wide width={180} height={38} />
+          </div>
+
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+            Barra espaciadora para saltar
+          </p>
+        </div>
+
+        {/* CTA */}
+        <motion.button
+          whileHover={{ scale: 1.04, boxShadow: '0 0 40px rgba(61,184,250,0.45)' }}
+          whileTap={{ scale: 0.97 }}
+          onClick={onDismiss}
+          style={{
+            width: '100%',
+            padding: '14px 0',
+            borderRadius: 12,
+            border: 'none',
+            background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)',
+            color: '#fff',
+            fontFamily: 'var(--font-display)',
+            fontWeight: 700,
+            fontSize: 15,
+            cursor: 'pointer',
+            boxShadow: '0 0 24px rgba(61,184,250,0.3)',
+            letterSpacing: '0.03em',
+          }}
+        >
+          ¡A jugar! 🎮
+        </motion.button>
+      </motion.div>
+    </>
+  )
+}
 
 // ── Botón reutilizable ─────────────────────────────────────────
 function PillButton({
@@ -137,14 +299,14 @@ function ModulosList({
 // ══════════════════════════════════════════════════════════════
 export default function MapaPage() {
   const router = useRouter()
-  const { user, logout } = useAuth()
+  const { user, logout, token } = useAuth()
 
   // Spline hover
-  const [overGym,    setOverGym]    = useState(false)
+  const [overGym, setOverGym] = useState(false)
   const [overSchool, setOverSchool] = useState(false)
 
   // Panel clases
-  const [clasesOpen,        setClasesOpen]        = useState(false)
+  const [clasesOpen, setClasesOpen] = useState(false)
   const [claseSeleccionada, setClaseSeleccionada] = useState<ClaseConfig | null>(null)
 
   // Panel gym
@@ -153,9 +315,18 @@ export default function MapaPage() {
   // Logout
   const [showLogout, setShowLogout] = useState(false)
 
+  // Aviso tapete primero; luego tutorial WASD
+  const [showTapeteHint, setShowTapeteHint] = useState(true)
+  const [showTutorial, setShowTutorial] = useState(false)
+
+  const dismissTapeteHint = useCallback(() => {
+    setShowTapeteHint(false)
+    setShowTutorial(true)
+  }, [])
+
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
-    if (name === 'IsOverGym')    flushSync(() => setOverGym(isTrue))
+    if (name === 'IsOverGym') flushSync(() => setOverGym(isTrue))
     if (name === 'IsOverSchool') flushSync(() => setOverSchool(isTrue))
   }, [])
 
@@ -166,17 +337,22 @@ export default function MapaPage() {
 
   const modulosClase = claseSeleccionada
     ? (CURSOS.find(c => c.id === claseSeleccionada.cursoId)?.modulos ?? [])
-        .filter(m => !m.nombre.toLowerCase().includes('práctica'))
+      .filter(m => !m.nombre.toLowerCase().includes('práctica'))
     : []
+
+  // ── Instrumentos dinámicos (hook combina estáticos + DB) ──────
+  const { clases: allClases, gym: allGym } = useInstrumentos(token ?? null)
 
   // Filtrar por acceso — admins ven todo
   const isAdmin = user?.role === 'admin'
+  const acceso = user?.clases_acceso ?? []
+
   const clasesVisibles = isAdmin
-    ? CLASES_CONFIG
-    : CLASES_CONFIG.filter(c => user?.clases_acceso?.includes(c.id))
+    ? allClases
+    : allClases.filter(c => acceso.includes(c.id))
   const gymVisibles = isAdmin
-    ? GYM_INSTRUMENTOS
-    : GYM_INSTRUMENTOS.filter(g => g.id === 'gym-general' || user?.clases_acceso?.includes(g.id))
+    ? allGym
+    : allGym.filter(g => g.id === 'gym-general' || acceso.includes(g.id))
 
   return (
     <main className="relative w-full overflow-hidden"
@@ -186,6 +362,8 @@ export default function MapaPage() {
         scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"
         onVariableChange={handleVariableChange}
       />
+
+      <TapeteCard show={showTapeteHint} onDismiss={dismissTapeteHint} sala="mapa" />
 
       {/* ── Botón Gym ── */}
       <AnimatePresence>
@@ -282,10 +460,10 @@ export default function MapaPage() {
                   {modulosClase.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
                     : <ModulosList
-                        modulos={modulosClase}
-                        color={claseSeleccionada.color}
-                        onSelect={m => router.push(`/escuela/clase/${claseSeleccionada.id}/${m.id}`)}
-                      />
+                      modulos={modulosClase}
+                      color={claseSeleccionada.color}
+                      onSelect={m => router.push(`/escuela/clase/${claseSeleccionada.id}`)}
+                    />
                   }
                 </motion.div>
               )}
@@ -352,17 +530,26 @@ export default function MapaPage() {
               initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setShowLogout(false)}
               className="absolute inset-0 z-40"
-              style={{ background: 'rgba(10,10,26,0.8)', backdropFilter: 'blur(8px)' }}
+              style={{ background: 'rgba(10,10,26,0.3)', backdropFilter: 'blur(3px)' }}
             />
             <motion.div
               key="modal-logout"
-              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              initial={{ opacity: 0, x: '100%' }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: '100%' }}
+              transition={{ type: 'spring', damping: 24, stiffness: 300 }}
               className="absolute z-50"
               style={{
-                top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-                background: 'rgba(14,14,32,0.99)',
-                border: '1px solid rgba(255,255,255,0.1)', borderRadius: 20,
-                padding: '28px 24px', width: 'min(300px, 90vw)', textAlign: 'center',
+                top: 70, right: 0,
+                background: 'rgba(14,14,32,0.98)',
+                borderTop: '1px solid rgba(255,255,255,0.1)',
+                borderBottom: '1px solid rgba(255,255,255,0.1)',
+                borderLeft: '1px solid rgba(255,255,255,0.1)',
+                borderRight: 'none',
+                borderTopLeftRadius: 20,
+                borderBottomLeftRadius: 20,
+                borderTopRightRadius: 0,
+                borderBottomRightRadius: 0,
+                boxShadow: '-8px 12px 40px rgba(0,0,0,0.6)',
+                padding: '24px 24px', width: 'min(280px, 85vw)', textAlign: 'center',
               }}
             >
               <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
@@ -412,33 +599,40 @@ export default function MapaPage() {
 
               {/* Instrumentos */}
               <motion.div key="gym-instrs"
-                  initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl"
+                style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
 
-                  <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
-                  <div className="flex items-center justify-between mb-6">
-                    <div>
-                      <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>¿Qué vas a practicar?</h2>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
-                    </div>
-                    <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
+                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                <div className="flex items-center justify-between mb-6">
+                  <div>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>¿Qué vas a practicar?</h2>
+                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
                   </div>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {gymVisibles.length === 0 ? (
-                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                        Sin instrumentos asignados
-                      </p>
-                    ) : gymVisibles.map((g, i) => (
-                      <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => router.push(`/escuela/gym/${g.id}`)} />
-                    ))}
-                  </div>
-                </motion.div>
+                  <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
+                    style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {gymVisibles.length === 0 ? (
+                    <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                      Sin instrumentos asignados
+                    </p>
+                  ) : gymVisibles.map((g, i) => (
+                    <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => router.push(`/escuela/gym/${g.id}`)} />
+                  ))}
+                </div>
+              </motion.div>
 
             </AnimatePresence>
           </PanelBase>
+        )}
+      </AnimatePresence>
+
+      {/* ── WASD Tutorial ── */}
+      <AnimatePresence>
+        {showTutorial && (
+          <WasdTutorialCard onDismiss={() => setShowTutorial(false)} />
         )}
       </AnimatePresence>
 

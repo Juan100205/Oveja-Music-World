@@ -27,10 +27,11 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ cursos: data ?? [] })
   }
 
-  // Árbol completo para un curso
   const { data: curso, error: ce } = await db
     .from('cursos').select('*').eq('id', cursoId).single()
-  if (ce || !curso) return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
+  if (ce || !curso) {
+    return NextResponse.json({ error: 'Curso no encontrado' }, { status: 404 })
+  }
 
   const { data: modulos } = await db
     .from('modulos').select('*').eq('curso_id', cursoId).order('orden')

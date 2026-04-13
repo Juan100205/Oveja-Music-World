@@ -1,10 +1,13 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import SplineScene from '@/components/spline/SplineScene'
-import { GYM_INSTRUMENTOS, type GymInstrumento } from '@/data/gym'
+import TapeteCard from '@/components/ui/TapeteCard'
+import { useAuth } from '@/hooks/useAuth'
+import { useInstrumentos } from '@/hooks/useInstrumentos'
+import type { GymInstrumento } from '@/data/gym'
 import type { Modulo, Seccion } from '@/data/cursos'
 
 const SCENE_GYM = 'https://prod.spline.design/gYLTlZu92yz616yC/scene.splinecode'
@@ -28,12 +31,16 @@ function getYouTubeId(url: string): string | null {
 
 export default function GymPage() {
   const router = useRouter()
+  const { token } = useAuth()
+  const { gym: allGym } = useInstrumentos(token)
 
   const [menuOpen,          setMenuOpen]          = useState(false)
   const [instrActivo,       setInstrActivo]       = useState<GymInstrumento | null>(null)
   const [moduloActivo,      setModuloActivo]       = useState<Modulo | null>(null)
   const [seccionActiva,     setSeccionActiva]      = useState<Seccion | null>(null)
   const [videoActivo,       setVideoActivo]        = useState<{ url: string; label?: string } | null>(null)
+  const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
+  const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
   const cerrarTodo = () => {
     setMenuOpen(false)
@@ -46,6 +53,8 @@ export default function GymPage() {
     <main style={{ width: '100vw', height: '100vh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
       <SplineScene scene={SCENE_GYM} />
+
+      <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
       {/* ── Botón fijo ← Mapa ── */}
       <motion.button
@@ -154,7 +163,7 @@ export default function GymPage() {
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {GYM_INSTRUMENTOS.map((instr, i) => (
+                    {allGym.map((instr, i) => (
                       <motion.button
                         key={instr.id}
                         initial={{ opacity: 0, y: 20 }}

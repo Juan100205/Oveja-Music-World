@@ -7,10 +7,11 @@ import {
   Piano, Drum, Guitar, Mic, Music2, BookOpen,
   GraduationCap, Dumbbell,
   Trash2, Pencil, ChevronRight, ChevronDown, Plus, X, Check,
-  Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link,
+  Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link, LayoutList,
   Zap, Clock,
   type LucideIcon,
 } from 'lucide-react'
+import VideoCardEditor from './VideoCardEditor'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface InteractionPoint {
@@ -533,6 +534,8 @@ function RecursoModal({
                 </div>
                 {/* Auto-generar para todos */}
                 <motion.button
+                  type="button"
+                  title="Usa subtítulos de YouTube: coloca interacciones en los huecos largos sin texto (pausas / silencio). Aplica a todos los videos del sitio que aún no tengan interacciones."
                   whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
                   onClick={handleAutoGenerate}
                   disabled={autoLoading}
@@ -695,53 +698,76 @@ function RecursoModal({
 // ── Fila de recurso ────────────────────────────────────────────
 function RecursoRow({
   recurso,
+  token,
   onEdit,
   onDelete,
 }: {
   recurso: Recurso
+  token: string
   onEdit: () => void
   onDelete: () => void
 }) {
   const shortUrl = recurso.url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 55)
   const TipoIcon = TIPO_ICON[recurso.tipo] ?? Link
+  const [editingCards, setEditingCards] = useState(false)
+
+  const isVideo = recurso.tipo === 'video'
 
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', gap: 10,
-      background: 'rgba(255,255,255,0.025)',
-      border: '1px solid rgba(255,255,255,0.06)',
-      borderRadius: 10, padding: '8px 12px',
-    }}>
-      {/* Icono tipo — stroke, sin relleno */}
+    <>
       <div style={{
-        width: 28, height: 28, borderRadius: 7, flexShrink: 0,
-        border: `1px solid ${TIPO_COLOR[recurso.tipo]}44`,
-        background: `${TIPO_COLOR[recurso.tipo]}12`,
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        display: 'flex', alignItems: 'center', gap: 10,
+        background: 'rgba(255,255,255,0.025)',
+        border: '1px solid rgba(255,255,255,0.06)',
+        borderRadius: 10, padding: '8px 12px',
       }}>
-        <TipoIcon size={13} strokeWidth={1.5} color={TIPO_COLOR[recurso.tipo]} />
-      </div>
-
-      <div style={{ flex: 1, minWidth: 0 }}>
-        {recurso.label && (
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#fff', marginBottom: 1, fontWeight: 500 }}>
-            {recurso.label}
-          </p>
-        )}
-        <p style={{
-          fontFamily: 'var(--font-body)', fontSize: 11,
-          color: 'rgba(255,255,255,0.3)',
-          overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+        {/* Icono tipo — stroke, sin relleno */}
+        <div style={{
+          width: 28, height: 28, borderRadius: 7, flexShrink: 0,
+          border: `1px solid ${TIPO_COLOR[recurso.tipo]}44`,
+          background: `${TIPO_COLOR[recurso.tipo]}12`,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
         }}>
-          {shortUrl}
-        </p>
+          <TipoIcon size={13} strokeWidth={1.8} color={TIPO_COLOR[recurso.tipo]} />
+        </div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          {recurso.label && (
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#fff', marginBottom: 1, fontWeight: 500 }}>
+              {recurso.label}
+            </p>
+          )}
+          <p style={{
+            fontFamily: 'var(--font-body)', fontSize: 11,
+            color: 'rgba(255,255,255,0.3)',
+            overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
+          }}>
+            {shortUrl}
+          </p>
+        </div>
+
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
+          {isVideo && (
+            <SmallBtn
+              icon={LayoutList}
+              label="Cartas"
+              onClick={() => setEditingCards(true)}
+              color="rgba(155,84,249,0.12)"
+            />
+          )}
+          <SmallBtn icon={Pencil} onClick={onEdit} />
+          <SmallBtn icon={Trash2} onClick={onDelete} danger />
+        </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 4, flexShrink: 0 }}>
-        <SmallBtn icon={Pencil} onClick={onEdit} />
-        <SmallBtn icon={Trash2} onClick={onDelete} danger />
-      </div>
-    </div>
+      {editingCards && (
+        <VideoCardEditor
+          recursoUrl={recurso.url}
+          token={token}
+          onClose={() => setEditingCards(false)}
+        />
+      )}
+    </>
   )
 }
 
@@ -784,14 +810,20 @@ function SeccionPanel({
         method: 'POST', headers: authHeaders,
         body: JSON.stringify({ seccion_id: seccion.id, ...data }),
       })
-      if (!res.ok) throw new Error('Error al crear recurso')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        throw new Error(errData.error || `Error al crear recurso: ${res.status}`)
+      }
       const { recurso } = await res.json()
       onUpdate({ ...seccion, recursos: [...seccion.recursos, recurso] })
     } else if (editingRecurso) {
       const res = await fetch(`${apiBase}/recursos/${editingRecurso.id}`, {
         method: 'PATCH', headers: authHeaders, body: JSON.stringify(data),
       })
-      if (!res.ok) throw new Error('Error al actualizar recurso')
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        throw new Error(errData.error || `Error al actualizar recurso: ${res.status}`)
+      }
       const { recurso } = await res.json()
       onUpdate({ ...seccion, recursos: seccion.recursos.map(r => r.id === recurso.id ? recurso : r) })
     }
@@ -848,6 +880,7 @@ function SeccionPanel({
                   <RecursoRow
                     key={r.id}
                     recurso={r}
+                    token={token}
                     onEdit={() => setEditingRecurso(r)}
                     onDelete={() => deleteRecurso(r.id)}
                   />
@@ -1064,6 +1097,7 @@ function CursoEditor({
   const [saving, setSaving] = useState(false)
   const [zonaTab, setZonaTab] = useState<'escuela' | 'gym'>('escuela')
   const [autoLoading, setAutoLoading] = useState(false)
+  const [initializing, setInitializing] = useState(false)
 
   const authHeaders = useCallback(() => ({
     Authorization: `Bearer ${token}`,
@@ -1071,28 +1105,72 @@ function CursoEditor({
   }), [token])
 
   useEffect(() => {
+    console.log('[Frontend useEffect] Cargando curso:', cursoId)
     let cancelled = false
     fetch(`${apiBase}?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
-      .then(r => r.json())
-      .then(d => { if (!cancelled) setCurso(d.curso ?? null) })
-      .catch(() => { if (!cancelled) setError('Error al cargar') })
+      .then(r => {
+        console.log('[Frontend useEffect] Respuesta status:', r.status)
+        return r.json()
+      })
+      .then(d => {
+        console.log('[Frontend useEffect] Datos recibidos:', d)
+        console.log('[Frontend useEffect] Curso cargado con módulos:', d.curso?.modulos?.length || 0)
+        if (!cancelled) setCurso(d.curso ?? null)
+      })
+      .catch((err) => {
+        console.error('[Frontend useEffect] Error al cargar:', err)
+        if (!cancelled) setError('Error al cargar')
+      })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
   }, [apiBase, cursoId, token])
 
   const addModulo = async () => {
-    if (!newModNombre.trim() || !curso) return
+    console.log('[Frontend addModulo] ===== INICIO =====')
+    console.log('[Frontend addModulo] Nombre:', newModNombre.trim())
+    console.log('[Frontend addModulo] Curso:', curso?.id)
+
+    if (!newModNombre.trim() || !curso) {
+      console.warn('[Frontend addModulo] Cancelado: falta nombre o curso')
+      return
+    }
+
     setSaving(true)
-    const res = await fetch(`${apiBase}/modulos`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({ curso_id: curso.id, nombre: newModNombre.trim() }),
-    })
-    if (res.ok) {
-      const { modulo } = await res.json()
-      setCurso(c => c ? { ...c, modulos: [...c.modulos, modulo] } : c)
-      setNewModNombre('')
-      setAddingModulo(false)
+    const requestBody = { curso_id: curso.id, nombre: newModNombre.trim() }
+    console.log('[Frontend addModulo] Enviando POST a:', `${apiBase}/modulos`)
+    console.log('[Frontend addModulo] Body:', requestBody)
+
+    try {
+      const res = await fetch(`${apiBase}/modulos`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify(requestBody),
+      })
+
+      console.log('[Frontend addModulo] Respuesta status:', res.status, res.statusText)
+
+      if (res.ok) {
+        const responseData = await res.json()
+        console.log('[Frontend addModulo] Respuesta data:', responseData)
+        const modulo = responseData.modulo
+        console.log('[Frontend addModulo] Módulo recibido:', modulo)
+
+        setCurso(c => {
+          const newCurso = c ? { ...c, modulos: [...c.modulos, modulo] } : c
+          console.log('[Frontend addModulo] Nuevo estado del curso:', newCurso)
+          return newCurso
+        })
+        setNewModNombre('')
+        setAddingModulo(false)
+        console.log('[Frontend addModulo] ===== ÉXITO =====')
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('[Frontend addModulo] Error:', res.status, errorData)
+        alert(`Error al crear módulo: ${errorData.error || res.statusText}`)
+      }
+    } catch (err) {
+      console.error('[Frontend addModulo] Error de red:', err)
+      alert('Error de conexión al crear el módulo')
     }
     setSaving(false)
   }
@@ -1103,10 +1181,21 @@ function CursoEditor({
 
   const deleteModulo = useCallback(async (id: string) => {
     if (!confirm('¿Eliminar este módulo y todo su contenido?')) return
-    const res = await fetch(`${apiBase}/modulos/${id}`, {
-      method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
-    })
-    if (res.ok) setCurso(c => c ? { ...c, modulos: c.modulos.filter(m => m.id !== id) } : c)
+    try {
+      const res = await fetch(`${apiBase}/modulos/${id}`, {
+        method: 'DELETE', headers: { Authorization: `Bearer ${token}` },
+      })
+      if (res.ok) {
+        setCurso(c => c ? { ...c, modulos: c.modulos.filter(m => m.id !== id) } : c)
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Error desconocido' }))
+        console.error('Error al eliminar módulo:', res.status, errorData)
+        alert(`Error al eliminar módulo: ${errorData.error || res.statusText}`)
+      }
+    } catch (err) {
+      console.error('Error de red al eliminar módulo:', err)
+      alert('Error de conexión al eliminar el módulo')
+    }
   }, [apiBase, token])
 
   if (loading) return (
@@ -1115,26 +1204,77 @@ function CursoEditor({
     </div>
   )
 
-  if (error || !curso) return (
-    <p style={{ color: '#ff5252', fontFamily: 'var(--font-body)', fontSize: 14, padding: 20 }}>
-      {error ?? 'Curso no encontrado'}
-    </p>
+  if (error) return (
+    <p style={{ color: '#ff5252', fontFamily: 'var(--font-body)', fontSize: 14, padding: 20 }}>{error}</p>
   )
 
-  // Módulos que tienen al menos una sección visible en el tab actual
-  const modulosVisibles = (curso?.modulos ?? []).filter(m =>
-    m.secciones.some(s =>
-      s.zona === null || s.zona === (zonaTab === 'escuela' ? 'clase' : 'gym')
+  // Curso no existe en DB todavía — ofrecer inicialización
+  if (!curso) {
+    const initCourse = async () => {
+      setInitializing(true)
+      try {
+        const res = await fetch(`${apiBase}/cursos`, {
+          method: 'POST',
+          headers: authHeaders(),
+          body: JSON.stringify({ nombre: cursoNombre, emoji: cursoEmoji, id: cursoId }),
+        })
+        const data = await res.json()
+        if (res.ok) {
+          setCurso({ ...data.curso, modulos: [] })
+        } else if (res.status === 409) {
+          // Ya existe — recargar
+          const retry = await fetch(`${apiBase}?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
+          const rd = await retry.json()
+          setCurso(rd.curso ?? null)
+        } else {
+          setError(data.error ?? 'Error al crear curso')
+        }
+      } catch { setError('Error de conexión') }
+      finally { setInitializing(false) }
+    }
+
+    return (
+      <div style={{ padding: '48px 24px', textAlign: 'center', maxWidth: 400, margin: '0 auto' }}>
+        <div style={{ fontSize: 40, marginBottom: 16 }}>{cursoEmoji}</div>
+        <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, color: '#fff', marginBottom: 8 }}>
+          {cursoNombre}
+        </h2>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 24, lineHeight: 1.6 }}>
+          Este instrumento aún no tiene contenido en la base de datos.<br />
+          Inicialízalo para empezar a agregar módulos y recursos.
+        </p>
+        <motion.button
+          whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+          onClick={initCourse}
+          disabled={initializing}
+          style={{
+            padding: '12px 28px', borderRadius: 12, border: 'none',
+            background: 'linear-gradient(135deg, #ec488a, #9b54f9)',
+            color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700,
+            fontSize: 14, cursor: initializing ? 'wait' : 'pointer',
+          }}
+        >
+          {initializing ? 'Creando…' : '+ Inicializar curso'}
+        </motion.button>
+      </div>
     )
-  )
+  }
 
-  // Stats del tab actual
+  // Módulos del curso - MOSTRAR TODOS (incluyendo vacíos)
+  console.log('[Frontend render] Total módulos en curso:', curso?.modulos?.length || 0)
+  console.log('[Frontend render] Módulos:', curso?.modulos)
+
+  const modulosVisibles = (curso?.modulos ?? [])
+
+  console.log('[Frontend render] Módulos a renderizar:', modulosVisibles.length)
+
+  // Stats del tab actual (filtrar secciones por zona)
   const seccionesTab = modulosVisibles.reduce((a, m) =>
-    a + m.secciones.filter(s => s.zona === null || s.zona === (zonaTab === 'escuela' ? 'clase' : 'gym')).length, 0)
+    a + (m.secciones || []).filter(s => s.zona === null || s.zona === (zonaTab === 'escuela' ? 'clase' : 'gym')).length, 0)
   const recursosTab = modulosVisibles.reduce((a, m) =>
-    a + m.secciones
+    a + (m.secciones || [])
       .filter(s => s.zona === null || s.zona === (zonaTab === 'escuela' ? 'clase' : 'gym'))
-      .reduce((b, s) => b + s.recursos.length, 0), 0)
+      .reduce((b, s) => b + (s.recursos?.length || 0), 0), 0)
 
   return (
     <div>
@@ -1199,6 +1339,8 @@ function CursoEditor({
         {/* Botón añadir módulo */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
           <motion.button
+            type="button"
+            title="Lee subtítulos del video y coloca interacciones en los tramos largos sin habla (según captions). Solo videos YouTube sin interacciones aún."
             whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
             onClick={async () => {
               setAutoLoading(true)
@@ -1306,6 +1448,17 @@ function CursoEditor({
   )
 }
 
+// Color estable para cursos sin entrada en la lista estática (metadata)
+function colorFromId(id: string): string {
+  let h = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    h ^= id.charCodeAt(i)
+    h = Math.imul(h, 16777619)
+  }
+  const hue = Math.abs(h) % 280 + 30
+  return `hsl(${hue}, 52%, 58%)`
+}
+
 // ── Instrumentos principales (sidebar fijo) ───────────────────
 const INSTRUMENTOS_PRINCIPALES = [
   { id: 'piano',            nombre: 'Piano',             Icon: Piano,       color: '#ec488a', emoji: '🎹' },
@@ -1314,11 +1467,21 @@ const INSTRUMENTOS_PRINCIPALES = [
   { id: 'violin',           nombre: 'Violín',             Icon: Music2,      color: '#9b54f9', emoji: '🎻' },
   { id: 'canto',            nombre: 'Canto',              Icon: Mic,         color: '#ec488a', emoji: '🎤' },
   { id: 'ciudad-musical',   nombre: 'Iniciación Musical', Icon: BookOpen,    color: '#3db8fa', emoji: '🎵' },
+  // Mismo id que CURSOS / tabla `cursos` (evita 404 si un instrumento en BD usa id autogenerado)
+  { id: 'ukelele',          nombre: 'Ukelele',            Icon: Music2,      color: '#34d399', emoji: '🎶' },
 ]
 
 // ══════════════════════════════════════════════════════════════
 // CONTENT MANAGER — Componente raíz
 // ══════════════════════════════════════════════════════════════
+type SidebarInst = {
+  id: string
+  nombre: string
+  emoji: string
+  color: string
+  Icon: LucideIcon
+}
+
 export default function ContentManager({
   token,
   apiBase = '/api/admin/content',
@@ -1328,20 +1491,81 @@ export default function ContentManager({
   apiBase?: string
   allowedCursoIds?: string[]
 }) {
-  const instrumentos = allowedCursoIds
-    ? INSTRUMENTOS_PRINCIPALES.filter(i => allowedCursoIds.includes(i.id))
-    : INSTRUMENTOS_PRINCIPALES
+  const staticMeta = useMemo(() => new Map(INSTRUMENTOS_PRINCIPALES.map(s => [s.id, s])), [])
 
-  const [selectedId, setSelectedId] = useState(instrumentos[0]?.id ?? '')
+  // Fuente de verdad: tabla `instrumentos` en Supabase
+  const [instrsApi, setInstrsApi] = useState<Array<{
+    id: string; nombre: string; emoji: string; color: string
+    curso_id: string | null; orden: number
+  }>>([])
+  const [listLoading, setListLoading] = useState(true)
+
+  useEffect(() => {
+    if (!token) return
+    let cancelled = false
+    setListLoading(true)
+    fetch('/api/instrumentos', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : { instrumentos: [] })
+      .then(data => {
+        if (!cancelled) setInstrsApi(Array.isArray(data.instrumentos) ? data.instrumentos : [])
+      })
+      .catch(() => { if (!cancelled) setInstrsApi([]) })
+      .finally(() => { if (!cancelled) setListLoading(false) })
+    return () => { cancelled = true }
+  }, [token])
+
+  // Sidebar basado ÚNICAMENTE en instrumentos de la tabla `instrumentos`
+  const instrumentos: SidebarInst[] = useMemo(() => {
+    const seen = new Set<string>()
+    const out: SidebarInst[] = []
+
+    const sorted = [...instrsApi].sort((a, b) => (a.orden ?? 0) - (b.orden ?? 0))
+    for (const ins of sorted) {
+      const cid = (ins.curso_id?.trim()) || ins.id
+      if (!cid || seen.has(cid)) continue
+      seen.add(cid)
+      const s = staticMeta.get(cid)
+      out.push({
+        id:     cid,
+        nombre: ins.nombre,
+        emoji:  ins.emoji,
+        color:  ins.color || s?.color || colorFromId(cid),
+        Icon:   s?.Icon ?? Music2,
+      })
+    }
+
+    if (allowedCursoIds?.length) return out.filter(i => allowedCursoIds.includes(i.id))
+    return out
+  }, [instrsApi, staticMeta, allowedCursoIds])
+
+  const [selectedId, setSelectedId] = useState('')
+  useEffect(() => {
+    if (instrumentos.length === 0) return
+    setSelectedId(cur => (instrumentos.some(i => i.id === cur) ? cur : instrumentos[0].id))
+  }, [instrumentos])
+
   const selected = instrumentos.find(i => i.id === selectedId) ?? instrumentos[0]
 
-  if (instrumentos.length === 0) {
+  if (listLoading && instrumentos.length === 0) {
     return (
-      <div style={{ padding: 60, textAlign: 'center', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
+      <div style={{ padding: 48, textAlign: 'center', fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.35)' }}>
+        Cargando instrumentos…
+      </div>
+    )
+  }
+
+  if (!listLoading && instrumentos.length === 0) {
+    return (
+      <div style={{ padding: 40, maxWidth: 480, margin: '0 auto', textAlign: 'center' }}>
         <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(255,255,255,0.05)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
           <Music2 size={24} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.2)' }} />
         </div>
-        <p>No tienes cursos asignados todavía.</p>
+        <p style={{ color: 'rgba(255,255,255,0.45)', fontFamily: 'var(--font-body)', marginBottom: 8 }}>
+          No hay instrumentos registrados.
+        </p>
+        <p style={{ color: 'rgba(255,255,255,0.28)', fontFamily: 'var(--font-body)', fontSize: 13 }}>
+          Ve a <strong style={{ color: 'rgba(255,255,255,0.5)' }}>Instrumentos</strong> y crea o importa los instrumentos del curso.
+        </p>
       </div>
     )
   }
@@ -1359,10 +1583,14 @@ export default function ContentManager({
         <p style={{
           fontFamily: 'var(--font-body)', fontSize: 10,
           color: 'rgba(255,255,255,0.25)', letterSpacing: '0.12em',
-          textTransform: 'uppercase', padding: '0 18px', marginBottom: 10,
+          textTransform: 'uppercase', padding: '0 18px', marginBottom: 6,
         }}>
           Instrumentos
         </p>
+
+        {listLoading && (
+          <p style={{ padding: '0 18px', fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>Cargando…</p>
+        )}
 
         {instrumentos.map(inst => {
           const active = selectedId === inst.id

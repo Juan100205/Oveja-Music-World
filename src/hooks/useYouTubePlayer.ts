@@ -3,35 +3,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import type { InteractionPoint } from '@/types'
 
-// ── YT IFrame API types (minimal) ──────────────────────────────
-declare global {
-  interface Window {
-    YT: {
-      Player: new (
-        el: HTMLElement | string,
-        opts: {
-          videoId: string
-          playerVars?: Record<string, unknown>
-          events?: {
-            onReady?: (e: { target: YTPlayer }) => void
-            onStateChange?: (e: { data: number }) => void
-          }
-        }
-      ) => YTPlayer
-      PlayerState: { ENDED: number; PLAYING: number; PAUSED: number; BUFFERING: number }
-    }
-    onYouTubeIframeAPIReady?: () => void
-  }
-}
-
-interface YTPlayer {
-  playVideo(): void
-  pauseVideo(): void
-  getCurrentTime(): number
-  getDuration(): number
-  destroy(): void
-}
-
 export interface UseYouTubePlayerReturn {
   containerRef:       React.RefObject<HTMLDivElement | null>
   playerReady:        boolean
@@ -72,13 +43,17 @@ export function useYouTubePlayer(
   const playerRef          = useRef<YTPlayer | null>(null)
   const intervalRef        = useRef<ReturnType<typeof setInterval> | null>(null)
   const firedRef           = useRef<Set<string>>(new Set())  // ids already triggered
+  // ── onVideoEnded stored in a ref so the YT player closure always reads the latest value ──
+  const onVideoEndedRef    = useRef<(() => void) | null>(null)
 
   const [playerReady,        setPlayerReady]        = useState(false)
   const [interactionPending, setInteractionPending] = useState<InteractionPoint | null>(null)
+  // Exposed as state so consumers can read it, but we drive it from the ref
   const [onVideoEnded,       _setOnVideoEnded]      = useState<(() => void) | null>(null)
 
   const setOnVideoEnded = useCallback((cb: (() => void) | null) => {
-    _setOnVideoEnded(() => cb)
+    onVideoEndedRef.current = cb   // always up-to-date in the player closure
+    _setOnVideoEnded(() => cb)     // keep state in sync for consumers
   }, [])
 
   const stopInterval = useCallback(() => {
@@ -146,7 +121,10 @@ export function useYouTubePlayer(
             if (e.data === PAUSED)   stopInterval()
             if (e.data === ENDED)  {
               stopInterval()
-              onVideoEnded?.()
+              // Lee siempre el callback más reciente desde el ref (evita stale closure)
+              const cb = onVideoEndedRef.current
+              console.log('[YT] 🎬 video ENDED — videoCompleted callback registrado:', !!cb)
+              cb?.()
             }
           },
         },
