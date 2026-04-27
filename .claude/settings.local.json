@@ -31,7 +31,11 @@
       "Bash(npm test:*)",
       "Bash(npx vercel:*)",
       "Bash(npx eslint:*)",
-      "Bash(node:*)"
+      "Bash(node:*)",
+      "Bash(npm list *)",
+      "Bash(curl -s http://localhost:3001/api/admin/users -H \"Authorization: Bearer test-invalid-token\")",
+      "Bash(kill %1)",
+      "Bash(xargs grep *)"
     ]
   }
 }

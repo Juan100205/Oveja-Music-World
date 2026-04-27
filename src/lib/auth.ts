@@ -1,9 +1,9 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
+import { getServerEnv } from '@/lib/env'
 import type { LoginCredentials, JWTPayload } from '@/types'
 
 const SALT_ROUNDS = 12
-const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-in-production'
 const JWT_EXPIRES_IN = '7d'
 
 // --- Validation ---
@@ -49,12 +49,12 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 // --- JWT ---
 
 export function signToken(payload: JWTPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN })
+  return jwt.sign(payload, getServerEnv('JWT_SECRET'), { expiresIn: JWT_EXPIRES_IN })
 }
 
 export function verifyToken(token: string): JWTPayload | null {
   try {
-    return jwt.verify(token, JWT_SECRET) as JWTPayload
+    return jwt.verify(token, getServerEnv('JWT_SECRET')) as JWTPayload
   } catch {
     return null
   }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -294,6 +294,11 @@ function ModulosList({
   )
 }
 
+function isPracticeModule(nombre: string): boolean {
+  const normalized = nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  return normalized.includes('practica')
+}
+
 // ══════════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ══════════════════════════════════════════════════════════════
@@ -308,6 +313,7 @@ export default function MapaPage() {
   // Panel clases
   const [clasesOpen, setClasesOpen] = useState(false)
   const [claseSeleccionada, setClaseSeleccionada] = useState<ClaseConfig | null>(null)
+  const [modulosDb, setModulosDb] = useState<Record<string, Modulo[]>>({})
 
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
@@ -335,12 +341,36 @@ export default function MapaPage() {
   const cerrarClases = () => { setClasesOpen(false); setClaseSeleccionada(null) }
   const cerrarGym = () => setGymOpen(false)
 
+  useEffect(() => {
+    if (!token || !claseSeleccionada?.cursoId || modulosDb[claseSeleccionada.cursoId]) return
+
+    const cursoId = claseSeleccionada.cursoId
+
+    fetch(`/api/content?id=${cursoId}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { modulos?: Modulo[] } | null) => {
+        const modulos = data?.modulos
+        if (!Array.isArray(modulos)) return
+        setModulosDb(prev => ({ ...prev, [cursoId]: modulos }))
+      })
+      .catch(() => { /* fallback silencioso a datos estaticos */ })
+  }, [token, claseSeleccionada?.cursoId, modulosDb])
+
   const modulosClase = claseSeleccionada
     ? (CURSOS.find(c => c.id === claseSeleccionada.cursoId)?.modulos ?? [])
-      .filter(m => !m.nombre.toLowerCase().includes('práctica'))
+      .filter(m => !isPracticeModule(m.nombre))
     : []
 
   // ── Instrumentos dinámicos (hook combina estáticos + DB) ──────
+  const modulosClaseVista = claseSeleccionada
+    ? ((modulosDb[claseSeleccionada.cursoId]?.length
+      ? modulosDb[claseSeleccionada.cursoId]
+      : modulosClase))
+      .filter(m => !isPracticeModule(m.nombre))
+    : []
+
   const { clases: allClases, gym: allGym } = useInstrumentos(token ?? null)
 
   // Filtrar por acceso — admins ven todo
@@ -457,12 +487,12 @@ export default function MapaPage() {
                     <button onClick={cerrarClases} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
-                  {modulosClase.length === 0
+                  {modulosClaseVista.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
                     : <ModulosList
-                      modulos={modulosClase}
+                      modulos={modulosClaseVista}
                       color={claseSeleccionada.color}
-                      onSelect={m => router.push(`/escuela/clase/${claseSeleccionada.id}`)}
+                      onSelect={() => router.push(`/escuela/clase/${claseSeleccionada.id}`)}
                     />
                   }
                 </motion.div>
