@@ -43,36 +43,40 @@ function WasdKey({ label, wide, width, height }: { label: React.ReactNode; wide?
 function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
   return (
     <>
-      {/* Card */}
+      {/* Backdrop */}
       <motion.div
-        key="wasd-card"
-        initial={{ opacity: 0, x: '-100%' }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: '-100%' }}
-        transition={{ type: 'spring', damping: 22, stiffness: 280 }}
-        className="absolute z-50"
-        style={{
-          bottom: 100, left: 0,
-          width: 'min(320px, 85vw)',
-          background: 'rgba(10,10,26,0.97)',
-          borderTop: '1px solid rgba(61,184,250,0.25)',
-          borderRight: '1px solid rgba(61,184,250,0.25)',
-          borderBottom: '1px solid rgba(61,184,250,0.25)',
-          borderLeft: 'none',
-          borderTopRightRadius: 20,
-          borderBottomRightRadius: 20,
-          borderTopLeftRadius: 0,
-          borderBottomLeftRadius: 0,
-          boxShadow: '8px 0 40px rgba(61,184,250,0.12), 12px 0 60px rgba(155,84,249,0.08)',
-          padding: '24px 20px 20px',
-          textAlign: 'center',
-          overflow: 'hidden',
-        }}
-      >
+        key="wasd-backdrop"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 z-40"
+        style={{ background: 'rgba(10,10,26,0.65)', backdropFilter: 'blur(6px)' }}
+      />
+
+      {/* Contenedor de centrado */}
+      <div className="absolute inset-0 z-50 flex items-center justify-center p-4 pointer-events-none">
+        <motion.div
+          key="wasd-card"
+          initial={{ opacity: 0, scale: 0.88, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 10 }}
+          transition={{ type: 'spring', damping: 22, stiffness: 300 }}
+          className="pointer-events-auto relative"
+          style={{
+            width: 'min(340px, 88vw)',
+            background: 'rgba(10,10,26,0.97)',
+            border: '1px solid rgba(61,184,250,0.22)',
+            borderRadius: 24,
+            boxShadow: '0 0 60px rgba(61,184,250,0.12), 0 0 100px rgba(155,84,249,0.08)',
+            padding: '36px 32px 28px',
+            textAlign: 'center',
+            overflow: 'hidden',
+          }}
+        >
         {/* Glow accent top */}
         <div style={{
           position: 'absolute', top: 0, left: '50%', transform: 'translateX(-50%)',
-          width: 180, height: 2,
+          width: 200, height: 2,
           background: 'linear-gradient(90deg, transparent, rgba(61,184,250,0.7), transparent)',
         }} />
 
@@ -169,7 +173,8 @@ function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
         >
           ¡A jugar! 🎮
         </motion.button>
-      </motion.div>
+        </motion.div>
+      </div>
     </>
   )
 }
@@ -299,6 +304,15 @@ function isPracticeModule(nombre: string): boolean {
   return normalized.includes('practica')
 }
 
+function getTutorialCount(userId: string): number {
+  return parseInt(localStorage.getItem(`tutorial_wasd_${userId}`) ?? '0', 10)
+}
+
+function incrementTutorialCount(userId: string): void {
+  const count = getTutorialCount(userId)
+  localStorage.setItem(`tutorial_wasd_${userId}`, String(count + 1))
+}
+
 // ══════════════════════════════════════════════════════════════
 // PÁGINA PRINCIPAL
 // ══════════════════════════════════════════════════════════════
@@ -327,14 +341,39 @@ export default function MapaPage() {
 
   const dismissTapeteHint = useCallback(() => {
     setShowTapeteHint(false)
-    setShowTutorial(true)
-  }, [])
+    const count = user?.id ? getTutorialCount(user.id) : 0
+    if (count < 5) setShowTutorial(true)
+  }, [user?.id])
+
+  const dismissTutorial = useCallback(() => {
+    setShowTutorial(false)
+    if (user?.id) incrementTutorialCount(user.id)
+  }, [user?.id])
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
-    if (name === 'IsOverGym') flushSync(() => setOverGym(isTrue))
-    if (name === 'IsOverSchool') flushSync(() => setOverSchool(isTrue))
-  }, [])
+    if (name === 'IsOverGym') {
+      flushSync(() => {
+        setOverGym(isTrue)
+        if (isTrue) {
+          if (!gymOpen && !clasesOpen) setGymOpen(true)
+        } else {
+          setGymOpen(false)
+        }
+      })
+    }
+    if (name === 'IsOverSchool') {
+      flushSync(() => {
+        setOverSchool(isTrue)
+        if (isTrue) {
+          if (!clasesOpen && !gymOpen) setClasesOpen(true)
+        } else {
+          setClasesOpen(false)
+          setClaseSeleccionada(null)
+        }
+      })
+    }
+  }, [clasesOpen, gymOpen])
 
   const anyOpen = clasesOpen || gymOpen
 
@@ -395,39 +434,7 @@ export default function MapaPage() {
 
       <TapeteCard show={showTapeteHint} onDismiss={dismissTapeteHint} sala="mapa" />
 
-      {/* ── Botón Gym ── */}
-      <AnimatePresence>
-        {overGym && !anyOpen && (
-          <motion.div key="gym-btn" className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
-            <PillButton
-              onClick={() => setGymOpen(true)}
-              gradient="linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)"
-              glow="rgba(61,184,250,0.45)"
-            >
-              🏋️ Ir a Entrenar →
-            </PillButton>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* ── Botón Clases ── */}
-      <AnimatePresence>
-        {overSchool && !anyOpen && (
-          <motion.div key="school-btn" className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20"
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.3, ease: 'easeOut' }}>
-            <PillButton
-              onClick={() => setClasesOpen(true)}
-              gradient="linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)"
-              glow="rgba(236,72,138,0.45)"
-            >
-              Ir a Clase →
-            </PillButton>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Los paneles se abren automáticamente al hacer hover en Spline via handleVariableChange */}
 
       {/* ════════════════════════════════════════
           PANEL — CLASES
@@ -662,7 +669,7 @@ export default function MapaPage() {
       {/* ── WASD Tutorial ── */}
       <AnimatePresence>
         {showTutorial && (
-          <WasdTutorialCard onDismiss={() => setShowTutorial(false)} />
+          <WasdTutorialCard onDismiss={dismissTutorial} />
         )}
       </AnimatePresence>
 

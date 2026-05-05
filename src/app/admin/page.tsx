@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 
@@ -39,7 +39,7 @@ const COLOR_PRESETS = [
 ]
 
 const EMPTY_INSTR_FORM = {
-  nombre: '', emoji: '🎵', descripcion: '', color: '#ec488a',
+  id: '', nombre: '', emoji: '🎵', descripcion: '', color: '#ec488a',
   glow: 'rgba(236,72,138,0.4)', zona: 'clase', curso_id: '',
   crear_curso_vacio: true,
 }
@@ -162,13 +162,17 @@ export default function AdminPage() {
     }
   }, [isAuthenticated, user, hasFetchedInstrs, fetchingInstrs, fetchInstrumentos])
 
-  const handleCreateInstr = async () => {
+  const handleSaveInstr = async () => {
     setInstrFormError(null)
     if (!instrForm.nombre.trim()) { setInstrFormError('El nombre es requerido'); return }
     setCreatingInstr(true)
     try {
-      const res = await fetch('/api/admin/instrumentos', {
-        method: 'POST',
+      const isEdit = !!instrForm.id && instrumentos.some(i => i.id === instrForm.id)
+      const url = isEdit ? `/api/admin/instrumentos/${instrForm.id}` : '/api/admin/instrumentos'
+      const method = isEdit ? 'PATCH' : 'POST'
+
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           nombre:      instrForm.nombre,
@@ -178,12 +182,18 @@ export default function AdminPage() {
           glow:        instrForm.glow,
           zona:        instrForm.zona,
           curso_id:    instrForm.curso_id || null,
-          crear_curso_vacio: instrForm.crear_curso_vacio,
+          crear_curso_vacio: isEdit ? false : instrForm.crear_curso_vacio,
         }),
       })
       const data = await res.json()
       if (!res.ok) { setInstrFormError(data.error); return }
-      setInstrumentos(prev => [...prev, data.instrumento])
+      
+      if (isEdit) {
+        setInstrumentos(prev => prev.map(i => i.id === instrForm.id ? data.instrumento : i))
+      } else {
+        setInstrumentos(prev => [...prev, data.instrumento])
+      }
+      
       setShowNewInstr(false)
       setInstrForm(EMPTY_INSTR_FORM)
     } catch { setInstrFormError('Error de conexión') }
@@ -250,11 +260,34 @@ export default function AdminPage() {
     if (isAuthenticated && user?.role === 'admin') fetchUsers()
   }, [isAuthenticated, user, fetchUsers])
 
-  // ── Mapa de cursos activo (estáticos + dinámicos de DB) ───────
-  const dynCursosMap = instrumentos
-    .filter(i => !CURSOS_MAP.some(c => c.claseId === i.id))
-    .map(i => ({ cursoId: i.curso_id ?? i.id, claseId: i.id, label: i.nombre, emoji: i.emoji, color: i.color }))
-  const activeCursosMap = [...CURSOS_MAP, ...dynCursosMap]
+  // ── Instrumentos consolidados (Estáticos + DB) ───────
+  const mergeInstrs = (staticList: any[], dynamicList: Instrumento[]): Instrumento[] => {
+    const dynIds = new Set(dynamicList.map(d => d.id))
+    const filteredStatic = staticList.map(s => ({
+      id: s.id || s.claseId,
+      nombre: s.nombre || s.label,
+      emoji: s.emoji,
+      descripcion: s.descripcion || '',
+      color: s.color?.includes('gradient') ? s.color.match(/#[0-9a-fA-F]{6}/)?.[0] ?? '#ec488a' : s.color,
+      glow: s.glow || 'rgba(255,255,255,0.2)',
+      zona: 'clase',
+      curso_id: s.cursoId || s.claseId,
+      orden: 0,
+      activo: true
+    })).filter(s => !dynIds.has(s.id))
+    return [...filteredStatic, ...dynamicList]
+  }
+
+  // Usamos el listado de clases estáticas base para asegurar que siempre aparezcan
+  const allInstrumentos = mergeInstrs(CURSOS_MAP, instrumentos)
+
+  const activeCursosMap = allInstrumentos.map(i => ({
+    cursoId: i.curso_id ?? i.id,
+    claseId: i.id,
+    label:   i.nombre,
+    emoji:   i.emoji,
+    color:   i.color
+  }))
 
   // ── Toggle curso ───────────────────────────────────────────
   const toggleCurso = useCallback(async (userId: string, cursoId: string, claseId: string) => {
@@ -545,79 +578,107 @@ export default function AdminPage() {
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              {instrumentos.map(inst => (
-                <motion.div
-                  key={inst.id}
-                  initial={{ opacity: 0, y: 6 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  style={{
-                    display: 'flex', alignItems: 'center', gap: 14,
-                    padding: '14px 18px', borderRadius: 14,
-                    background: 'rgba(255,255,255,0.03)',
-                    border: `1px solid ${inst.color}33`,
-                  }}
-                >
-                  {/* Emoji + color dot */}
-                  <div style={{
-                    width: 46, height: 46, borderRadius: 12, flexShrink: 0,
-                    background: `${inst.color}18`,
-                    border: `1px solid ${inst.color}44`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    fontSize: 22,
-                  }}>
-                    {inst.emoji}
-                  </div>
-
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', margin: 0 }}>
-                        {inst.nombre}
-                      </p>
-                      <span style={{
-                        padding: '2px 8px', borderRadius: 999, fontSize: 10, fontFamily: 'var(--font-body)',
-                        background: inst.zona === 'clase' ? 'rgba(61,184,250,0.15)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.15)' : 'rgba(255,255,255,0.08)',
-                        color: inst.zona === 'clase' ? '#3db8fa' : inst.zona === 'gym' ? '#c084ff' : 'rgba(255,255,255,0.5)',
-                        border: `1px solid ${inst.zona === 'clase' ? 'rgba(61,184,250,0.3)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.3)' : 'rgba(255,255,255,0.1)'}`,
-                      }}>
-                        {inst.zona === 'clase' ? '🏫 Clase' : inst.zona === 'gym' ? '🏋️ Gym' : '↔ Ambos'}
-                      </span>
-                      {inst.curso_id && (
-                        <span style={{ fontSize: 10, fontFamily: 'var(--font-body)', color: 'rgba(255,255,255,0.3)' }}>
-                          → curso: {inst.curso_id}
-                        </span>
-                      )}
-                    </div>
-                    {inst.descripcion && (
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
-                        {inst.descripcion}
-                      </p>
-                    )}
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.2)', margin: '3px 0 0' }}>
-                      id: {inst.id}
-                    </p>
-                  </div>
-
-                  {/* Color swatch */}
-                  <div style={{
-                    width: 20, height: 20, borderRadius: '50%', flexShrink: 0,
-                    background: inst.color, boxShadow: `0 0 8px ${inst.glow}`,
-                  }} />
-
-                  {/* Delete */}
-                  <motion.button
-                    whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                    onClick={() => setInstrToDelete(inst)}
+              {allInstrumentos.map(inst => {
+                const isStaticOnly = !instrumentos.some(i => i.id === inst.id)
+                return (
+                  <motion.div
+                    key={inst.id}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
                     style={{
-                      width: 32, height: 32, borderRadius: 8, flexShrink: 0,
-                      background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
-                      color: 'rgba(255,82,82,0.7)', cursor: 'pointer',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '14px 18px', borderRadius: 14,
+                      background: 'rgba(255,255,255,0.03)',
+                      border: `1px solid ${inst.color}33`,
+                      opacity: isStaticOnly ? 0.7 : 1,
                     }}
                   >
-                    <Trash2 size={13} strokeWidth={1.5} />
-                  </motion.button>
-                </motion.div>
-              ))}
+                    {/* Emoji + color dot */}
+                    <div style={{
+                      width: 46, height: 46, borderRadius: 12, flexShrink: 0,
+                      background: `${inst.color}18`,
+                      border: `1px solid ${inst.color}44`,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 22,
+                    }}>
+                      {inst.emoji}
+                    </div>
+
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', margin: 0 }}>
+                          {inst.nombre}
+                        </p>
+                        <span style={{
+                          padding: '2px 8px', borderRadius: 999, fontSize: 10, fontFamily: 'var(--font-body)',
+                          background: inst.zona === 'clase' ? 'rgba(61,184,250,0.15)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.15)' : 'rgba(255,255,255,0.08)',
+                          color: inst.zona === 'clase' ? '#3db8fa' : inst.zona === 'gym' ? '#c084ff' : 'rgba(255,255,255,0.5)',
+                          border: `1px solid ${inst.zona === 'clase' ? 'rgba(61,184,250,0.3)' : inst.zona === 'gym' ? 'rgba(155,84,249,0.3)' : 'rgba(255,255,255,0.1)'}`,
+                        }}>
+                          {inst.zona === 'clase' ? '🏫 Clase' : inst.zona === 'gym' ? '🏋️ Gym' : '↔ Ambos'}
+                        </span>
+                        {isStaticOnly && (
+                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}>
+                            Código estático
+                          </span>
+                        )}
+                      </div>
+                      {inst.descripcion && (
+                        <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
+                          {inst.descripcion}
+                        </p>
+                      )}
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.2)', margin: '3px 0 0' }}>
+                        id: {inst.id}
+                      </p>
+                    </div>
+
+                    {/* Acciones */}
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <motion.button
+                        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setInstrForm({
+                            id: inst.id,
+                            nombre: inst.nombre,
+                            emoji: inst.emoji,
+                            descripcion: inst.descripcion ?? '',
+                            color: inst.color,
+                            glow: inst.glow,
+                            zona: inst.zona,
+                            curso_id: inst.curso_id ?? '',
+                            crear_curso_vacio: false
+                          })
+                          setShowNewInstr(true)
+                        }}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                          color: 'rgba(255,255,255,0.6)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        <Pencil size={13} strokeWidth={1.5} />
+                      </motion.button>
+
+                      {!isStaticOnly && (
+                        <motion.button
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          onClick={() => setInstrToDelete(inst)}
+                          style={{
+                            width: 32, height: 32, borderRadius: 8,
+                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
+                            color: 'rgba(255,82,82,0.7)', cursor: 'pointer',
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          }}
+                        >
+                          <Trash2 size={13} strokeWidth={1.5} />
+                        </motion.button>
+                      )}
+                    </div>
+                  </motion.div>
+                )
+              })}
             </div>
           )}
         </div>
@@ -832,7 +893,7 @@ export default function AdminPage() {
                 <div style={{ display: 'flex', gap: 10, marginTop: 4 }}>
                   <motion.button
                     whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.97 }}
-                    onClick={handleCreateInstr}
+                    onClick={handleSaveInstr}
                     disabled={creatingInstr}
                     style={{
                       flex: 1, padding: '12px', borderRadius: 12, border: 'none',

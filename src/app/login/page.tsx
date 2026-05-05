@@ -1,14 +1,18 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
-import { motion } from 'framer-motion'
+import { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
 import LoginForm from '@/components/auth/LoginForm'
+import RegisterForm from '@/components/auth/RegisterForm'
 import { useAuth } from '@/hooks/useAuth'
 
+type Mode = 'login' | 'register'
+
 export default function LoginPage() {
-  const { login, loading, error, isAuthenticated } = useAuth()
+  const { login, register, loading, error, isAuthenticated } = useAuth()
   const router = useRouter()
+  const [mode, setMode] = useState<Mode>('login')
 
   useEffect(() => {
     if (!isAuthenticated) return
@@ -20,12 +24,15 @@ export default function LoginPage() {
   const handleLogin = async (credentials: { email: string; password: string }) => {
     const ok = await login(credentials)
     if (ok) {
-      // Los admins van directo al panel
       const stored = localStorage.getItem('user')
       const u = stored ? JSON.parse(stored) : null
       router.push(u?.role === 'admin' ? '/admin' : u?.role === 'teacher' ? '/teacher' : '/escuela')
     }
     return ok
+  }
+
+  const handleRegister = async (data: { email: string; password: string; nombre?: string }) => {
+    return register(data)
   }
 
   return (
@@ -40,15 +47,39 @@ export default function LoginPage() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full opacity-10" style={{ background: 'var(--om-purple)' }} />
       </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 30, scale: 0.95 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        transition={{ duration: 0.5, ease: 'easeOut' }}
-        className="relative w-full max-w-sm rounded-3xl p-6 sm:p-12"
-        style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}
-      >
-        <LoginForm onSubmit={handleLogin} loading={loading} serverError={error} />
-      </motion.div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={mode}
+          initial={{ opacity: 0, y: 24, scale: 0.97 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: -16, scale: 0.97 }}
+          transition={{ duration: 0.35, ease: 'easeOut' }}
+          className="relative w-full max-w-sm rounded-3xl p-6 sm:p-10"
+          style={{ background: 'rgba(255,255,255,0.95)', boxShadow: '0 24px 64px rgba(0,0,0,0.2)' }}
+        >
+          {mode === 'login' ? (
+            <>
+              <LoginForm onSubmit={handleLogin} loading={loading} serverError={error} />
+              <p style={{ textAlign: 'center', fontFamily: 'var(--font-body)', fontSize: 13, color: 'var(--om-text)', opacity: 0.6, marginTop: 16 }}>
+                ¿No Tienes cuenta?{' '}
+                <button
+                  type="button"
+                  onClick={() => setMode('register')}
+                  style={{ color: 'var(--om-purple)', fontWeight: 600, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  Registrate
+                </button>
+              </p>
+            </>
+          ) : (
+            <RegisterForm
+              onSubmit={handleRegister}
+              onSwitchToLogin={() => setMode('login')}
+              loading={loading}
+            />
+          )}
+        </motion.div>
+      </AnimatePresence>
     </main>
   )
 }

@@ -130,22 +130,18 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
-  const [isMobile, setIsMobile] = useState(false)
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevVarsRef = useRef<Record<string, unknown>>({})
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
-
   useEffect(() => {
-    if (isMobile || loaded || error) return
+    if (loaded || error) return
 
     timeoutRef.current = setTimeout(() => setError(true), LOAD_TIMEOUT_MS)
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [isMobile, loaded, error])
+  }, [loaded, error])
 
   // Limpia el polling solo al desmontar el componente
   useEffect(() => {
@@ -154,13 +150,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
     }
   }, [])
 
-  if (isMobile) {
-    return (
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh' }}>
-        <MobileFallback />
-      </div>
-    )
-  }
+
 
   if (error) {
     return (

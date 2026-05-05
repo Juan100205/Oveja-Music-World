@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This file provides guidance to Codex (Codex.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
 
@@ -24,6 +24,10 @@ If the dev server fails to start due to a Turbopack lock or panic, delete `.next
 
 `src/components/spline/SplineScene.tsx` wraps `@splinetool/react-spline` (v4, client-only via `dynamic`). On load it polls `splineApp.getVariables()` every 100ms and fires `onVariableChange(name, value)` whenever a boolean changes. **Always use `flushSync`** when setting state from this callback to prevent batching delays.
 
+**Mobile Support**: The 3D world is enabled for all devices. There is no screen-width restriction; the component attempts to render Spline regardless of the device type.
+
+**Navigation Triggers**: In `/escuela`, panels open automatically when a specific variable (e.g., `IsOverSchool`) becomes `true` via hover, and close when it becomes `false`. No intermediate confirmation buttons are used.
+
 Spline scenes in use:
 - Map: `https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode` — booleans: `IsOverGym`, `IsOverSchool`
 - Classroom: `https://prod.spline.design/646pGt79P6qgQp6p/scene.splinecode` — booleans: `isInClass`, `isOutingClass`
@@ -42,18 +46,22 @@ Spline scenes in use:
 
 ### Data layer (`src/data/`)
 
-All course content is static — no DB reads at runtime for content.
+Course content and instrument metadata use a **hybrid system** (Static fallback + Database priority).
 
-- `cursos.ts` — `CURSOS: Curso[]` — all instruments, modules, sections, and resource links. Types: `Curso → Modulo → Seccion → Recurso`. `TipoRecurso` values: `'video' | 'drive' | 'juego' | 'pdf' | 'imagen' | 'herramienta' | 'otro'`
-- `clases.ts` — `CLASES_CONFIG: ClaseConfig[]` — 6 school instruments mapped to their `cursoId`
-- `gym.ts` — `GYM_INSTRUMENTOS: GymInstrumento[]` — uses `getModulos(cursoId, moduloIds?)` to pull practice-specific modules from `CURSOS`
+- **Database Priority**: The `useInstrumentos` hook and the school views fetch data from the `instrumentos`, `modulos`, `secciones`, and `recursos` tables. If a record exists in the database with the same ID as a static one, the **database version takes precedence**.
+- **Admin Management**: Use the `/admin` panel to create, edit, or delete instruments. Editing a static instrument "promotes" it to the database to allow customization.
+- **Static files**: `src/data/cursos.ts`, `clases.ts`, and `gym.ts` remain as fallback defaults for when the database is empty or a specific item hasn't been "promoted" to DB yet.
+- `TipoRecurso` values: `'video' | 'drive' | 'juego' | 'pdf' | 'imagen' | 'herramienta' | 'otro'`
 
 ### Auth & backend (`src/lib/`, `src/app/api/`)
 
 Custom JWT auth over Supabase (not Supabase Auth). Flow:
 1. `POST /api/auth/login` — validates credentials, queries `users` table via `getSupabaseAdmin()`, returns JWT + user
-2. `useAuth` hook stores token + user in `localStorage`
-3. Protected API routes verify `Bearer` token with `verifyToken()` from `src/lib/auth.ts`
+2. `POST /api/auth/register` — creates a new user with `role: 'student'`, `puntos: 0`, `nivel: 1`, no `cursos_acceso` or `clases_acceso`. Admin assigns instrument access later via `/admin`.
+3. `useAuth` hook stores token + user in `localStorage`. Exports: `login()`, `register()`, `logout()`, `updateUser()`, `isAuthenticated`.
+4. Protected API routes verify `Bearer` token with `verifyToken()` from `src/lib/auth.ts`
+
+**Login page** (`src/app/login/page.tsx`): handles `mode: 'login' | 'register'` toggle with `AnimatePresence`. `RegisterForm.tsx` shows a success screen after registration (no auto-login — admin must assign permissions first).
 
 Supabase clients: `getSupabase()` (browser/public) and `getSupabaseAdmin()` (server/service role). Always use admin client in API routes, never expose it to the browser.
 
@@ -78,6 +86,12 @@ CSS variables (defined in `globals.css`):
 - `--font-display: 'Comfortaa'` (headings, buttons), `--font-body: 'Roboto'` (body text)
 
 Tailwind v4 is configured — CSS variables are exposed as `text-om-pink`, `bg-om-blue`, etc. via `@theme inline` in `globals.css`. Panels use glassmorphism: `background: rgba(12,12,28,0.98)` + `backdropFilter: blur(24px)`.
+
+### WASD Tutorial (`src/app/escuela/page.tsx`)
+
+`WasdTutorialCard` is a centered modal overlay that appears after the `TapeteCard` is dismissed on first entry to `/escuela`. It shows keyboard controls (WASD, arrow keys, spacebar).
+
+**Per-user counter**: stored in `localStorage` as `tutorial_wasd_{userId}`. Shows for the first 5 sessions per user; after that `dismissTapeteHint` skips it. Counter increments on dismiss via `incrementTutorialCount(userId)`.
 
 ### YouTube embedding
 

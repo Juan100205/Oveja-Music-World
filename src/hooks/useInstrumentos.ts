@@ -67,8 +67,9 @@ export function useInstrumentos(token: string | null) {
       .then((data: { instrumentos: ApiInstrumento[] } | null) => {
         const items = data?.instrumentos ?? []
 
+        // Los que vienen de la DB tienen prioridad sobre los estáticos del mismo ID
         setDynClases(items
-          .filter(i => !STATIC_IDS_CLASE.has(i.id) && !BLOCKED_IDS.has(i.id) && (i.zona === 'clase' || i.zona === 'ambos'))
+          .filter(i => (i.zona === 'clase' || i.zona === 'ambos'))
           .map(i => ({
             id:          i.id,
             nombre:      i.nombre,
@@ -81,7 +82,7 @@ export function useInstrumentos(token: string | null) {
         )
 
         setDynGym(items
-          .filter(i => !STATIC_IDS_GYM.has(i.id) && !BLOCKED_IDS.has(i.id) && (i.zona === 'gym' || i.zona === 'ambos'))
+          .filter(i => (i.zona === 'gym' || i.zona === 'ambos'))
           .map(i => ({
             id:          i.id,
             nombre:      i.nombre,
@@ -93,25 +94,36 @@ export function useInstrumentos(token: string | null) {
           }))
         )
 
-        setDynCursos(items
-          .filter(i => !STATIC_IDS_CLASE.has(i.id) && !BLOCKED_IDS.has(i.id))
-          .map(i => ({
-            cursoId: i.curso_id ?? i.id,
-            claseId: i.id,
-            label:   i.nombre,
-            emoji:   i.emoji,
-            color:   i.color,
-          }))
-        )
+        setDynCursos(items.map(i => ({
+          cursoId: i.curso_id ?? i.id,
+          claseId: i.id,
+          label:   i.nombre,
+          emoji:   i.emoji,
+          color:   i.color,
+        })))
       })
-      .catch(() => { /* fallback silencioso a datos estáticos */ })
+      .catch(() => { /* fallback silencioso */ })
       .finally(() => setLoading(false))
   }, [token])
 
+  // Helper para combinar listas evitando duplicados, priorizando la segunda lista (dinámica)
+  const merge = <T extends { id: string }>(staticList: T[], dynamicList: T[]): T[] => {
+    const dynIds = new Set(dynamicList.map(d => d.id))
+    const filteredStatic = staticList.filter(s => !dynIds.has(s.id))
+    return [...filteredStatic, ...dynamicList]
+  }
+
+  // Especial para cursosMap que usa claseId como key
+  const mergeCursos = (staticList: CursoMapEntry[], dynamicList: CursoMapEntry[]): CursoMapEntry[] => {
+    const dynIds = new Set(dynamicList.map(d => d.claseId))
+    const filteredStatic = staticList.filter(s => !dynIds.has(s.claseId))
+    return [...filteredStatic, ...dynamicList]
+  }
+
   return {
-    clases:    [...CLASES_CONFIG, ...dynClases] as ClaseConfig[],
-    gym:       [...GYM_INSTRUMENTOS, ...dynGym] as GymInstrumento[],
-    cursosMap: [...STATIC_CURSOS_MAP, ...dynCursos] as CursoMapEntry[],
+    clases:    merge(CLASES_CONFIG, dynClases),
+    gym:       merge(GYM_INSTRUMENTOS, dynGym),
+    cursosMap: mergeCursos(STATIC_CURSOS_MAP, dynCursos),
     loading,
   }
 }

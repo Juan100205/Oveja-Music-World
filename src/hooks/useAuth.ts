@@ -10,8 +10,15 @@ interface AuthState {
   error: string | null
 }
 
+interface RegisterCredentials {
+  email: string
+  password: string
+  nombre?: string
+}
+
 interface UseAuthReturn extends AuthState {
   login: (credentials: LoginCredentials) => Promise<boolean>
+  register: (credentials: RegisterCredentials) => Promise<{ ok: boolean; error?: string }>
   logout: () => void
   updateUser: (patch: Partial<Omit<User, 'password_hash'>>) => void
   isAuthenticated: boolean
@@ -86,9 +93,28 @@ export function useAuth(): UseAuthReturn {
     })
   }, [])
 
+  const register = useCallback(async (credentials: RegisterCredentials): Promise<{ ok: boolean; error?: string }> => {
+    setState(s => ({ ...s, loading: true, error: null }))
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+      })
+      const data = await res.json()
+      setState(s => ({ ...s, loading: false }))
+      if (!res.ok) return { ok: false, error: data.error }
+      return { ok: true }
+    } catch {
+      setState(s => ({ ...s, loading: false }))
+      return { ok: false, error: 'Error de conexión' }
+    }
+  }, [])
+
   return {
     ...state,
     login,
+    register,
     logout,
     updateUser,
     isAuthenticated: !!state.token && !!state.user,
