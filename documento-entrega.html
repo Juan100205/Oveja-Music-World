@@ -1,0 +1,1276 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Oveja Music World — Documento de Entrega</title>
+<link href="https://fonts.googleapis.com/css2?family=Comfortaa:wght@400;600;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet" />
+<style>
+  /* ── Reset & base ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --pink:    #ec488a;
+    --blue:    #3db8fa;
+    --purple:  #9b54f9;
+    --orange:  #ffa737;
+    --dark:    #0a0a1a;
+    --darker:  #06060f;
+    --card:    #111128;
+    --border:  rgba(255,255,255,0.08);
+    --text:    #e8eaf0;
+    --muted:   rgba(255,255,255,0.45);
+    --font-d:  'Comfortaa', sans-serif;
+    --font-b:  'Roboto', sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: var(--font-b);
+    font-size: 14px;
+    line-height: 1.7;
+  }
+
+  /* ── Print ────────────────────────────────────────────── */
+  @media print {
+    body { background: #fff !important; color: #111 !important; font-size: 11px; }
+    .cover { background: var(--dark) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .no-print { display: none !important; }
+    .page-break { page-break-before: always; }
+    section { page-break-inside: avoid; }
+    h2 { page-break-after: avoid; }
+    a { color: inherit; text-decoration: none; }
+    .card { border: 1px solid #ddd !important; background: #f9f9f9 !important; }
+    .tag { background: #eee !important; color: #333 !important; }
+    .chip { background: #eee !important; color: #333 !important; border: 1px solid #ccc !important; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ddd !important; padding: 6px 10px !important; color: #111 !important; background: #fff !important; }
+    th { background: #f0f0f0 !important; }
+    .toc-list a { color: #333 !important; }
+    .step-num { background: var(--pink) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge-admin { background: #f0e6ff !important; color: #7c3aed !important; }
+    .badge-teacher { background: #e0f2fe !important; color: #0369a1 !important; }
+    .badge-student { background: #f0fdf4 !important; color: #15803d !important; }
+    .section-header { background: #0a0a1a !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* ── Layout ───────────────────────────────────────────── */
+  .container { max-width: 900px; margin: 0 auto; padding: 0 32px; }
+
+  /* ── COVER ────────────────────────────────────────────── */
+  .cover {
+    min-height: 100vh;
+    background: var(--darker);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+    padding: 60px 32px;
+  }
+
+  .cover-glow-1 {
+    position: absolute; top: -120px; left: -120px;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(236,72,138,0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover-glow-2 {
+    position: absolute; bottom: -120px; right: -120px;
+    width: 500px; height: 500px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(61,184,250,0.15) 0%, transparent 70%);
+    pointer-events: none;
+  }
+  .cover-glow-3 {
+    position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%);
+    width: 700px; height: 700px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(155,84,249,0.08) 0%, transparent 65%);
+    pointer-events: none;
+  }
+
+  .cover-logo {
+    width: 90px; height: 90px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 24px;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 32px;
+    overflow: hidden;
+    position: relative; z-index: 1;
+  }
+  .cover-logo img { width: 60px; height: 60px; object-fit: contain; }
+
+  .cover-eyebrow {
+    font-family: var(--font-b);
+    font-size: 11px; font-weight: 500;
+    letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--blue); margin-bottom: 16px;
+    position: relative; z-index: 1;
+  }
+
+  .cover-title {
+    font-family: var(--font-d);
+    font-size: clamp(32px, 6vw, 52px);
+    font-weight: 700; color: #fff;
+    line-height: 1.15; margin-bottom: 8px;
+    position: relative; z-index: 1;
+  }
+  .cover-title span { color: var(--pink); }
+
+  .cover-subtitle {
+    font-family: var(--font-d);
+    font-size: clamp(16px, 3vw, 22px);
+    font-weight: 400; color: var(--muted);
+    margin-bottom: 40px;
+    position: relative; z-index: 1;
+  }
+
+  .cover-divider {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, var(--pink), var(--purple));
+    margin: 0 auto 40px; border-radius: 2px;
+    position: relative; z-index: 1;
+  }
+
+  .cover-meta {
+    display: flex; gap: 32px; flex-wrap: wrap;
+    justify-content: center; margin-bottom: 60px;
+    position: relative; z-index: 1;
+  }
+  .cover-meta-item { text-align: center; }
+  .cover-meta-label {
+    font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--muted); margin-bottom: 4px;
+  }
+  .cover-meta-value {
+    font-family: var(--font-d); font-size: 14px; font-weight: 600; color: #fff;
+  }
+
+  .cover-chips {
+    display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+    position: relative; z-index: 1;
+  }
+  .cover-chip {
+    font-size: 11px; padding: 5px 14px; border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.12);
+    color: rgba(255,255,255,0.55);
+    font-family: var(--font-b);
+  }
+
+  .cover-footer {
+    position: absolute; bottom: 32px; width: 100%;
+    display: flex; align-items: center; justify-content: center; gap: 12px;
+    z-index: 1;
+  }
+  .cover-footer img { height: 28px; opacity: 0.5; }
+  .cover-footer-text {
+    font-size: 11px; color: rgba(255,255,255,0.25);
+    font-family: var(--font-b);
+  }
+
+  /* ── TOC ──────────────────────────────────────────────── */
+  .toc-section {
+    padding: 80px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .toc-title {
+    font-family: var(--font-d); font-size: 28px; font-weight: 700;
+    color: #fff; margin-bottom: 32px;
+  }
+  .toc-title span { color: var(--pink); }
+
+  .toc-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 12px;
+  }
+  .toc-item {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 16px; border-radius: 12px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid var(--border);
+    text-decoration: none; color: var(--text);
+    transition: all 0.15s;
+  }
+  .toc-item:hover { background: rgba(255,255,255,0.06); border-color: rgba(236,72,138,0.3); }
+  .toc-num {
+    font-family: var(--font-d); font-size: 11px; font-weight: 700;
+    color: var(--pink); min-width: 24px;
+  }
+  .toc-label { font-size: 13px; font-weight: 500; color: rgba(255,255,255,0.8); }
+  .toc-sub { font-size: 11px; color: var(--muted); }
+
+  /* ── SECTION ──────────────────────────────────────────── */
+  .doc-section { padding: 80px 0; border-bottom: 1px solid var(--border); }
+
+  .section-header {
+    background: linear-gradient(135deg, rgba(236,72,138,0.08) 0%, rgba(155,84,249,0.06) 100%);
+    border: 1px solid rgba(236,72,138,0.15);
+    border-radius: 16px;
+    padding: 24px 28px;
+    margin-bottom: 40px;
+    display: flex; align-items: flex-start; gap: 16px;
+  }
+  .section-icon {
+    font-size: 32px; line-height: 1; flex-shrink: 0;
+    width: 56px; height: 56px;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.04); border-radius: 14px;
+    border: 1px solid rgba(255,255,255,0.08);
+  }
+  .section-meta { flex: 1; }
+  .section-num {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--pink); margin-bottom: 4px;
+  }
+  .section-title {
+    font-family: var(--font-d); font-size: 24px; font-weight: 700;
+    color: #fff; margin-bottom: 6px;
+  }
+  .section-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── Headings ─────────────────────────────────────────── */
+  h2 {
+    font-family: var(--font-d); font-size: 20px; font-weight: 700;
+    color: #fff; margin: 40px 0 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  h2::before {
+    content: ''; display: block; width: 4px; height: 22px;
+    background: linear-gradient(180deg, var(--pink), var(--purple));
+    border-radius: 2px; flex-shrink: 0;
+  }
+  h3 {
+    font-family: var(--font-d); font-size: 15px; font-weight: 600;
+    color: rgba(255,255,255,0.85); margin: 28px 0 12px;
+  }
+
+  p { color: rgba(255,255,255,0.7); margin-bottom: 12px; line-height: 1.75; }
+
+  /* ── Steps ────────────────────────────────────────────── */
+  .steps { display: flex; flex-direction: column; gap: 4px; margin: 16px 0 24px; }
+  .step {
+    display: flex; gap: 12px; align-items: flex-start;
+    padding: 12px 16px; border-radius: 10px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid transparent;
+    transition: all 0.15s;
+  }
+  .step:hover { background: rgba(255,255,255,0.04); border-color: var(--border); }
+  .step-num {
+    flex-shrink: 0; width: 24px; height: 24px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--pink), var(--purple));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 700; color: #fff;
+    font-family: var(--font-d); margin-top: 2px;
+  }
+  .step-text { font-size: 13.5px; color: rgba(255,255,255,0.75); line-height: 1.6; }
+  .step-text strong { color: #fff; font-weight: 600; }
+  .step-text code {
+    background: rgba(61,184,250,0.12); color: var(--blue);
+    padding: 1px 6px; border-radius: 4px; font-size: 12px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── Cards ────────────────────────────────────────────── */
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 14px; padding: 20px 24px; margin-bottom: 16px;
+  }
+  .card-title {
+    font-family: var(--font-d); font-size: 14px; font-weight: 700;
+    color: #fff; margin-bottom: 8px;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .card p { margin: 0; font-size: 13px; }
+
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin: 16px 0; }
+
+  /* ── Badges / Chips ───────────────────────────────────── */
+  .badge {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 3px 10px; border-radius: 999px; font-size: 11px; font-weight: 600;
+    font-family: var(--font-b);
+  }
+  .badge-admin   { background: rgba(155,84,249,0.18); color: #c084ff; border: 1px solid rgba(155,84,249,0.3); }
+  .badge-teacher { background: rgba(61,184,250,0.15);  color: #3db8fa; border: 1px solid rgba(61,184,250,0.3); }
+  .badge-student { background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.55); border: 1px solid rgba(255,255,255,0.12); }
+  .badge-new     { background: rgba(52,211,153,0.15);  color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+
+  .chip {
+    display: inline-block; padding: 2px 10px; border-radius: 999px;
+    font-size: 11px; font-family: var(--font-b);
+    background: rgba(255,255,255,0.06); color: var(--muted);
+    border: 1px solid var(--border); margin: 2px;
+  }
+  .chip-pink   { background: rgba(236,72,138,0.1); color: var(--pink); border-color: rgba(236,72,138,0.25); }
+  .chip-blue   { background: rgba(61,184,250,0.1); color: var(--blue); border-color: rgba(61,184,250,0.25); }
+  .chip-purple { background: rgba(155,84,249,0.1); color: var(--purple); border-color: rgba(155,84,249,0.25); }
+  .chip-orange { background: rgba(255,167,55,0.1); color: var(--orange); border-color: rgba(255,167,55,0.25); }
+
+  /* ── Tables ───────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; margin: 16px 0 24px; border-radius: 12px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    background: rgba(255,255,255,0.04); color: rgba(255,255,255,0.5);
+    font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
+    text-align: left; padding: 10px 16px; border-bottom: 1px solid var(--border);
+    font-family: var(--font-b);
+  }
+  td {
+    padding: 10px 16px; font-size: 13px; color: rgba(255,255,255,0.7);
+    border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(255,255,255,0.015); }
+  code {
+    background: rgba(61,184,250,0.1); color: var(--blue);
+    padding: 1px 6px; border-radius: 4px; font-size: 12px;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── Code block ───────────────────────────────────────── */
+  pre {
+    background: rgba(0,0,0,0.4); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 12px; padding: 20px; overflow-x: auto;
+    margin: 16px 0 24px; font-size: 12px; line-height: 1.6;
+  }
+  pre code {
+    background: none; color: rgba(255,255,255,0.8); padding: 0;
+    font-family: 'Courier New', monospace;
+  }
+
+  /* ── Alert boxes ──────────────────────────────────────── */
+  .alert {
+    padding: 14px 18px; border-radius: 12px; margin: 16px 0;
+    font-size: 13px; line-height: 1.6; display: flex; gap: 12px; align-items: flex-start;
+  }
+  .alert-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .alert-info    { background: rgba(61,184,250,0.08);  border: 1px solid rgba(61,184,250,0.2);  color: rgba(61,184,250,0.9); }
+  .alert-warning { background: rgba(255,167,55,0.08);  border: 1px solid rgba(255,167,55,0.25); color: rgba(255,167,55,0.9); }
+  .alert-success { background: rgba(52,211,153,0.08);  border: 1px solid rgba(52,211,153,0.25); color: rgba(52,211,153,0.9); }
+  .alert-danger  { background: rgba(236,72,138,0.08);  border: 1px solid rgba(236,72,138,0.25); color: rgba(236,72,138,0.9); }
+
+  /* ── Roles grid ───────────────────────────────────────── */
+  .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 16px 0 24px; }
+  .role-card {
+    border-radius: 12px; padding: 16px;
+    border: 1px solid;
+  }
+  .role-card.admin   { background: rgba(155,84,249,0.06); border-color: rgba(155,84,249,0.2); }
+  .role-card.teacher { background: rgba(61,184,250,0.05); border-color: rgba(61,184,250,0.18); }
+  .role-card.student { background: rgba(255,255,255,0.03); border-color: rgba(255,255,255,0.08); }
+  .role-card-title {
+    font-family: var(--font-d); font-size: 13px; font-weight: 700;
+    margin-bottom: 10px; display: flex; align-items: center; gap: 6px;
+  }
+  .role-card ul { list-style: none; }
+  .role-card ul li {
+    font-size: 12px; color: rgba(255,255,255,0.6); padding: 2px 0;
+    display: flex; align-items: flex-start; gap: 6px;
+  }
+  .role-card ul li::before { content: '→'; opacity: 0.4; flex-shrink: 0; }
+
+  /* ── Level table ──────────────────────────────────────── */
+  .level-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 16px 0 24px; }
+  .level-item {
+    text-align: center; padding: 14px 8px; border-radius: 12px;
+    background: rgba(255,255,255,0.03); border: 1px solid var(--border);
+  }
+  .level-num { font-family: var(--font-d); font-size: 22px; font-weight: 700; color: #fff; }
+  .level-name { font-size: 11px; color: var(--muted); margin: 4px 0; }
+  .level-pts { font-size: 12px; font-weight: 600; }
+
+  /* ── API endpoint ─────────────────────────────────────── */
+  .endpoint {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-radius: 10px;
+    background: rgba(255,255,255,0.025);
+    border: 1px solid var(--border); margin-bottom: 8px;
+  }
+  .method {
+    font-size: 11px; font-weight: 700; font-family: var(--font-d);
+    padding: 2px 8px; border-radius: 6px; min-width: 44px; text-align: center;
+  }
+  .method-get    { background: rgba(52,211,153,0.15); color: #34d399; }
+  .method-post   { background: rgba(61,184,250,0.15);  color: var(--blue); }
+  .method-patch  { background: rgba(255,167,55,0.15);  color: var(--orange); }
+  .method-delete { background: rgba(236,72,138,0.15);  color: var(--pink); }
+  .endpoint-path { font-family: 'Courier New', monospace; font-size: 13px; color: rgba(255,255,255,0.8); flex: 1; }
+  .endpoint-desc { font-size: 12px; color: var(--muted); }
+
+  /* ── Nav sidebar (screen only) ────────────────────────── */
+  @media (min-width: 1100px) {
+    .layout { display: grid; grid-template-columns: 220px 1fr; gap: 0; max-width: 1200px; margin: 0 auto; }
+    .sidebar {
+      position: sticky; top: 0; height: 100vh; overflow-y: auto;
+      padding: 32px 16px; border-right: 1px solid var(--border);
+      background: rgba(10,10,26,0.95); backdrop-filter: blur(12px);
+    }
+    .sidebar-logo { margin-bottom: 24px; padding-bottom: 20px; border-bottom: 1px solid var(--border); }
+    .sidebar-logo img { height: 32px; opacity: 0.8; }
+    .sidebar-nav-item {
+      display: flex; align-items: center; gap: 8px;
+      padding: 7px 10px; border-radius: 8px; margin-bottom: 2px;
+      text-decoration: none; color: var(--muted); font-size: 12px;
+      transition: all 0.15s;
+    }
+    .sidebar-nav-item:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .sidebar-nav-num { font-size: 10px; color: var(--pink); min-width: 18px; font-family: var(--font-d); font-weight: 700; }
+    .content-wrap { padding: 0 48px; }
+  }
+  @media (max-width: 1099px) {
+    .sidebar { display: none; }
+    .content-wrap { max-width: 900px; margin: 0 auto; padding: 0 24px; }
+  }
+
+  /* ── Misc ─────────────────────────────────────────────── */
+  ul.styled { padding-left: 0; list-style: none; margin: 12px 0 20px; }
+  ul.styled li {
+    padding: 6px 0 6px 20px; font-size: 13px; color: rgba(255,255,255,0.7);
+    border-bottom: 1px solid rgba(255,255,255,0.04); position: relative;
+  }
+  ul.styled li::before {
+    content: '•'; color: var(--pink); position: absolute; left: 0; font-size: 16px; top: 4px;
+  }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin: 12px 0; }
+
+  .tag {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 8px; font-size: 12px;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+    color: rgba(255,255,255,0.6);
+  }
+
+  .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+  .footer {
+    padding: 48px 32px; text-align: center;
+    border-top: 1px solid var(--border);
+  }
+  .footer-logo { height: 36px; opacity: 0.4; margin-bottom: 12px; }
+  .footer-text { font-size: 12px; color: rgba(255,255,255,0.25); line-height: 1.8; }
+
+  /* scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════ COVER ══════════════════ -->
+<div class="cover page-break">
+  <div class="cover-glow-1"></div>
+  <div class="cover-glow-2"></div>
+  <div class="cover-glow-3"></div>
+
+  <div class="cover-logo">
+    <img src="IsotipoWhite.png" alt="Oveja Music World" onerror="this.style.display='none'; this.parentElement.innerHTML='🐑';" />
+  </div>
+
+  <div class="cover-eyebrow">Documento de Entrega · 2025</div>
+
+  <h1 class="cover-title">Oveja Music <span>World</span></h1>
+  <p class="cover-subtitle">Plataforma LMS Interactiva con Mundo 3D</p>
+
+  <div class="cover-divider"></div>
+
+  <div class="cover-meta">
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Versión</div>
+      <div class="cover-meta-value">1.0 — Producción</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Fecha</div>
+      <div class="cover-meta-value">Mayo 2025</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Plataforma</div>
+      <div class="cover-meta-value">Next.js 16 + Supabase</div>
+    </div>
+    <div class="cover-meta-item">
+      <div class="cover-meta-label">Tipo</div>
+      <div class="cover-meta-value">LMS + Mundo 3D</div>
+    </div>
+  </div>
+
+  <div class="cover-chips">
+    <span class="cover-chip">Manual de Usuario</span>
+    <span class="cover-chip">Documentación Funcional</span>
+    <span class="cover-chip">Referencia Técnica</span>
+    <span class="cover-chip">Flujos y Casos de Uso</span>
+  </div>
+
+  <div class="cover-footer">
+    <img src="IsotipoBlack.png" alt="rdz" style="filter: invert(1);" onerror="this.style.display='none';" />
+    <span class="cover-footer-text">Desarrollado por rdz · Juan Jose Riaño</span>
+  </div>
+</div>
+
+<!-- ══════════════════ LAYOUT ══════════════════ -->
+<div class="layout">
+
+  <!-- ── Sidebar nav (screen) ── -->
+  <nav class="sidebar no-print">
+    <div class="sidebar-logo">
+      <img src="IsotipoWhite.png" alt="Oveja Music" onerror="this.style.display='none';" />
+    </div>
+    <a class="sidebar-nav-item" href="#toc"><span class="sidebar-nav-num">—</span> Contenido</a>
+    <a class="sidebar-nav-item" href="#s1"><span class="sidebar-nav-num">01</span> Autenticación</a>
+    <a class="sidebar-nav-item" href="#s2"><span class="sidebar-nav-num">02</span> Mapa / Escuela</a>
+    <a class="sidebar-nav-item" href="#s3"><span class="sidebar-nav-num">03</span> Aula de Clase</a>
+    <a class="sidebar-nav-item" href="#s4"><span class="sidebar-nav-num">04</span> Gym</a>
+    <a class="sidebar-nav-item" href="#s5"><span class="sidebar-nav-num">05</span> Gamificación</a>
+    <a class="sidebar-nav-item" href="#s6"><span class="sidebar-nav-num">06</span> Panel Admin</a>
+    <a class="sidebar-nav-item" href="#s7"><span class="sidebar-nav-num">07</span> Panel Profesor</a>
+    <a class="sidebar-nav-item" href="#s8"><span class="sidebar-nav-num">08</span> APIs</a>
+    <a class="sidebar-nav-item" href="#s9"><span class="sidebar-nav-num">09</span> Base de Datos</a>
+    <a class="sidebar-nav-item" href="#s10"><span class="sidebar-nav-num">10</span> Seguridad</a>
+    <a class="sidebar-nav-item" href="#s11"><span class="sidebar-nav-num">11</span> Casos Borde</a>
+    <a class="sidebar-nav-item" href="#s12"><span class="sidebar-nav-num">12</span> Recomendaciones</a>
+  </nav>
+
+  <div class="content-wrap">
+
+  <!-- ══ TABLE OF CONTENTS ══ -->
+  <div class="toc-section page-break" id="toc">
+    <div class="container" style="max-width:100%">
+      <h1 class="toc-title">Tabla de <span>Contenido</span></h1>
+      <div class="toc-grid">
+        <a class="toc-item" href="#s1">
+          <span class="toc-num">01</span>
+          <div><div class="toc-label">Autenticación</div><div class="toc-sub">Login · Registro · Logout</div></div>
+        </a>
+        <a class="toc-item" href="#s2">
+          <span class="toc-num">02</span>
+          <div><div class="toc-label">Mundo / Escuela</div><div class="toc-sub">Mapa 3D · Tutorial · Zonas</div></div>
+        </a>
+        <a class="toc-item" href="#s3">
+          <span class="toc-num">03</span>
+          <div><div class="toc-label">Aula de Clase</div><div class="toc-sub">Contenido · Videos · Interacciones</div></div>
+        </a>
+        <a class="toc-item" href="#s4">
+          <span class="toc-num">04</span>
+          <div><div class="toc-label">Gym</div><div class="toc-sub">Sala de práctica 3D</div></div>
+        </a>
+        <a class="toc-item" href="#s5">
+          <span class="toc-num">05</span>
+          <div><div class="toc-label">Gamificación</div><div class="toc-sub">Puntos · Niveles · Progreso</div></div>
+        </a>
+        <a class="toc-item" href="#s6">
+          <span class="toc-num">06</span>
+          <div><div class="toc-label">Panel Administrador</div><div class="toc-sub">Usuarios · Contenido · Instrumentos</div></div>
+        </a>
+        <a class="toc-item" href="#s7">
+          <span class="toc-num">07</span>
+          <div><div class="toc-label">Panel Profesor</div><div class="toc-sub">Clases · Estudiantes</div></div>
+        </a>
+        <a class="toc-item" href="#s8">
+          <span class="toc-num">08</span>
+          <div><div class="toc-label">APIs</div><div class="toc-sub">Endpoints · Métodos · Respuestas</div></div>
+        </a>
+        <a class="toc-item" href="#s9">
+          <span class="toc-num">09</span>
+          <div><div class="toc-label">Base de Datos</div><div class="toc-sub">Tablas · Campos · Relaciones</div></div>
+        </a>
+        <a class="toc-item" href="#s10">
+          <span class="toc-num">10</span>
+          <div><div class="toc-label">Seguridad</div><div class="toc-sub">JWT · Roles · Permisos</div></div>
+        </a>
+        <a class="toc-item" href="#s11">
+          <span class="toc-num">11</span>
+          <div><div class="toc-label">Casos Borde</div><div class="toc-sub">Errores · Edge cases</div></div>
+        </a>
+        <a class="toc-item" href="#s12">
+          <span class="toc-num">12</span>
+          <div><div class="toc-label">Recomendaciones</div><div class="toc-sub">Mejoras futuras · UX</div></div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 1 — AUTENTICACIÓN
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s1">
+    <div class="section-header">
+      <div class="section-icon">🔐</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 01</div>
+        <div class="section-title">Autenticación</div>
+        <div class="section-desc">Control de acceso mediante JWT. Gestiona el ciclo completo de identidad: registro, login y logout por rol.</div>
+      </div>
+    </div>
+
+    <div class="roles-grid">
+      <div class="role-card admin">
+        <div class="role-card-title"><span class="badge badge-admin">Admin</span></div>
+        <ul><li>Login y logout</li><li>Cambiar contraseña de cualquier usuario desde el panel</li></ul>
+      </div>
+      <div class="role-card teacher">
+        <div class="role-card-title"><span class="badge badge-teacher">Profesor</span></div>
+        <ul><li>Login y logout</li><li>Acceso al panel /teacher</li></ul>
+      </div>
+      <div class="role-card student">
+        <div class="role-card-title"><span class="badge badge-student">Estudiante</span></div>
+        <ul><li>Registro de cuenta nueva</li><li>Login y logout</li><li>Acceso al mundo /escuela</li></ul>
+      </div>
+    </div>
+
+    <h2>1.1 — Inicio de Sesión</h2>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Usuario navega a <code>/login</code>. Si ya tiene token válido en <code>localStorage</code> se redirige automáticamente sin mostrar el formulario.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">El sistema renderiza <strong>LoginForm</strong> con campos <strong>Email</strong> y <strong>Contraseña</strong> sobre fondo con gradiente azul → púrpura → rosa.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Usuario llena sus credenciales y presiona <strong>"Ingresar"</strong> (o tecla Enter).</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Validación client-side:</strong> email con formato válido · contraseña mínimo 6 caracteres. Si falla → alerta rosa animada, botón permanece habilitado.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Si pasa validación: botón cambia a <em>"Ingresando..."</em> y se deshabilita. Se ejecuta <code>POST /api/auth/login</code>.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text"><strong>Validación server-side:</strong> busca usuario por email (lowercase). Si no existe → <code>401 "Credenciales inválidas"</code>. Si existe: compara contraseña con <code>bcrypt.compare</code>.</div></div>
+      <div class="step"><div class="step-num">7</div><div class="step-text">Si la contraseña es correcta: genera JWT firmado (expiración 7 días), retorna <code>{ token, user }</code>. El <code>password_hash</code> nunca se envía al cliente.</div></div>
+      <div class="step"><div class="step-num">8</div><div class="step-text">Cliente guarda <code>token</code> y <code>user</code> en <code>localStorage</code>. Redirige según rol: <strong>admin → /admin</strong> · <strong>teacher → /teacher</strong> · <strong>student → /escuela</strong>.</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Campo</th><th>Regla</th><th>Mensaje de error</th></tr></thead>
+        <tbody>
+          <tr><td>email</td><td>Obligatorio, formato x@x.x</td><td>"Email inválido"</td></tr>
+          <tr><td>password</td><td>Obligatorio, mín. 6 caracteres</td><td>"La contraseña debe tener al menos 6 caracteres"</td></tr>
+          <tr><td>email + password</td><td>Coincidencia en base de datos</td><td>"Credenciales inválidas"</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>1.2 — Registro de Usuario</h2>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">ℹ️</span>
+      <span>El registro crea la cuenta pero <strong>no otorga permisos automáticamente</strong>. El administrador debe asignar los cursos antes de que el estudiante pueda acceder al contenido.</span>
+    </div>
+
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">En <code>/login</code>, usuario hace clic en <strong>"¿No tenés cuenta? Registrate"</strong>. La tarjeta cambia con animación scale+fade mostrando <strong>RegisterForm</strong>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Formulario: <strong>Nombre</strong> (opcional) · <strong>Email</strong> · <strong>Contraseña</strong> · <strong>Confirmar contraseña</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Validaciones client: email válido · contraseña ≥ 6 chars · confirmación coincide. Error muestra alerta rosa animada.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Si pasa: <code>POST /api/auth/register</code> con <code>{ email, password, nombre? }</code>. Botón cambia a <em>"Creando cuenta..."</em>.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Server verifica que el email no exista. Si existe → <code>409 "El email ya está registrado"</code>. Si libre: hashea contraseña y crea usuario con <code>role: 'student'</code>, <code>puntos: 0</code>, <code>nivel: 1</code>, sin acceso a cursos.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text">Éxito: pantalla de confirmación con ✅ y mensaje <em>"El administrador te asignará acceso a los cursos en breve."</em> Botón <strong>"Ir al login"</strong> regresa al formulario de ingreso.</div></div>
+    </div>
+
+    <h2>1.3 — Logout</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Usuario hace clic en botón <strong>"Salir"</strong> (ícono LogOut, visible en todas las pantallas protegidas).</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Aparece modal de confirmación con backdrop blur: <em>"¿Cerrar sesión?"</em> · botones <strong>Cancelar</strong> / <strong>Salir</strong>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Si confirma: borra <code>token</code> y <code>user</code> de <code>localStorage</code>, redirige a <code>/login</code>.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 2 — MUNDO / ESCUELA
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s2">
+    <div class="section-header">
+      <div class="section-icon">🌍</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 02</div>
+        <div class="section-title">Mundo Interactivo — /escuela</div>
+        <div class="section-desc">Mapa 3D en Spline donde el estudiante navega una oveja para descubrir las zonas de aprendizaje (Escuela y Gym).</div>
+      </div>
+    </div>
+
+    <div class="alert alert-warning">
+      <span class="alert-icon">🎮</span>
+      <span><strong>Controles de navegación:</strong> WASD o teclas de flecha para moverse · Barra espaciadora para saltar. El mundo requiere teclado — en dispositivos móviles táctil la navegación no aplica.</span>
+    </div>
+
+    <h2>2.1 — Entrada al Mundo</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Usuario autenticado accede a <code>/escuela</code>. Si no está autenticado → redirige a <code>/login</code>.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Carga escena 3D Spline del mapa. Mientras carga: fondo negro <code>#0a0a1a</code>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><strong>TapeteCard</strong> aparece (aviso de bienvenida). Usuario hace clic para cerrarlo.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Sistema evalúa contador tutorial: si <code>localStorage.tutorial_wasd_{userId} &lt; 5</code> → muestra el <strong>tutorial WASD centrado</strong> con backdrop blur. Si ≥ 5 → no muestra.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Tutorial muestra: oveja animada flotando · teclado WASD + flechas visualizadas · barra espaciadora · leyendas de control. Botón <strong>"¡A jugar! 🎮"</strong>.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text">Al cerrar tutorial: contador incrementa en <code>localStorage</code>. A partir de la sesión #6 el tutorial no vuelve a aparecer.</div></div>
+    </div>
+
+    <h2>2.2 — Navegación y Zonas</h2>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">🏫 Zona Escuela</div>
+        <p>Al pasar la oveja sobre el edificio escuela: aparece botón <strong>"Ir a Clase →"</strong> (gradiente rosa→púrpura). Al salir de la zona: botón desaparece. Clic abre el panel de instrumentos.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🏋️ Zona Gym</div>
+        <p>Al pasar sobre el gym: aparece botón <strong>"🏋️ Ir a Entrenar →"</strong> (gradiente azul→púrpura). Clic abre el panel de instrumentos de práctica.</p>
+      </div>
+    </div>
+
+    <div class="alert alert-info">
+      <span class="alert-icon">⚙️</span>
+      <span>El sistema detecta las zonas mediante polling de variables Spline cada 100ms (<code>IsOverSchool</code>, <code>IsOverGym</code>). Los botones nunca aparecen simultáneamente ni cuando hay un panel abierto.</span>
+    </div>
+
+    <h2>2.3 — Panel de Clases</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Clic en <strong>"Ir a Clase →"</strong>. Panel sube desde abajo con glassmorphism.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Paso 1 — Instrumento:</strong> muestra las tarjetas de instrumentos con acceso. <span class="badge badge-admin">Admin</span> ve todos · <span class="badge badge-student">Student</span> solo los asignados en <code>clases_acceso</code>. Si lista vacía: <em>"Sin clases asignadas"</em>.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Usuario selecciona instrumento. Panel transiciona mostrando módulos.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text"><strong>Paso 2 — Módulo:</strong> lista módulos del instrumento (excluyendo los de práctica). Carga desde estáticos; si DB tiene datos, los reemplaza.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Usuario selecciona módulo → redirige a <code>/escuela/clase/{instrumento}/{modulo}</code>.</div></div>
+      <div class="step"><div class="step-num">6</div><div class="step-text">Panel se cierra tocando backdrop o botón X en cualquier momento.</div></div>
+    </div>
+
+    <h2>2.4 — Panel de Gym</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Clic en <strong>"🏋️ Ir a Entrenar →"</strong>. Panel sube mostrando instrumentos de práctica disponibles.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Lógica de acceso: <span class="badge badge-admin">Admin</span> ve todo · <span class="badge badge-student">Student</span> ve <code>gym-general</code> + instrumentos asignados.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Selección → redirige a <code>/escuela/gym/{instrumento}</code>.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 3 — AULA DE CLASE
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s3">
+    <div class="section-header">
+      <div class="section-icon">🎓</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 03</div>
+        <div class="section-title">Aula de Clase</div>
+        <div class="section-desc">Sala 3D de aprendizaje donde el estudiante consume contenido multimedia y acumula puntos de gamificación.</div>
+      </div>
+    </div>
+
+    <h2>3.1 — Consumo de Contenido</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Ruta <code>/escuela/clase/[instrumento]/[modulo]</code>. Carga escena Spline del aula. Localiza el módulo por ID y muestra sus secciones y recursos.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Cada recurso tipo <strong>video</strong> muestra un thumbnail de YouTube. Clic → overlay con iframe y autoplay.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Al cerrar el overlay: <code>POST /api/progress</code> con <code>{ url, tipo: 'video' }</code>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Si el recurso ya fue completado: <code>ya_completado: true</code>, no suma puntos (idempotente).</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Si es nuevo: inserta en tabla <code>completions</code> y suma puntos al usuario. Actualiza <code>nivel</code> si corresponde.</div></div>
+    </div>
+
+    <h2>3.2 — Puntos por Tipo de Recurso</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Tipo</th><th>Puntos</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip chip-pink">video</span></td><td><strong>20 pts</strong></td><td>Video de YouTube</td></tr>
+          <tr><td><span class="chip chip-blue">juego</span></td><td><strong>10 pts</strong></td><td>Actividad interactiva</td></tr>
+          <tr><td><span class="chip">drive</span></td><td><strong>5 pts</strong></td><td>Archivo de Google Drive</td></tr>
+          <tr><td><span class="chip">pdf</span></td><td><strong>5 pts</strong></td><td>Documento PDF</td></tr>
+          <tr><td><span class="chip">imagen</span></td><td><strong>5 pts</strong></td><td>Imagen o lámina</td></tr>
+          <tr><td><span class="chip">herramienta</span></td><td><strong>5 pts</strong></td><td>Herramienta externa</td></tr>
+          <tr><td><span class="chip">otro</span></td><td><strong>5 pts</strong></td><td>Otros recursos</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>3.3 — Videos con Cartas Interactivas</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Si el video tiene cartas configuradas, al llegar al <strong>timestamp</strong> (segundos) el video pausa automáticamente.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Aparece overlay con la carta según su tipo:</div></div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">📝 Texto</div>
+        <p>Muestra un mensaje informativo. El estudiante lee y cierra para continuar el video.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🔘 Botón</div>
+        <p>Mensaje + botón con label configurable. Puede vincular a recurso externo o acción.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">⏱️ Countdown</div>
+        <p>Instrucción + cuenta regresiva visual en segundos. El estudiante realiza la actividad en el tiempo indicado.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🧠 Quiz</div>
+        <p>Pregunta con 4 opciones. El estudiante selecciona → sistema muestra si es correcto/incorrecto. Video continúa al terminar.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 4 — GYM
+  ══════════════════════════════════════════ -->
+  <section class="doc-section" id="s4">
+    <div class="section-header">
+      <div class="section-icon">🏋️</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 04</div>
+        <div class="section-title">Gym — Sala de Práctica</div>
+        <div class="section-desc">Espacio 3D para práctica libre instrumental. Muestra módulos de práctica del instrumento seleccionado.</div>
+      </div>
+    </div>
+
+    <p>Ruta: <code>/escuela/gym/[instrumento]</code>. Carga la escena Spline del gym. Variables de detección: <code>isTrainning</code> / <code>isOutingGym</code>.</p>
+    <p>Muestra los módulos marcados como "práctica" del instrumento (que el panel de clases excluye). El sistema de consumo de contenido, puntos y completions funciona igual que en el aula de clase.</p>
+
+    <div class="alert alert-success">
+      <span class="alert-icon">✅</span>
+      <span>El progreso en el Gym suma puntos al mismo contador global del estudiante. No existe separación de puntos entre Escuela y Gym.</span>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 5 — GAMIFICACIÓN
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s5">
+    <div class="section-header">
+      <div class="section-icon">⭐</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 05</div>
+        <div class="section-title">Gamificación</div>
+        <div class="section-desc">Sistema de puntos y niveles que motiva al estudiante a consumir contenido de forma progresiva.</div>
+      </div>
+    </div>
+
+    <h2>Sistema de Niveles</h2>
+    <div class="level-grid">
+      <div class="level-item"><div class="level-num">1</div><div class="level-name">Principiante</div><div class="level-pts" style="color:#aaa">0 pts</div></div>
+      <div class="level-item"><div class="level-num">2</div><div class="level-name">Aprendiz</div><div class="level-pts" style="color:var(--blue)">100 pts</div></div>
+      <div class="level-item"><div class="level-num">3</div><div class="level-name">Intermedio</div><div class="level-pts" style="color:var(--orange)">300 pts</div></div>
+      <div class="level-item"><div class="level-num">4</div><div class="level-name">Avanzado</div><div class="level-pts" style="color:var(--purple)">600 pts</div></div>
+      <div class="level-item"><div class="level-num">5</div><div class="level-name">Maestro</div><div class="level-pts" style="color:var(--pink)">1000 pts</div></div>
+    </div>
+
+    <h2>Flujo de Acumulación de Puntos</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Estudiante completa un recurso (cierra el video / interactúa con el contenido).</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><code>POST /api/progress</code> verifica en tabla <code>completions</code> si <code>resource_url</code> ya existe para este usuario.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Si ya completado → retorna <code>{ ya_completado: true, puntos_ganados: 0 }</code>. No se duplican puntos.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Si nuevo → inserta en <code>completions</code>, suma puntos al usuario en tabla <code>users</code>, recalcula nivel.</div></div>
+      <div class="step"><div class="step-num">5</div><div class="step-text">Retorna <code>{ ya_completado: false, puntos_ganados, total_puntos, nivel, subio_nivel }</code>.</div></div>
+    </div>
+
+    <h2>Cálculo de Progreso</h2>
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">calcularNivel(puntos)</div>
+        <p>Itera la tabla de niveles y retorna el nivel máximo alcanzado con los puntos actuales.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">calcularProgreso(puntos)</div>
+        <p>Retorna porcentaje (0–100) del avance dentro del nivel actual. Nivel 5 = 100% siempre.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">calcularPuntosParaSiguiente(puntos)</div>
+        <p>Puntos que faltan para el siguiente nivel. Nivel máximo = 0.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 6 — PANEL ADMINISTRADOR
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s6">
+    <div class="section-header">
+      <div class="section-icon">⚙️</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 06</div>
+        <div class="section-title">Panel Administrador — /admin</div>
+        <div class="section-desc">Interfaz completa de gestión: usuarios, contenido educativo e instrumentos. Acceso exclusivo para rol admin.</div>
+      </div>
+    </div>
+
+    <div class="alert alert-danger">
+      <span class="alert-icon">🔒</span>
+      <span>Guard activo: si <code>role !== 'admin'</code> → redirige a <code>/escuela</code>. Todas las APIs del panel requieren token válido con rol admin en el header <code>Authorization: Bearer</code>.</span>
+    </div>
+
+    <h2>6.1 — Gestión de Usuarios</h2>
+
+    <h3>Ver lista de usuarios</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Tab <strong>Usuarios</strong> activo por defecto. <code>GET /api/admin/users</code> retorna todos los usuarios ordenados por fecha de creación.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Tarjetas muestran: avatar con iniciales + color hash · nombre · email · badge de rol · nivel · puntos · instrumentos asignados.</div></div>
+    </div>
+
+    <h3>Crear usuario</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Clic en <strong>"+ Nuevo usuario"</strong>. Panel sube desde abajo (mobile-friendly).</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Formulario: Nombre (opcional) · Email * · Contraseña * · Rol (Estudiante/Profesor/Admin) · Cursos con acceso (multi-toggle).</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Validaciones: email y contraseña obligatorios · contraseña ≥ 6 chars. <code>POST /api/admin/users</code>. Si email duplicado → <code>409</code>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Éxito: usuario agregado a la lista, panel se cierra.</div></div>
+    </div>
+
+    <h3>Cambiar rol</h3>
+    <p>Select en cada tarjeta (Estudiante / Profesor / Admin). Al cambiar: <code>PATCH /api/admin/users/{id}</code> con actualización optimista. Si falla: revierte al rol anterior.</p>
+
+    <h3>Asignar / quitar acceso a cursos</h3>
+    <p>Botones toggle en sección <strong>"Cursos con acceso"</strong>. Al activar/desactivar: actualiza <code>cursos_acceso</code> y <code>clases_acceso</code> simultáneamente con optimistic update.</p>
+
+    <h3>Cambiar contraseña de usuario</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Clic en ícono 🔑 (azul) en la tarjeta del usuario.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Modal centrado: email del usuario + input de nueva contraseña. Enter también envía.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Validación: mínimo 6 caracteres. <code>PATCH /api/admin/users/{id}</code> con <code>{ password }</code>.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Server hashea con bcrypt (12 rounds) → guarda <code>password_hash</code>. El password plano nunca se almacena.</div></div>
+    </div>
+
+    <h3>Eliminar usuario</h3>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text">Ícono 🗑️ (rosa). No aparece para el propio usuario admin logeado.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Modal de confirmación con advertencia de irreversibilidad.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><code>DELETE /api/admin/users/{id}</code>. Server bloquea si es el mismo admin. Éxito → usuario desaparece de la lista.</div></div>
+    </div>
+
+    <h2>6.2 — Gestión de Contenido</h2>
+
+    <p>Estructura jerárquica del contenido educativo:</p>
+    <pre><code>Instrumento
+  └── Curso
+        └── Módulo
+              └── Sección  (zona: escuela | gym)
+                    └── Recurso  (video | drive | juego | pdf | imagen | herramienta | otro)
+                          └── Interaction Points  (timestamp + tipo + mensaje)</code></pre>
+
+    <div class="card-grid">
+      <div class="card"><div class="card-title">📦 Módulos</div><p>Crear · Renombrar inline (click en nombre, Enter para guardar, Escape para cancelar) · Eliminar en cascada.</p></div>
+      <div class="card"><div class="card-title">📂 Secciones</div><p>Crear · Renombrar · Cambiar zona (Escuela/Gym) · Eliminar.</p></div>
+      <div class="card"><div class="card-title">🔗 Recursos</div><p>Agregar URL · Seleccionar tipo · Label opcional · Eliminar.</p></div>
+      <div class="card"><div class="card-title">🃏 Video Cards</div><p>Texto · Botón · Countdown · Quiz. Configuradas por timestamp dentro del video.</p></div>
+    </div>
+
+    <h3>Auto-generación de interacciones</h3>
+    <p>Botón <strong>"Auto-interact"</strong>: analiza subtítulos de YouTube y genera puntos de interacción automáticamente. Salta videos ya configurados.</p>
+
+    <h2>6.3 — Gestión de Instrumentos</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text"><strong>Crear:</strong> nombre · emoji · descripción · color (8 presets) · zona · curso vinculado · opción de crear curso vacío automáticamente.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text"><strong>Editar:</strong> clic en ícono ✏️. Mismo form pre-rellenado. Editar un instrumento estático lo "promueve" a la base de datos.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text"><strong>Eliminar:</strong> modal con confirmación por texto — el admin debe escribir el nombre exacto del instrumento para habilitar el botón.</div></div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Color preset</th><th>Hex</th></tr></thead>
+        <tbody>
+          <tr><td><span class="chip chip-pink">Rosa</span></td><td><code>#ec488a</code></td></tr>
+          <tr><td><span class="chip chip-blue">Azul</span></td><td><code>#3db8fa</code></td></tr>
+          <tr><td><span class="chip chip-purple">Púrpura</span></td><td><code>#9b54f9</code></td></tr>
+          <tr><td><span class="chip chip-orange">Naranja</span></td><td><code>#ffa737</code></td></tr>
+          <tr><td><span class="chip" style="background:rgba(52,211,153,0.1);color:#34d399;border-color:rgba(52,211,153,0.3)">Verde</span></td><td><code>#34d399</code></td></tr>
+          <tr><td><span class="chip" style="background:rgba(244,63,94,0.1);color:#f43f5e;border-color:rgba(244,63,94,0.3)">Rojo</span></td><td><code>#f43f5e</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 7 — PANEL PROFESOR
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s7">
+    <div class="section-header">
+      <div class="section-icon">👩‍🏫</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 07</div>
+        <div class="section-title">Panel Profesor — /teacher</div>
+        <div class="section-desc">Gestión de contenido propio y monitoreo del progreso de los estudiantes asignados.</div>
+      </div>
+    </div>
+
+    <div class="roles-grid" style="grid-template-columns: 1fr 1fr">
+      <div class="role-card teacher">
+        <div class="role-card-title"><span class="badge badge-teacher">Profesor</span> Puede</div>
+        <ul>
+          <li>Ver y editar sus propios cursos</li>
+          <li>Ver estudiantes que comparten sus cursos</li>
+          <li>Editar nivel, puntos y clases del estudiante</li>
+        </ul>
+      </div>
+      <div class="role-card admin">
+        <div class="role-card-title"><span class="badge badge-admin">Admin</span> También puede</div>
+        <ul>
+          <li>Ver todos los cursos (sin filtro)</li>
+          <li>Ver todos los estudiantes</li>
+          <li>Acceder al panel /admin desde /teacher</li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>7.1 — Tab Clases (Contenido)</h2>
+    <p>Muestra el <code>ContentManager</code> filtrado a los cursos del profesor. El profesor puede crear, editar y eliminar módulos, secciones y recursos únicamente dentro de sus cursos asignados. Usa endpoints <code>/api/teacher/content/</code>.</p>
+
+    <h2>7.2 — Tab Estudiantes</h2>
+    <div class="steps">
+      <div class="step"><div class="step-num">1</div><div class="step-text"><code>GET /api/teacher/students</code>. Filtra estudiantes que comparten al menos un curso con el profesor.</div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-text">Tarjetas: avatar · nombre/email · barra de nivel + puntos · cursos asignados.</div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-text">Clic en tarjeta → modo edición con draft local: nivel (1–5) · puntos · clases asignadas.</div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-text">Guardar → <code>PATCH /api/teacher/students/{id}</code>. Éxito → actualiza tarjeta. Error → muestra mensaje sin revertir.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 8 — APIs
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s8">
+    <div class="section-header">
+      <div class="section-icon">🔌</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 08</div>
+        <div class="section-title">APIs — Referencia de Endpoints</div>
+        <div class="section-desc">Todos los endpoints de la plataforma con métodos, roles requeridos y descripción.</div>
+      </div>
+    </div>
+
+    <h2>Auth</h2>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/auth/login</span><span class="endpoint-desc">Login · Público</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/auth/register</span><span class="endpoint-desc">Registro de cuenta · Público</span></div>
+
+    <h2>Usuario y Progreso</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/users/me</span><span class="endpoint-desc">Perfil + gamificación · Autenticado</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/users/me</span><span class="endpoint-desc">Suma puntos · Autenticado</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/progress</span><span class="endpoint-desc">Lista recursos completados · Autenticado</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/progress</span><span class="endpoint-desc">Registra recurso completado + puntos · Autenticado</span></div>
+
+    <h2>Admin — Usuarios</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/admin/users</span><span class="endpoint-desc">Lista todos los usuarios · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/users</span><span class="endpoint-desc">Crea usuario · Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/admin/users/[id]</span><span class="endpoint-desc">Actualiza rol, nombre, cursos, contraseña · Admin</span></div>
+    <div class="endpoint"><span class="method method-delete">DEL</span><span class="endpoint-path">/api/admin/users/[id]</span><span class="endpoint-desc">Elimina usuario · Admin</span></div>
+
+    <h2>Admin — Contenido</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/admin/content</span><span class="endpoint-desc">Árbol completo de cursos · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/content/modulos</span><span class="endpoint-desc">Crea módulo · Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/admin/content/modulos/[id]</span><span class="endpoint-desc">Edita módulo · Admin</span></div>
+    <div class="endpoint"><span class="method method-delete">DEL</span><span class="endpoint-path">/api/admin/content/modulos/[id]</span><span class="endpoint-desc">Elimina módulo · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/content/secciones</span><span class="endpoint-desc">Crea sección · Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/admin/content/secciones/[id]</span><span class="endpoint-desc">Edita sección (nombre, zona) · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/content/recursos</span><span class="endpoint-desc">Crea recurso · Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/admin/content/recursos/[id]</span><span class="endpoint-desc">Edita recurso · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/content/recursos/auto-interact</span><span class="endpoint-desc">Auto-genera puntos de interacción de YouTube · Admin</span></div>
+
+    <h2>Admin — Instrumentos</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/admin/instrumentos</span><span class="endpoint-desc">Lista instrumentos DB · Admin</span></div>
+    <div class="endpoint"><span class="method method-post">POST</span><span class="endpoint-path">/api/admin/instrumentos</span><span class="endpoint-desc">Crea instrumento · Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/admin/instrumentos/[id]</span><span class="endpoint-desc">Edita instrumento · Admin</span></div>
+    <div class="endpoint"><span class="method method-delete">DEL</span><span class="endpoint-path">/api/admin/instrumentos/[id]</span><span class="endpoint-desc">Elimina instrumento · Admin</span></div>
+
+    <h2>Profesor</h2>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/teacher/students</span><span class="endpoint-desc">Lista estudiantes del profesor · Teacher/Admin</span></div>
+    <div class="endpoint"><span class="method method-patch">PATCH</span><span class="endpoint-path">/api/teacher/students/[id]</span><span class="endpoint-desc">Edita estudiante · Teacher/Admin</span></div>
+    <div class="endpoint"><span class="method method-get">GET</span><span class="endpoint-path">/api/teacher/content</span><span class="endpoint-desc">Contenido del profesor · Teacher/Admin</span></div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 9 — BASE DE DATOS
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s9">
+    <div class="section-header">
+      <div class="section-icon">🗄️</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 09</div>
+        <div class="section-title">Base de Datos</div>
+        <div class="section-desc">Tablas principales en Supabase (PostgreSQL). Custom JWT Auth — NO usa Supabase Auth.</div>
+      </div>
+    </div>
+
+    <h2>Tabla: users</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>uuid PK</td><td>Identificador único</td></tr>
+          <tr><td><code>email</code></td><td>text UNIQUE</td><td>Email en minúsculas</td></tr>
+          <tr><td><code>password_hash</code></td><td>text</td><td>bcrypt hash, 12 rounds. Nunca se expone al cliente</td></tr>
+          <tr><td><code>nombre</code></td><td>text | null</td><td>Nombre visible, opcional</td></tr>
+          <tr><td><code>role</code></td><td>text</td><td><code>student</code> · <code>teacher</code> · <code>admin</code></td></tr>
+          <tr><td><code>nivel</code></td><td>int</td><td>1–5, recalculado al sumar puntos</td></tr>
+          <tr><td><code>puntos</code></td><td>int</td><td>Acumulado total de puntos</td></tr>
+          <tr><td><code>cursos_acceso</code></td><td>text[]</td><td>IDs de cursos habilitados para este usuario</td></tr>
+          <tr><td><code>clases_acceso</code></td><td>text[]</td><td>IDs de instrumentos/clases habilitados</td></tr>
+          <tr><td><code>created_at</code></td><td>timestamp</td><td>Fecha de creación</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Tabla: completions</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>uuid PK</td><td></td></tr>
+          <tr><td><code>user_id</code></td><td>uuid FK → users</td><td>Usuario que completó</td></tr>
+          <tr><td><code>resource_url</code></td><td>text</td><td>URL del recurso completado (único por usuario)</td></tr>
+          <tr><td><code>tipo</code></td><td>text</td><td>Tipo de recurso: video, juego, drive, etc.</td></tr>
+          <tr><td><code>puntos</code></td><td>int</td><td>Puntos otorgados en ese completion</td></tr>
+          <tr><td><code>completed_at</code></td><td>timestamp</td><td>Fecha y hora de completion</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Tabla: instrumentos</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Campo</th><th>Tipo</th><th>Descripción</th></tr></thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>text PK</td><td>Slug del instrumento</td></tr>
+          <tr><td><code>nombre</code></td><td>text</td><td>Nombre visible</td></tr>
+          <tr><td><code>emoji</code></td><td>text</td><td>Emoji representativo</td></tr>
+          <tr><td><code>color</code></td><td>text</td><td>Color hex para la tarjeta</td></tr>
+          <tr><td><code>glow</code></td><td>text</td><td>rgba para efecto de sombra</td></tr>
+          <tr><td><code>zona</code></td><td>text</td><td><code>clase</code> · <code>gym</code></td></tr>
+          <tr><td><code>curso_id</code></td><td>text</td><td>ID del curso vinculado</td></tr>
+          <tr><td><code>activo</code></td><td>bool</td><td>Visibilidad en el mapa</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Variables de Entorno Requeridas</h2>
+    <pre><code>NEXT_PUBLIC_SUPABASE_URL        # URL pública del proyecto Supabase
+NEXT_PUBLIC_SUPABASE_ANON_KEY   # Clave anónima (browser)
+SUPABASE_SERVICE_ROLE_KEY       # Clave service role (solo server)
+JWT_SECRET                      # Secreto para firmar tokens JWT</code></pre>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 10 — SEGURIDAD
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s10">
+    <div class="section-header">
+      <div class="section-icon">🛡️</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 10</div>
+        <div class="section-title">Seguridad</div>
+        <div class="section-desc">Modelo de autenticación JWT, autorización por rol y protecciones de datos sensibles.</div>
+      </div>
+    </div>
+
+    <h2>Autenticación JWT</h2>
+    <div class="card-grid">
+      <div class="card"><div class="card-title">Firma</div><p><code>jsonwebtoken</code> con <code>JWT_SECRET</code>. Expiración: 7 días.</p></div>
+      <div class="card"><div class="card-title">Almacenamiento</div><p>Token en <code>localStorage</code>. Cada request incluye <code>Authorization: Bearer {token}</code>.</p></div>
+      <div class="card"><div class="card-title">Verificación</div><p>Todas las APIs protegidas extraen y verifican el token antes de procesar el request.</p></div>
+    </div>
+
+    <h2>Autorización por Rol</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Endpoints</th><th>Guard</th><th>Condición</th></tr></thead>
+        <tbody>
+          <tr><td><code>/api/admin/*</code></td><td>requireAdmin()</td><td>Token válido + role === 'admin'</td></tr>
+          <tr><td><code>/api/teacher/*</code></td><td>teacherGuard()</td><td>Token válido + role === 'teacher' | 'admin'</td></tr>
+          <tr><td><code>/api/users/me</code>, <code>/api/progress</code></td><td>verifyToken()</td><td>Token válido (cualquier rol)</td></tr>
+          <tr><td><code>/api/auth/login</code>, <code>/api/auth/register</code></td><td>Ninguno</td><td>Público</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <h2>Protecciones Específicas</h2>
+    <ul class="styled">
+      <li>Admin no puede eliminarse a sí mismo (<code>adminPayload.sub === id → 400</code>)</li>
+      <li><code>password_hash</code> nunca se incluye en ninguna respuesta de API</li>
+      <li>Las contraseñas siempre se hashean con bcrypt (12 rounds) antes de guardarse</li>
+      <li><code>getSupabaseAdmin()</code> (service role) solo se usa en server-side — nunca expuesto al browser</li>
+      <li>Todos los emails se normalizan a lowercase antes de insertar o consultar</li>
+      <li>Los recursos de completions son idempotentes: no se duplican puntos por el mismo recurso</li>
+    </ul>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 11 — CASOS BORDE Y ERRORES
+  ══════════════════════════════════════════ -->
+  <section class="doc-section page-break" id="s11">
+    <div class="section-header">
+      <div class="section-icon">⚠️</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 11</div>
+        <div class="section-title">Casos Borde y Errores Posibles</div>
+        <div class="section-desc">Comportamientos del sistema ante situaciones límite, fallos de red o configuración incorrecta.</div>
+      </div>
+    </div>
+
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Caso</th><th>Comportamiento del sistema</th><th>Gravedad</th></tr></thead>
+        <tbody>
+          <tr><td>Token expirado (7 días)</td><td>APIs retornan 401. No hay redirección automática — el usuario ve errores hasta relanzar sesión manualmente.</td><td><span class="badge badge-teacher">Media</span></td></tr>
+          <tr><td>Email ya registrado (registro)</td><td><code>409 "El email ya está registrado"</code>. Formulario permanece visible.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Credenciales incorrectas</td><td><code>401 "Credenciales inválidas"</code>. No se especifica si es email o contraseña (seguridad).</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Admin intenta eliminarse</td><td><code>400 "No puedes eliminarte a ti mismo"</code>. Botón de eliminar no aparece para el propio admin.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Recurso completado dos veces</td><td><code>ya_completado: true, puntos_ganados: 0</code>. Idempotente, no duplica puntos.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Spline CDN no disponible</td><td>Pantalla negra sin fallback. Los botones de zona nunca aparecen.</td><td><span class="badge badge-admin">Alta</span></td></tr>
+          <tr><td>Supabase service role key incorrecta</td><td>Todas las APIs admin/teacher fallan con 500.</td><td><span class="badge badge-admin">Alta</span></td></tr>
+          <tr><td>JWT_SECRET no configurado</td><td>Error en build/runtime. La plataforma no arranca.</td><td><span class="badge badge-admin">Crítica</span></td></tr>
+          <tr><td>Estudiante sin cursos asignados</td><td>Panel de clases muestra <em>"Sin clases asignadas"</em>. No hay error.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Módulo sin secciones</td><td>Muestra mensaje <em>"Contenido próximamente"</em>.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>localStorage no disponible</td><td>El hook useAuth usa useEffect (client-only). No afecta SSR.</td><td><span class="badge badge-student">Baja</span></td></tr>
+          <tr><td>Contraseña nueva menor a 6 chars</td><td>Bloqueado client-side + server-side. Mensaje de error en el modal.</td><td><span class="badge badge-student">Baja</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- ══════════════════════════════════════════
+       SECCIÓN 12 — RECOMENDACIONES
+  ══════════════════════════════════════════ -->
+  <section class="doc-section" id="s12">
+    <div class="section-header">
+      <div class="section-icon">🚀</div>
+      <div class="section-meta">
+        <div class="section-num">Módulo 12</div>
+        <div class="section-title">Recomendaciones y Mejoras Futuras</div>
+        <div class="section-desc">Funcionalidades identificadas para próximas iteraciones de la plataforma.</div>
+      </div>
+    </div>
+
+    <div class="card-grid">
+      <div class="card">
+        <div class="card-title">🔄 Refresh de sesión automático</div>
+        <p>El token expira a los 7 días sin renovación automática. Implementar refresh token o detección de 401 con redirección a login.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📧 Recuperación de contraseña</div>
+        <p>No existe flujo de "olvidé mi contraseña". Requeriría integración de email transaccional (Resend, SendGrid).</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🔍 Búsqueda de usuarios</div>
+        <p>El panel admin no tiene campo de búsqueda/filtro. Crítico cuando la base crece.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🚫 Suspensión de cuentas</div>
+        <p>Solo existe eliminar. Agregar campo <code>activo</code> en users para suspender sin borrar el historial.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📊 Exportación de reportes</div>
+        <p>No existe endpoint de exportación CSV/PDF de progreso por curso o usuario.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📱 Soporte móvil en 3D</div>
+        <p>Spline requiere teclado. Agregar joystick táctil virtual para dispositivos móviles.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">🏆 Celebración de nivel</div>
+        <p><code>subio_nivel: true</code> ya existe en la API. Implementar animación de celebración cuando el estudiante sube de nivel.</p>
+      </div>
+      <div class="card">
+        <div class="card-title">📋 Logs de auditoría</div>
+        <p>No hay registro de acciones del admin (quién cambió qué y cuándo). Importante para ambientes educativos formales.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ FOOTER ══ -->
+  <footer class="footer">
+    <img src="IsotipoBlack.png" alt="rdz" class="footer-logo" style="filter: invert(1);" onerror="this.style.display:'none';" />
+    <div class="footer-text">
+      Oveja Music World · Documento de Entrega v1.0 · Mayo 2025<br/>
+      Desarrollado por <strong style="color:rgba(255,255,255,0.45)">rdz — Juan Jose Riaño</strong><br/>
+      Next.js 16 · Supabase · Spline · Framer Motion · Tailwind v4
+    </div>
+  </footer>
+
+  </div><!-- /content-wrap -->
+</div><!-- /layout -->
+
+</body>
+</html>

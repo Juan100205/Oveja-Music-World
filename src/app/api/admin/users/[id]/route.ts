@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { extractTokenFromHeader, verifyToken } from '@/lib/auth'
+import { extractTokenFromHeader, verifyToken, hashPassword } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 
 function requireAdmin(req: NextRequest) {
@@ -26,6 +26,13 @@ export async function PATCH(
   const updates: Record<string, unknown> = {}
   for (const key of allowed) {
     if (key in body) updates[key] = body[key]
+  }
+
+  if ('password' in body) {
+    if (!body.password || body.password.length < 6) {
+      return NextResponse.json({ error: 'La contraseña debe tener al menos 6 caracteres' }, { status: 400 })
+    }
+    updates.password_hash = await hashPassword(body.password)
   }
 
   if (Object.keys(updates).length === 0) {

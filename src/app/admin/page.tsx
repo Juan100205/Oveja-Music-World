@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 
@@ -120,13 +120,17 @@ export default function AdminPage() {
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
 
-  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido' | 'instrumentos'>('usuarios')
+  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido' | 'instrumentos' | 'manual'>('usuarios')
   const [users,      setUsers]      = useState<AdminUser[]>([])
   const [fetching,   setFetching]   = useState(true)
   const [saving,     setSaving]     = useState<string | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [deleteId,   setDeleteId]   = useState<string | null>(null)
   const [error,      setError]      = useState<string | null>(null)
+  const [changePwdId,      setChangePwdId]      = useState<string | null>(null)
+  const [newPwd,           setNewPwd]           = useState('')
+  const [changePwdSaving,  setChangePwdSaving]  = useState(false)
+  const [changePwdError,   setChangePwdError]   = useState<string | null>(null)
   const [showLogout, setShowLogout] = useState(false)
 
   // ── Instrumentos ───────────────────────────────────────────
@@ -399,6 +403,29 @@ export default function AdminPage() {
     }
   }
 
+  // ── Cambiar contraseña ────────────────────────────────────
+  const handleChangePwd = async () => {
+    setChangePwdError(null)
+    if (!newPwd || newPwd.length < 6) { setChangePwdError('Mínimo 6 caracteres'); return }
+    if (!changePwdId) return
+    setChangePwdSaving(true)
+    try {
+      const res = await fetch(`/api/admin/users/${changePwdId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ password: newPwd }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setChangePwdError(data.error); return }
+      setChangePwdId(null)
+      setNewPwd('')
+    } catch {
+      setChangePwdError('Error de conexión')
+    } finally {
+      setChangePwdSaving(false)
+    }
+  }
+
   if (loading || !isAuthenticated || user?.role !== 'admin') return null
 
   // ── Render ─────────────────────────────────────────────────
@@ -432,7 +459,7 @@ export default function AdminPage() {
               Panel Admin
             </h1>
             <p className="admin-subtitle" style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {activeTab === 'usuarios' ? `${users.length} usuarios` : activeTab === 'contenido' ? 'Gestión de contenido' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
+              {activeTab === 'usuarios' ? `${users.length} usuarios` : activeTab === 'contenido' ? 'Gestión de contenido' : activeTab === 'manual' ? 'Manual de uso' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
@@ -444,7 +471,7 @@ export default function AdminPage() {
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 12, padding: 4,
         }}>
-          {(['usuarios', 'contenido', 'instrumentos'] as const).map(tab => (
+          {(['usuarios', 'contenido', 'instrumentos', 'manual'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -461,6 +488,7 @@ export default function AdminPage() {
             >
               {tab === 'usuarios'     ? <><Users    size={14} strokeWidth={1.5} /> Usuarios</>
              : tab === 'contenido'   ? <><BookOpen  size={14} strokeWidth={1.5} /> Contenido</>
+             : tab === 'manual'      ? <><FileText  size={14} strokeWidth={1.5} /> Manual</>
              :                         <><Music     size={14} strokeWidth={1.5} /> Instrumentos</>
               }
             </button>
@@ -552,6 +580,42 @@ export default function AdminPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* ── Tab: Manual ──────────────────────────────────────── */}
+      {activeTab === 'manual' && (
+        <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 60px)' }}>
+          <div style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            padding: '12px 20px',
+            borderBottom: '1px solid rgba(255,255,255,0.06)',
+          }}>
+            <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.4)' }}>
+              Manual de uso · Oveja Music World v1.0
+            </span>
+            <a
+              href="/manual.html"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: 'flex', alignItems: 'center', gap: 6,
+                padding: '6px 14px', borderRadius: 999,
+                background: 'rgba(255,255,255,0.07)',
+                border: '1px solid rgba(255,255,255,0.1)',
+                color: 'rgba(255,255,255,0.55)',
+                fontFamily: 'var(--font-body)', fontSize: 12,
+                textDecoration: 'none', cursor: 'pointer',
+              }}
+            >
+              <FileText size={13} strokeWidth={1.5} /> Abrir en nueva pestaña
+            </a>
+          </div>
+          <iframe
+            src="/manual.html"
+            style={{ flex: 1, border: 'none', width: '100%' }}
+            title="Manual de uso"
+          />
+        </div>
+      )}
 
       {/* ── Tab: Contenido ───────────────────────────────────── */}
       {activeTab === 'contenido' && token && (
@@ -986,6 +1050,19 @@ export default function AdminPage() {
                     >
                       {ROLES.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
                     </select>
+                    {/* Cambiar contraseña */}
+                    <motion.button
+                      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                      onClick={() => { setChangePwdId(u.id); setNewPwd(''); setChangePwdError(null) }}
+                      style={{
+                        background: 'rgba(61,184,250,0.1)', border: '1px solid rgba(61,184,250,0.2)',
+                        borderRadius: 999, width: 28, height: 28,
+                        color: '#3db8fa', cursor: 'pointer',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}
+                    >
+                      <KeyRound size={13} strokeWidth={1.5} />
+                    </motion.button>
                     {/* Eliminar */}
                     {u.id !== user?.id && (
                       <motion.button
@@ -1259,6 +1336,91 @@ export default function AdminPage() {
                   }}
                 >
                   Eliminar
+                </motion.button>
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          MODAL — Cambiar contraseña
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {changePwdId && (
+          <>
+            <motion.div
+              key="backdrop-pwd"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              onClick={() => { setChangePwdId(null); setNewPwd('') }}
+              className="fixed inset-0 z-[200]"
+              style={{ background: 'rgba(10,10,26,0.7)', backdropFilter: 'blur(4px)' }}
+            />
+            <motion.div
+              key="modal-pwd"
+              initial={{ opacity: 0, scale: 0.92 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.92 }}
+              className="fixed inset-0 m-auto h-fit z-[201]"
+              style={{
+                background: 'rgba(14,14,32,0.99)',
+                border: '1px solid rgba(61,184,250,0.25)', borderRadius: 20,
+                padding: '28px 24px', width: 'min(340px, 90vw)', textAlign: 'center',
+              }}
+            >
+              <div style={{ width: 56, height: 56, borderRadius: 16, background: 'rgba(61,184,250,0.1)', border: '1px solid rgba(61,184,250,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
+                <KeyRound size={24} strokeWidth={1.5} style={{ color: '#3db8fa' }} />
+              </div>
+              <h3 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', marginBottom: 4 }}>
+                Cambiar contraseña
+              </h3>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginBottom: 20, lineHeight: 1.5 }}>
+                {users.find(u => u.id === changePwdId)?.email}
+              </p>
+
+              {changePwdError && (
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#ec488a', marginBottom: 12, background: 'rgba(236,72,138,0.08)', borderRadius: 10, padding: '8px 12px' }}>
+                  {changePwdError}
+                </p>
+              )}
+
+              <input
+                type="password"
+                value={newPwd}
+                onChange={e => setNewPwd(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleChangePwd()}
+                placeholder="Nueva contraseña"
+                autoFocus
+                style={{
+                  width: '100%', background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(61,184,250,0.25)', borderRadius: 12,
+                  padding: '11px 14px', color: '#fff',
+                  fontFamily: 'var(--font-body)', fontSize: 14,
+                  outline: 'none', marginBottom: 20, boxSizing: 'border-box',
+                }}
+              />
+
+              <div style={{ display: 'flex', gap: 10 }}>
+                <button
+                  onClick={() => { setChangePwdId(null); setNewPwd('') }}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 999,
+                    background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.1)',
+                    color: 'rgba(255,255,255,0.6)', fontFamily: 'var(--font-body)', fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  Cancelar
+                </button>
+                <motion.button
+                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                  onClick={handleChangePwd}
+                  disabled={changePwdSaving}
+                  style={{
+                    flex: 1, padding: '11px 0', borderRadius: 999,
+                    background: 'linear-gradient(135deg, #3db8fa, #9b54f9)',
+                    border: 'none', opacity: changePwdSaving ? 0.6 : 1,
+                    color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, cursor: 'pointer',
+                  }}
+                >
+                  {changePwdSaving ? 'Guardando...' : 'Guardar'}
                 </motion.button>
               </div>
             </motion.div>
