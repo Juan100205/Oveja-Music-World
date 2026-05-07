@@ -1,6 +1,10 @@
-import { redirect } from 'next/navigation'
+import ClasePage from '../page'
 
-export default async function RedirectPage({ params }: { params: Promise<{ instrumento: string; modulo: string }> }) {
-  const { instrumento } = await params
-  redirect(`/escuela/clase/${instrumento}`)
+export default async function ClaseConModuloPage({
+  params,
+}: {
+  params: Promise<{ instrumento: string; modulo: string }>
+}) {
+  const { modulo } = await params
+  return <ClasePage moduloIdInicial={modulo} />
 }

@@ -277,9 +277,15 @@ function InlineEdit({
   const commit = async () => {
     if (draft.trim() === value || !draft.trim()) { setEditing(false); setDraft(value); return }
     setSaving(true)
-    await onSave(draft.trim())
-    setSaving(false)
-    setEditing(false)
+    try {
+      await onSave(draft.trim())
+      setEditing(false)
+    } catch {
+      setDraft(value)
+      setEditing(false)
+    } finally {
+      setSaving(false)
+    }
   }
 
   if (!editing) {
@@ -794,14 +800,22 @@ function SeccionPanel({
     const res = await fetch(`${apiBase}/secciones/${seccion.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
-    if (res.ok) onUpdate({ ...seccion, nombre })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error desconocido' }))
+      throw new Error(err.error || `Error ${res.status}`)
+    }
+    onUpdate({ ...seccion, nombre })
   }, [apiBase, seccion, onUpdate, authHeaders])
 
   const changeZona = useCallback(async (zona: string) => {
     const res = await fetch(`${apiBase}/secciones/${seccion.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ zona }),
     })
-    if (res.ok) onUpdate({ ...seccion, zona: (zona || null) as Seccion['zona'] })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error desconocido' }))
+      throw new Error(err.error || `Error ${res.status}`)
+    }
+    onUpdate({ ...seccion, zona: (zona || null) as Seccion['zona'] })
   }, [apiBase, seccion, onUpdate, authHeaders])
 
   const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string; interacciones: InteractionPoint[] }) => {
@@ -944,7 +958,11 @@ function ModuloPanel({
     const res = await fetch(`${apiBase}/modulos/${modulo.id}`, {
       method: 'PATCH', headers: authHeaders, body: JSON.stringify({ nombre }),
     })
-    if (res.ok) onUpdate({ ...modulo, nombre })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error desconocido' }))
+      throw new Error(err.error || `Error ${res.status}`)
+    }
+    onUpdate({ ...modulo, nombre })
   }, [apiBase, modulo, onUpdate, authHeaders])
 
   const addSeccion = async () => {

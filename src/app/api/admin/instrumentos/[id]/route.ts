@@ -38,6 +38,15 @@ export async function PATCH(
     .single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Sync cursos table when nombre or emoji changes
+  if (data?.curso_id && (updates.nombre !== undefined || updates.emoji !== undefined)) {
+    const cursoUpdates: Record<string, unknown> = {}
+    if (updates.nombre !== undefined) cursoUpdates.nombre = updates.nombre
+    if (updates.emoji  !== undefined) cursoUpdates.emoji  = updates.emoji
+    await db.from('cursos').update(cursoUpdates).eq('id', data.curso_id)
+  }
+
   return NextResponse.json({ instrumento: data })
 }
 

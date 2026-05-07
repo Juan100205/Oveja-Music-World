@@ -229,16 +229,20 @@ function PtsToast({ pts, subioNivel, onDone }: { pts: number; subioNivel: boolea
   )
 }
 
-export default function ClasePage() {
+export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: string } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
+  const clase = CLASES_CONFIG.find(c => c.id === instrumento)
 
   const { isCompleted, completeResource } = useProgress()
   const { user, token, updateUser } = useAuth()
 
   const [isInClass,      setIsInClass]     = useState(false)
   const [isOutingClass,  setIsOutingClass] = useState(false)
-  const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(null)
+  const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(() => {
+    if (!moduloIdInicial || !clase) return null
+    return CURSOS.find(c => c.id === clase.cursoId)?.modulos.find(m => m.id === moduloIdInicial) ?? null
+  })
   const [seccionesOpen,  setSeccionesOpen] = useState(false)
   const [seccionActiva,  setSeccionActiva] = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]   = useState<{ url: string; label?: string } | null>(null)
@@ -251,6 +255,7 @@ export default function ClasePage() {
 
   // DB-backed modules: fetched from Supabase, override static data per module id
   const [dbModulos, setDbModulos] = useState<Record<string, Modulo>>({})
+
 
   const [interacciones, setInteracciones] = useState<InteractionPoint[]>([])
   const [loadingInteracciones, setLoadingInteracciones] = useState(false)
@@ -305,8 +310,6 @@ export default function ClasePage() {
     if (name === 'isOutingClass') flushSync(() => setIsOutingClass(isTrue))
   }, [])
 
-  const clase = CLASES_CONFIG.find(c => c.id === instrumento)
-
   // Fetch course content from Supabase — DB modules override static modules by id.
   // Sections/resources added via the admin panel appear immediately here.
   useEffect(() => {
@@ -336,7 +339,7 @@ export default function ClasePage() {
   ]
   const modulosDisponibles = mergedModulos.filter(m => !m.nombre.toLowerCase().includes('práctica'))
 
-  const cerrarPanel = () => { setSeccionesOpen(false); setSeccionActiva(null); setModuloActivo(null) }
+  const cerrarPanel = () => { setSeccionesOpen(false); setSeccionActiva(null); if (!moduloIdInicial) setModuloActivo(null) }
 
   return (
     <main style={{ width: '100vw', height: '100vh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
@@ -365,7 +368,7 @@ export default function ClasePage() {
       {clase && (
         <div className="mod-label absolute top-5 left-1/2 -translate-x-1/2 z-20"
           style={{ background: 'rgba(10,10,26,0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 20px', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
-          {clase.emoji} {clase.nombre}
+          {clase.emoji} {clase.nombre}{moduloActivo ? ` · ${moduloActivo.nombre}` : ''}
         </div>
       )}
 
@@ -472,9 +475,10 @@ export default function ClasePage() {
                   style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}>
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
-                    <motion.button whileHover={{ x: -3 }} onClick={() => setModuloActivo(null)}
+                    <motion.button whileHover={{ x: -3 }}
+                      onClick={() => moduloIdInicial ? router.push('/escuela') : setModuloActivo(null)}
                       style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ArrowLeft size={13} strokeWidth={1.5} /> Módulos
+                      <ArrowLeft size={13} strokeWidth={1.5} /> {moduloIdInicial ? 'Mapa' : 'Módulos'}
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>

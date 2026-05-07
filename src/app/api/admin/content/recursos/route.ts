@@ -10,12 +10,12 @@ function adminGuard(req: NextRequest) {
 }
 
 // POST /api/admin/content/recursos
-// body: { seccion_id, url, tipo, label? }
+// body: { seccion_id, url, tipo, label?, interacciones? }
 export async function POST(req: NextRequest) {
   if (!adminGuard(req)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const body = await req.json()
-  const { seccion_id, url, tipo, label } = body
+  const { seccion_id, url, tipo, label, interacciones } = body
 
   if (!seccion_id || !url?.trim() || !tipo)
     return NextResponse.json({ error: 'seccion_id, url y tipo son requeridos' }, { status: 400 })
@@ -33,6 +33,7 @@ export async function POST(req: NextRequest) {
       tipo,
       label: label?.trim() || null,
       orden: count ?? 0,
+      interacciones: Array.isArray(interacciones) ? interacciones : [],
     })
     .select()
     .single()

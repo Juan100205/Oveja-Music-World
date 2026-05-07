@@ -499,7 +499,7 @@ export default function MapaPage() {
                     : <ModulosList
                       modulos={modulosClaseVista}
                       color={claseSeleccionada.color}
-                      onSelect={() => router.push(`/escuela/clase/${claseSeleccionada.id}`)}
+                      onSelect={(m) => router.push(`/escuela/clase/${claseSeleccionada.id}/${m.id}`)}
                     />
                   }
                 </motion.div>
