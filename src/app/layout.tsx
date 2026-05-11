@@ -20,8 +20,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es">
       <head>
-        <link rel="preconnect" href="https://prod.spline.design" />
-        <link rel="prefetch" href={SPLINE_MAP}       crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://prod.spline.design" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://prod.spline.design" />
+        {/* Map is the entry scene — preload (high priority) so it starts
+            downloading immediately, even before Spline JS initialises. */}
+        <link rel="preload" href={SPLINE_MAP} as="fetch" crossOrigin="anonymous" />
+        {/* Classroom and gym are navigated to after the map — prefetch is
+            enough: the browser loads them in the background while idle. */}
         <link rel="prefetch" href={SPLINE_CLASSROOM} crossOrigin="anonymous" />
         <link rel="prefetch" href={SPLINE_GYM}       crossOrigin="anonymous" />
       </head>

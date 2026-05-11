@@ -4,9 +4,16 @@ import React, { useState, useEffect, useRef, Component } from 'react'
 import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// Pre-warm the Spline JS bundle: starts downloading as soon as this module
+// is parsed, instead of waiting for the component to first render.
+if (typeof window !== 'undefined') {
+  void import('@splinetool/react-spline')
+}
+
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
-const LOAD_TIMEOUT_MS = 90000
+// 30 s on mobile is already generous; 90 s was too long to show "retry".
+const LOAD_TIMEOUT_MS = 30_000
 
 // ── Error boundary for Spline runtime errors ───────────────────
 class SplineErrorBoundary extends Component<
@@ -59,31 +66,6 @@ function SplineLoader() {
   )
 }
 
-function MobileFallback() {
-  return (
-    <div
-      style={{
-        position: 'absolute', inset: 0,
-        display: 'flex', flexDirection: 'column',
-        alignItems: 'center', justifyContent: 'center',
-        gap: 12,
-        background: 'linear-gradient(160deg, #0a0a1a 0%, #1a0a2e 50%, #0a0a1a 100%)',
-      }}
-    >
-      <motion.div
-        animate={{ scale: [1, 1.08, 1] }}
-        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-        style={{ fontSize: 72 }}
-      >
-        🎵
-      </motion.div>
-      <p style={{ fontFamily: 'var(--font-display)', fontSize: 13, color: 'var(--om-pink)', opacity: 0.7, letterSpacing: 2 }}>
-        OVEJA MUSIC WORLD
-      </p>
-    </div>
-  )
-}
-
 function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   return (
     <div
@@ -113,14 +95,6 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
   )
 }
 
-/*
-  Contenedor con dimensiones explícitas en vh/vw.
-  ParentSize (interno de Spline) usa ResizeObserver para medir
-  su div padre — necesita px reales, no % heredados de parents
-  con altura indefinida.
-  NO usamos position:fixed porque queda atrapado dentro del
-  stacking context de los transforms de framer-motion.
-*/
 interface SplineSceneProps {
   scene: string
   onVariableChange?: (name: string, value: unknown) => void
@@ -133,24 +107,75 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevVarsRef = useRef<Record<string, unknown>>({})
+  const splineAppRef = useRef<{ getVariables: () => Record<string, unknown> } | null>(null)
 
+  // Preload the .splinecode scene file so the browser fetches it in parallel
+  // with the Spline JS runtime, shaving 1–2 round trips on slow connections.
+  useEffect(() => {
+    const link = document.createElement('link')
+    link.rel = 'preload'
+    link.href = scene
+    link.setAttribute('as', 'fetch')
+    link.crossOrigin = 'anonymous'
+    document.head.appendChild(link)
+    return () => {
+      if (document.head.contains(link)) document.head.removeChild(link)
+    }
+  }, [scene])
+
+  // Load timeout — show retry button after LOAD_TIMEOUT_MS
   useEffect(() => {
     if (loaded || error) return
-
     timeoutRef.current = setTimeout(() => setError(true), LOAD_TIMEOUT_MS)
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
   }, [loaded, error])
 
-  // Limpia el polling solo al desmontar el componente
+  // Pause the variable-polling interval when the tab is hidden to free CPU.
+  // Resume automatically when the tab becomes visible again.
+  useEffect(() => {
+    if (!loaded || !onVariableChange) return
+
+    const startPoll = () => {
+      if (pollRef.current || !splineAppRef.current) return
+      pollRef.current = setInterval(() => {
+        if (!splineAppRef.current) return
+        const current = splineAppRef.current.getVariables()
+        for (const key in current) {
+          if (current[key] !== prevVarsRef.current[key]) {
+            onVariableChange(key, current[key])
+            prevVarsRef.current[key] = current[key]
+          }
+        }
+      }, 100)
+    }
+
+    const stopPoll = () => {
+      if (pollRef.current) {
+        clearInterval(pollRef.current)
+        pollRef.current = null
+      }
+    }
+
+    const handleVisibility = () => {
+      if (document.hidden) stopPoll()
+      else startPoll()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibility)
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibility)
+      stopPoll()
+    }
+  }, [loaded, onVariableChange])
+
+  // Cleanup polling on unmount
   useEffect(() => {
     return () => {
       if (pollRef.current) clearInterval(pollRef.current)
     }
   }, [])
-
-
 
   if (error) {
     return (
@@ -186,11 +211,18 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
       </AnimatePresence>
 
       <div style={{ width: '100vw', height: '100dvh' }}>
-        <SplineErrorBoundary key={retryKey} onError={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setError(true) }}>
+        <SplineErrorBoundary
+          key={retryKey}
+          onError={() => {
+            if (timeoutRef.current) clearTimeout(timeoutRef.current)
+            setError(true)
+          }}
+        >
           <Spline
             scene={scene}
             onLoad={(splineApp) => {
               if (timeoutRef.current) clearTimeout(timeoutRef.current)
+              splineAppRef.current = splineApp
               setLoaded(true)
 
               if (!onVariableChange) return
@@ -199,16 +231,19 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
               const initial = splineApp.getVariables() as Record<string, unknown>
               prevVarsRef.current = { ...initial }
 
-              // Polling cada 100ms — detecta cambios en variables de Spline
-              pollRef.current = setInterval(() => {
-                const current = splineApp.getVariables() as Record<string, unknown>
-                for (const key in current) {
-                  if (current[key] !== prevVarsRef.current[key]) {
-                    onVariableChange(key, current[key])
-                    prevVarsRef.current[key] = current[key]
+              // Start polling only if the tab is currently visible
+              if (!document.hidden) {
+                pollRef.current = setInterval(() => {
+                  if (!splineAppRef.current) return
+                  const current = splineAppRef.current.getVariables() as Record<string, unknown>
+                  for (const key in current) {
+                    if (current[key] !== prevVarsRef.current[key]) {
+                      onVariableChange(key, current[key])
+                      prevVarsRef.current[key] = current[key]
+                    }
                   }
-                }
-              }, 100)
+                }, 100)
+              }
             }}
             style={{ width: '100%', height: '100%' }}
           />
