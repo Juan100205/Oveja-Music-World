@@ -342,7 +342,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const cerrarPanel = () => { setSeccionesOpen(false); setSeccionActiva(null); if (!moduloIdInicial) setModuloActivo(null) }
 
   return (
-    <main style={{ width: '100vw', height: '100vh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
+    <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
       <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
 

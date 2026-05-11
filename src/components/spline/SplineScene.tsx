@@ -154,7 +154,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
 
   if (error) {
     return (
-      <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100vh' }}>
+      <div style={{ position: 'absolute', top: 0, left: 0, width: '100vw', height: '100dvh' }}>
         <ErrorFallback onRetry={() => { setError(false); setLoaded(false); setRetryKey(k => k + 1) }} />
       </div>
     )
@@ -166,7 +166,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
         position: 'absolute',
         top: 0, left: 0,
         width: '100vw',
-        height: '100vh',
+        height: '100dvh',
         overflow: 'hidden',
         zIndex: 0,
         background: '#0a0a1a',
@@ -185,7 +185,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
         )}
       </AnimatePresence>
 
-      <div style={{ width: '100vw', height: '100vh' }}>
+      <div style={{ width: '100vw', height: '100dvh' }}>
         <SplineErrorBoundary key={retryKey} onError={() => { if (timeoutRef.current) clearTimeout(timeoutRef.current); setError(true) }}>
           <Spline
             scene={scene}

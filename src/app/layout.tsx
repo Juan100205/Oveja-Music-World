@@ -1,9 +1,15 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
   title: 'Oveja Music — Escuela de Música',
   description: 'Aprende música en un mundo 3D interactivo',
+}
+
+export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  viewportFit: 'cover',
 }
 
 const SPLINE_MAP       = 'https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode'

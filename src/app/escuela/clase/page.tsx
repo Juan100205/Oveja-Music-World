@@ -82,7 +82,7 @@ export default function ClasePage() {
   if (!user) return null
 
   return (
-    <main style={{ position: 'relative', width: '100vw', height: '100vh', overflow: 'hidden', background: '#0a0a1a' }}>
+    <main style={{ position: 'relative', width: '100vw', height: '100dvh', overflow: 'hidden', background: '#0a0a1a' }}>
 
         {/* ── Spline de fondo ── */}
         <SplineScene scene={SCENE_CLASE} onVariableChange={handleVariableChange} />

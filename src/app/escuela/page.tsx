@@ -425,7 +425,7 @@ export default function MapaPage() {
 
   return (
     <main className="relative w-full overflow-hidden"
-      style={{ width: '100vw', height: '100vh', background: '#0a0a1a' }}>
+      style={{ width: '100vw', height: '100dvh', background: '#0a0a1a' }}>
 
       <SplineScene
         scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"

@@ -32,7 +32,7 @@ function VisorContent() {
   return (
     <main
       style={{
-        width: '100vw', height: '100vh',
+        width: '100vw', height: '100dvh',
         background: '#0a0a1a',
         display: 'flex', flexDirection: 'column',
         overflow: 'hidden',
@@ -116,7 +116,7 @@ export default function VisorPage() {
       fallback={
         <div
           style={{
-            width: '100vw', height: '100vh', background: '#0a0a1a',
+            width: '100vw', height: '100dvh', background: '#0a0a1a',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}
         >
