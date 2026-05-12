@@ -31,7 +31,6 @@ function extractColor(color: string): string {
 const STATIC_IDS_CLASE = new Set(CLASES_CONFIG.map(c => c.id))
 const STATIC_IDS_GYM   = new Set(GYM_INSTRUMENTOS.map(g => g.id))
 
-const BLOCKED_IDS = new Set(['ukelele', 'ukulele'])
 
 const STATIC_CURSOS_MAP: CursoMapEntry[] = CLASES_CONFIG.map(c => ({
   cursoId: c.cursoId,

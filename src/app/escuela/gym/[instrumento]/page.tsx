@@ -236,7 +236,7 @@ function IframeViewer({ url, label, tipo, onClose }: {
               style={{ border: 'none', display: 'block' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
               allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation"
+              sandbox="allow-scripts allow-popups allow-forms allow-presentation"
             />
           </div>
         </div>
@@ -268,7 +268,9 @@ export default function GymSalaPage() {
   }, [])
 
   const gymInstr = allGym.find(g => g.id === instrumento)
-  const secciones = gymInstr ? getSecciones(gymInstr) : []
+  // DB instruments have modulos: [] — content always lives in static data
+  const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
+  const secciones = gymStatic ? getSecciones(gymStatic) : []
 
   const cerrarPanel = () => { setPanelOpen(false); setSeccionActiva(null) }
 

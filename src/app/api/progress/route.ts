@@ -32,7 +32,23 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'url y tipo requeridos' }, { status: 400 })
   }
 
+  const TIPOS_VALIDOS = Object.keys(PUNTOS_POR_TIPO)
+  if (!TIPOS_VALIDOS.includes(body.tipo)) {
+    return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
+  }
+
   const db = getSupabaseAdmin()
+
+  // Validar que la URL corresponde a un recurso real del currículo
+  const { data: recurso } = await db
+    .from('recursos')
+    .select('id')
+    .eq('url', body.url)
+    .maybeSingle()
+
+  if (!recurso) {
+    return NextResponse.json({ error: 'Recurso no encontrado' }, { status: 404 })
+  }
 
   // Verificar si ya fue completado
   const { data: existing } = await db

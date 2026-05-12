@@ -52,7 +52,6 @@ const CURSOS_MAP = [
   { cursoId: 'violin',         claseId: 'violin',       label: 'Violín',     emoji: '🎻', color: '#9b54f9' },
   { cursoId: 'ciudad-musical', claseId: 'introduccion', label: 'Iniciación', emoji: '🎵', color: '#3db8fa' },
   { cursoId: 'canto',          claseId: 'canto',        label: 'Canto',      emoji: '🎤', color: '#ffa737' },
-  { cursoId: 'ukelele',        claseId: 'ukelele',      label: 'Ukelele',    emoji: '🎶', color: '#34d399' },
 ]
 
 const ROLES = [
@@ -430,7 +429,7 @@ export default function AdminPage() {
 
   // ── Render ─────────────────────────────────────────────────
   return (
-    <main style={{ minHeight: '100vh', background: '#0a0a1a', color: '#fff' }}>
+    <main style={{ height: '100vh', overflowY: 'auto', background: '#0a0a1a', color: '#fff' }}>
 
       {/* ── Top bar ─────────────────────────────────────────── */}
       <div className="admin-topbar" style={{

@@ -737,43 +737,6 @@ export const CURSOS: Curso[] = [
     ],
   },
 
-  // ─────────────────────────────────────────────────────────────
-  // 🎶 UKELELE
-  // ─────────────────────────────────────────────────────────────
-  {
-    id: 'ukelele',
-    nombre: 'Ukelele',
-    emoji: '🎶',
-    modulos: [
-      {
-        id: 'ukelele-nivel-1',
-        nombre: 'Nivel 1',
-        secciones: [
-          {
-            nombre: 'Material y ejercicios',
-            recursos: [
-              { url: 'https://ovejamusic.com/wp-content/uploads/2023/09/Escala-pentatonica-5-patrones-1.pdf', tipo: 'pdf', label: 'Escala pentatónica – 5 patrones' },
-              { url: 'https://drive.google.com/file/d/1_sEelXY2FT7Y_OeCD6mrUpkOZCBJYfAW/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1Ekt4dNMiBqMGEgCOPhkF9j3s1a10_7S1/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1OUIwPJXsF7JhzD80oQKSifUnr9BxvrTu/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1-dCioAKXSQE_pOCPDfFIxPjuymkJrM_J/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/14KvtzwPDA-q2b5c2VS4uriAHcux5i_Ql/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1vSipbKBaPZL7yVtPsHum9avOuOt3-5RV/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1bRWZODscX7FZbW0gifdJYKLxg-wRcVWE/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1tEU2tt1BjeOBdlPUP20H2NMvX8c2cper/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1A7K3SsVbZtABs55rfLVHIwW92Os5j1wF/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1krxo9v3fx8WYU4nn9g0fV2cIONjvGb-i/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1XttklrGlG9yyvuD-nhqX-RQRyKvi9ivV/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1IYNYuzBkgstSoi62zDp5QMpXuPr6o27c/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1_4xST6CLEK9PCv1aV-XjAGUsQQcI5HKu/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1rm68Kgz6lMX2xhV0nM3r4cDy8c8PiPaD/view', tipo: 'drive' },
-              { url: 'https://drive.google.com/file/d/1faMR5Z5Xzx5f6v-SNyFI--vEGaA-eja0/view', tipo: 'drive' },
-            ],
-          },
-        ],
-      },
-    ],
-  },
 
   // ─────────────────────────────────────────────────────────────
   // 🎸 GUITARRA – CLASES

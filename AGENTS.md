@@ -40,9 +40,12 @@ Spline scenes in use:
 /escuela          → 3D map (SplineScene)
                     IsOverSchool → class instrument picker → module picker
                     IsOverGym    → gym instrument picker
-/escuela/clase/[instrumento]/[modulo]   → classroom (SplineScene)
-/escuela/gym/[instrumento]              → gym sala (SplineScene)
+/escuela/clase/[instrumento]          → classroom (SplineScene, no module preselected)
+/escuela/clase/[instrumento]/[modulo] → classroom (SplineScene, module preselected)
+/escuela/gym/[instrumento]            → gym sala (SplineScene)
 ```
+
+**Exit panel**: In the classroom, stepping on the out-zone (`isOutingClass`) opens a panel with "Volver al Mapa" + a "CAMBIAR DE MÓDULO" list showing other modules of the same instrument for direct navigation.
 
 ### Data layer (`src/data/`)
 
@@ -52,6 +55,14 @@ Course content and instrument metadata use a **hybrid system** (Static fallback 
 - **Admin Management**: Use the `/admin` panel to create, edit, or delete instruments. Editing a static instrument "promotes" it to the database to allow customization.
 - **Static files**: `src/data/cursos.ts`, `clases.ts`, and `gym.ts` remain as fallback defaults for when the database is empty or a specific item hasn't been "promoted" to DB yet.
 - `TipoRecurso` values: `'video' | 'drive' | 'juego' | 'pdf' | 'imagen' | 'herramienta' | 'otro'`
+
+### Classroom instrument fallback
+
+In `src/app/escuela/clase/[instrumento]/page.tsx`, the `ClasePage` component first looks up the instrument in static `CLASES_CONFIG`. If not found (admin-created instruments), it fetches from `/api/instrumentos` and builds a `claseInfo` fallback (`claseInfo = clase ?? dbInstrumento`). All UI references use `claseInfo` instead of `clase`, ensuring admin-created instruments work identically to static ones.
+
+### Admin panel overflow
+
+The admin main wrapper (`src/app/admin/page.tsx`) uses `height: '100vh', overflowY: 'auto'` so all four tabs (Usuarios, Contenido, Instrumentos, Manual) scroll properly with the app's custom scrollbar styles.
 
 ### Auth & backend (`src/lib/`, `src/app/api/`)
 

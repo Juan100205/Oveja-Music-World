@@ -1,13 +1,13 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
-import { CLASES_CONFIG } from '@/data/clases'
+import { CLASES_CONFIG, type ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Seccion, Recurso, Modulo } from '@/data/cursos'
 import { useProgress } from '@/hooks/useProgress'
@@ -195,7 +195,7 @@ function IframeViewer({ url, label, tipo, onClose }: { url: string; label?: stri
           <div className="flex-1 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#fff', minHeight: 0 }}>
             <iframe src={embedUrl} className="w-full h-full" style={{ border: 'none', display: 'block' }}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen
-              sandbox="allow-scripts allow-same-origin allow-popups allow-forms allow-presentation" />
+              sandbox="allow-scripts allow-popups allow-forms allow-presentation" />
           </div>
         </div>
       </motion.div>
@@ -241,7 +241,10 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const [isOutingClass,  setIsOutingClass] = useState(false)
   const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(() => {
     if (!moduloIdInicial || !clase) return null
-    return CURSOS.find(c => c.id === clase.cursoId)?.modulos.find(m => m.id === moduloIdInicial) ?? null
+    const curso = CURSOS.find(c => c.id === clase.cursoId)
+    const modulo = curso?.modulos.find(m => m.id === moduloIdInicial)
+    if (!modulo || modulo.nombre.toLowerCase().includes('práctica')) return null
+    return modulo
   })
   const [seccionesOpen,  setSeccionesOpen] = useState(false)
   const [seccionActiva,  setSeccionActiva] = useState<Seccion | null>(null)
@@ -252,6 +255,9 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const toastCountRef = useRef(0)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
+
+  // DB-backed instrument: fetched when clase doesn't exist in static CLASES_CONFIG
+  const [dbInstrumento, setDbInstrumento] = useState<ClaseConfig | null>(null)
 
   // DB-backed modules: fetched from Supabase, override static data per module id
   const [dbModulos, setDbModulos] = useState<Record<string, Modulo>>({})
@@ -310,11 +316,35 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
     if (name === 'isOutingClass') flushSync(() => setIsOutingClass(isTrue))
   }, [])
 
+  // Fetch instrument from DB when not found in static CLASES_CONFIG
+  useEffect(() => {
+    if (clase || !token) return
+    fetch('/api/instrumentos', { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then((data: { instrumentos?: { id: string; nombre: string; emoji: string; descripcion: string | null; color: string; glow: string; zona: string; curso_id: string | null }[] } | null) => {
+        const found = data?.instrumentos?.find(i => i.id === instrumento && (i.zona === 'clase' || i.zona === 'ambos'))
+        if (found) {
+          setDbInstrumento({
+            id: found.id,
+            nombre: found.nombre,
+            emoji: found.emoji,
+            descripcion: found.descripcion ?? '',
+            color: found.color,
+            glow: found.glow,
+            cursoId: found.curso_id ?? found.id,
+          })
+        }
+      })
+      .catch(() => {})
+  }, [clase, token, instrumento])
+
+  const claseInfo = clase ?? dbInstrumento
+
   // Fetch course content from Supabase — DB modules override static modules by id.
   // Sections/resources added via the admin panel appear immediately here.
   useEffect(() => {
-    if (!token || !clase?.cursoId) return
-    fetch(`/api/content?id=${clase.cursoId}`, {
+    if (!token || !claseInfo?.cursoId) return
+    fetch(`/api/content?id=${claseInfo.cursoId}`, {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then(r => r.json())
@@ -326,18 +356,32 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
         }
       })
       .catch(() => { /* silently fall back to static data */ })
-  }, [token, clase?.cursoId])
+  }, [token, claseInfo?.cursoId])
 
   // Merge static + DB: DB version takes priority per module id.
   // Modules only in DB (created via admin) are appended at the end.
-  const staticCurso  = CURSOS.find(c => c.id === clase?.cursoId)
+  const staticCurso  = CURSOS.find(c => c.id === claseInfo?.cursoId)
   const staticModulos = staticCurso?.modulos ?? []
-  const staticIds     = new Set(staticModulos.map(m => m.id))
-  const mergedModulos = [
-    ...staticModulos.map(m => dbModulos[m.id] ?? m),
-    ...Object.values(dbModulos).filter(m => !staticIds.has(m.id)),
-  ]
-  const modulosDisponibles = mergedModulos.filter(m => !m.nombre.toLowerCase().includes('práctica'))
+
+  const mergedModulos = useMemo(() => {
+    const staticIdSet = new Set(staticModulos.map(m => m.id))
+    return [
+      ...staticModulos.map(m => dbModulos[m.id] ?? m),
+      ...Object.values(dbModulos).filter(m => !staticIdSet.has(m.id)),
+    ]
+  }, [staticModulos, dbModulos])
+
+  const modulosDisponibles = useMemo(
+    () => mergedModulos.filter(m => !m.nombre.toLowerCase().includes('práctica')),
+    [mergedModulos]
+  )
+
+  // Sync moduloActivo from merged modules when moduloIdInicial is present
+  useEffect(() => {
+    if (!moduloIdInicial) return
+    const found = modulosDisponibles.find(m => m.id === moduloIdInicial)
+    if (found) setModuloActivo(found)
+  }, [moduloIdInicial, modulosDisponibles])
 
   const cerrarPanel = () => { setSeccionesOpen(false); setSeccionActiva(null); if (!moduloIdInicial) setModuloActivo(null) }
 
@@ -365,10 +409,10 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
       </motion.button>
 
       {/* ── Nombre del instrumento (top center) ── */}
-      {clase && (
+      {claseInfo && (
         <div className="mod-label absolute top-5 left-1/2 -translate-x-1/2 z-20"
           style={{ background: 'rgba(10,10,26,0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 20px', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
-          {clase.emoji} {clase.nombre}{moduloActivo ? ` · ${moduloActivo.nombre}` : ''}
+          {claseInfo.emoji} {claseInfo.nombre}{moduloActivo ? ` · ${moduloActivo.nombre}` : ''}
         </div>
       )}
 
@@ -434,7 +478,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                   <div className="flex items-center justify-between mb-5">
                     <div>
                       <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>
-                        {clase?.emoji} {clase?.nombre}
+                        {claseInfo?.emoji} {claseInfo?.nombre}
                       </h2>
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige un módulo</p>
                     </div>
@@ -450,7 +494,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
-                            style={{ width: 34, height: 34, background: clase?.color ?? 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
+                            style={{ width: 34, height: 34, background: claseInfo?.color ?? 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
                             {i + 1}
                           </div>
                           <div>
@@ -495,7 +539,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
-                            style={{ width: 34, height: 34, background: clase?.color ?? 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
+                            style={{ width: 34, height: 34, background: claseInfo?.color ?? 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
                             {i + 1}
                           </div>
                           <div>
@@ -573,7 +617,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
               <div className="flex items-center justify-between mb-6">
                 <div>
                   <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>
-                    {clase?.emoji} {clase?.nombre}
+                    {claseInfo?.emoji} {claseInfo?.nombre}
                   </h2>
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>¿A dónde quieres ir?</p>
                 </div>
@@ -583,7 +627,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
 
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => router.push('/escuela')}
-                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-5"
+                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-4"
                 style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none' }}>
                 <span style={{ fontSize: 24 }}>🗺️</span>
                 <div className="text-left">
@@ -591,6 +635,36 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>Salir al mapa principal</p>
                 </div>
               </motion.button>
+
+              {modulosDisponibles.length > 0 && (
+                <>
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 16 }} />
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', marginBottom: 12 }}>
+                    CAMBIAR DE MÓDULO
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {modulosDisponibles.map((m, i) => {
+                      if (m.id === moduloActivo?.id) return null
+                      return (
+                        <motion.button
+                          key={m.id}
+                          whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
+                          onClick={() => { setSalidaOpen(false); router.push(`/escuela/clase/${instrumento}/${m.id}`) }}
+                          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 cursor-pointer text-left"
+                          style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.07)' }}
+                        >
+                          <div className="flex-shrink-0 flex items-center justify-center rounded-full"
+                            style={{ width: 32, height: 32, background: `${claseInfo?.color ?? '#ec488a'}20`, color: claseInfo?.color ?? '#ec488a', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>
+                            {i + 1}
+                          </div>
+                          <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: '#fff', margin: 0 }}>{m.nombre}</p>
+                          <span style={{ marginLeft: 'auto', color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>›</span>
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </motion.div>
           </>
         )}

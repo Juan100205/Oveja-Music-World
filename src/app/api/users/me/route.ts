@@ -40,7 +40,11 @@ export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => null)
   const puntosGanados: number = body?.puntos ?? 0
 
-  if (puntosGanados <= 0) return NextResponse.json({ error: 'Puntos inválidos' }, { status: 400 })
+  // Cap to prevent arbitrary point inflation — max is the highest single-resource award
+  const MAX_PUNTOS_POR_LLAMADA = 50
+  if (puntosGanados <= 0 || puntosGanados > MAX_PUNTOS_POR_LLAMADA) {
+    return NextResponse.json({ error: 'Puntos inválidos' }, { status: 400 })
+  }
 
   const db = getSupabaseAdmin()
 

@@ -11,8 +11,17 @@ export async function POST(req: NextRequest) {
   const body = await req.json()
   const { seccion_id, url, tipo, label, interacciones } = body
 
-  if (!seccion_id || !url?.trim() || !tipo)
+  const TIPOS_VALIDOS = ['video', 'drive', 'juego', 'pdf', 'imagen', 'herramienta', 'otro']
+  const urlTrimmed = url?.trim() ?? ''
+
+  if (!seccion_id || !urlTrimmed || !tipo)
     return NextResponse.json({ error: 'seccion_id, url y tipo son requeridos' }, { status: 400 })
+
+  if (!TIPOS_VALIDOS.includes(tipo))
+    return NextResponse.json({ error: 'Tipo de recurso no válido' }, { status: 400 })
+
+  if (!/^https?:\/\//i.test(urlTrimmed))
+    return NextResponse.json({ error: 'La URL debe comenzar con https:// o http://' }, { status: 400 })
 
   const db = getSupabaseAdmin()
   const { data: seccion } = await db
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
     .from('recursos')
     .insert({
       seccion_id,
-      url: url.trim(),
+      url: urlTrimmed,
       tipo,
       label: label?.trim() || null,
       orden: count ?? 0,

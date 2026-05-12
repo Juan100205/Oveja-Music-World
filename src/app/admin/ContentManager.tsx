@@ -1486,7 +1486,6 @@ const INSTRUMENTOS_PRINCIPALES = [
   { id: 'canto',            nombre: 'Canto',              Icon: Mic,         color: '#ec488a', emoji: '🎤' },
   { id: 'ciudad-musical',   nombre: 'Iniciación Musical', Icon: BookOpen,    color: '#3db8fa', emoji: '🎵' },
   // Mismo id que CURSOS / tabla `cursos` (evita 404 si un instrumento en BD usa id autogenerado)
-  { id: 'ukelele',          nombre: 'Ukelele',            Icon: Music2,      color: '#34d399', emoji: '🎶' },
 ]
 
 // ══════════════════════════════════════════════════════════════
