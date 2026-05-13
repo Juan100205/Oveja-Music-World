@@ -300,7 +300,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} loadTimeoutMs={300_000} silentOnError />
+      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 

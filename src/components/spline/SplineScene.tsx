@@ -12,9 +12,8 @@ if (typeof window !== 'undefined') {
 
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
-// Default timeout — override per-scene via loadTimeoutMs prop.
-const DEFAULT_LOAD_TIMEOUT_MS = 20_000
-// Two silent auto-retries before giving up (catches transient WebGL init errors).
+// Two silent auto-retries on JS runtime errors before giving up.
+// There is NO load timeout — Spline waits as long as necessary.
 const MAX_AUTO_RETRIES = 2
 
 // ── Error boundary for Spline runtime errors ───────────────────
@@ -101,8 +100,7 @@ interface SplineSceneProps {
   scene: string
   onVariableChange?: (name: string, value: unknown) => void
   onLoad?: () => void
-  loadTimeoutMs?: number
-  /** When true: on unrecoverable error, hide silently instead of showing error UI.
+  /** When true: on unrecoverable JS error, hide silently instead of showing error UI.
    *  Pages with their own fallback content (gym sala) should use this. */
   silentOnError?: boolean
 }
@@ -111,7 +109,6 @@ const SplineScene = React.memo(function SplineScene({
   scene,
   onVariableChange,
   onLoad,
-  loadTimeoutMs = DEFAULT_LOAD_TIMEOUT_MS,
   silentOnError = false,
 }: SplineSceneProps) {
   const [loaded, setLoaded] = useState(false)
@@ -119,7 +116,6 @@ const SplineScene = React.memo(function SplineScene({
   const [hidden, setHidden] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
   const [autoRetryCount, setAutoRetryCount] = useState(0)
-  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prevVarsRef = useRef<Record<string, unknown>>({})
   const splineAppRef = useRef<{ getVariables: () => Record<string, unknown> } | null>(null)
@@ -137,18 +133,6 @@ const SplineScene = React.memo(function SplineScene({
       if (document.head.contains(link)) document.head.removeChild(link)
     }
   }, [scene])
-
-  // Load timeout — restart whenever retryKey changes (auto-retry resets the clock).
-  useEffect(() => {
-    if (loaded || error || hidden) return
-    timeoutRef.current = setTimeout(() => {
-      if (silentOnError) setHidden(true)
-      else setError(true)
-    }, loadTimeoutMs)
-    return () => {
-      if (timeoutRef.current) clearTimeout(timeoutRef.current)
-    }
-  }, [loaded, error, hidden, retryKey, loadTimeoutMs, silentOnError])
 
   // Pause the variable-polling interval when the tab is hidden to free CPU.
   // Resume automatically when the tab becomes visible again.
@@ -196,7 +180,6 @@ const SplineScene = React.memo(function SplineScene({
   }, [])
 
   const handleBoundaryError = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current)
     if (autoRetryCount < MAX_AUTO_RETRIES) {
       // Silent auto-retry: don't show any error UI, just remount Spline.
       setAutoRetryCount(c => c + 1)
@@ -260,18 +243,15 @@ const SplineScene = React.memo(function SplineScene({
           <Spline
             scene={scene}
             onLoad={(splineApp) => {
-              if (timeoutRef.current) clearTimeout(timeoutRef.current)
               splineAppRef.current = splineApp
               setLoaded(true)
               onLoad?.()
 
               if (!onVariableChange) return
 
-              // Snapshot inicial
               const initial = splineApp.getVariables() as Record<string, unknown>
               prevVarsRef.current = { ...initial }
 
-              // Start polling only if the tab is currently visible
               if (!document.hidden) {
                 pollRef.current = setInterval(() => {
                   if (!splineAppRef.current) return
