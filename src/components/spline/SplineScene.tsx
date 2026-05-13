@@ -12,8 +12,8 @@ if (typeof window !== 'undefined') {
 
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
-// 20 s — enough for slow mobile connections; after this, show retry button.
-const LOAD_TIMEOUT_MS = 20_000
+// Default timeout — override per-scene via loadTimeoutMs prop.
+const DEFAULT_LOAD_TIMEOUT_MS = 20_000
 
 // ── Error boundary for Spline runtime errors ───────────────────
 class SplineErrorBoundary extends Component<
@@ -99,9 +99,10 @@ interface SplineSceneProps {
   scene: string
   onVariableChange?: (name: string, value: unknown) => void
   onLoad?: () => void
+  loadTimeoutMs?: number
 }
 
-const SplineScene = React.memo(function SplineScene({ scene, onVariableChange, onLoad }: SplineSceneProps) {
+const SplineScene = React.memo(function SplineScene({ scene, onVariableChange, onLoad, loadTimeoutMs = DEFAULT_LOAD_TIMEOUT_MS }: SplineSceneProps) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
@@ -127,7 +128,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange, o
   // Load timeout — show retry button after LOAD_TIMEOUT_MS
   useEffect(() => {
     if (loaded || error) return
-    timeoutRef.current = setTimeout(() => setError(true), LOAD_TIMEOUT_MS)
+    timeoutRef.current = setTimeout(() => setError(true), loadTimeoutMs)
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
