@@ -251,7 +251,8 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
   const secciones = gymStatic ? getSecciones(gymStatic) : []
 
-  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(() =>

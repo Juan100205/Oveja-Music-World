@@ -237,7 +237,8 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const { isCompleted, completeResource } = useProgress()
   const { user, token, updateUser } = useAuth()
 
-  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
   const [isInClass,      setIsInClass]     = useState(false)
   const [isOutingClass,  setIsOutingClass] = useState(false)
   const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(() => {
