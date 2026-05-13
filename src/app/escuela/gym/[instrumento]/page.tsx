@@ -1,7 +1,7 @@
 'use client'
 
 import { useParams, useRouter } from 'next/navigation'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X } from 'lucide-react'
@@ -259,7 +259,30 @@ export default function GymSalaPage() {
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
+  const [sceneLoaded,    setSceneLoaded]    = useState(false)
+  const [fallbackVisible, setFallbackVisible] = useState(false)
+  const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
+
+  // After scene loads, if isTrainning never fires within 4s, show fallback button
+  useEffect(() => {
+    if (!sceneLoaded || tapeteHintOpen) return
+    if (isTrainning || panelOpen) return
+    fallbackTimerRef.current = setTimeout(() => {
+      if (!isTrainning && !panelOpen) setFallbackVisible(true)
+    }, 4000)
+    return () => {
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current)
+    }
+  }, [sceneLoaded, tapeteHintOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => {
+    if (isTrainning || panelOpen) {
+      setFallbackVisible(false)
+      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current)
+    }
+  }, [isTrainning, panelOpen])
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
@@ -277,7 +300,7 @@ export default function GymSalaPage() {
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} />
+      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} onLoad={() => setSceneLoaded(true)} />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
@@ -293,7 +316,7 @@ export default function GymSalaPage() {
 
       {/* ── Hint: pisa el tapete ── */}
       <AnimatePresence>
-        {!isTrainning && !panelOpen && !salidaOpen && (
+        {!isTrainning && !fallbackVisible && !panelOpen && !salidaOpen && (
           <motion.p
             key="hint-tapete-gym"
             initial={{ opacity: 0 }}
@@ -315,9 +338,9 @@ export default function GymSalaPage() {
         )}
       </AnimatePresence>
 
-      {/* ── isTrainning → Entrenar ── */}
+      {/* ── isTrainning o fallback móvil → Entrenar ── */}
       <AnimatePresence>
-        {isTrainning && !panelOpen && !salidaOpen && (
+        {(isTrainning || fallbackVisible) && !panelOpen && !salidaOpen && (
           <motion.button key="trainning-btn"
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}

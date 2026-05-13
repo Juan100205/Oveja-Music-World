@@ -98,9 +98,10 @@ function ErrorFallback({ onRetry }: { onRetry: () => void }) {
 interface SplineSceneProps {
   scene: string
   onVariableChange?: (name: string, value: unknown) => void
+  onLoad?: () => void
 }
 
-const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }: SplineSceneProps) {
+const SplineScene = React.memo(function SplineScene({ scene, onVariableChange, onLoad }: SplineSceneProps) {
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [retryKey, setRetryKey] = useState(0)
@@ -224,6 +225,7 @@ const SplineScene = React.memo(function SplineScene({ scene, onVariableChange }:
               if (timeoutRef.current) clearTimeout(timeoutRef.current)
               splineAppRef.current = splineApp
               setLoaded(true)
+              onLoad?.()
 
               if (!onVariableChange) return
 

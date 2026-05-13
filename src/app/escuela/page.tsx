@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
@@ -335,6 +335,10 @@ export default function MapaPage() {
   // Logout
   const [showLogout, setShowLogout] = useState(false)
 
+  // Delayed close refs — prevent mobile touch-release from instantly closing panels
+  const gymCloseRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const claseCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // Aviso tapete primero; luego tutorial WASD
   const [showTapeteHint, setShowTapeteHint] = useState(true)
   const [showTutorial, setShowTutorial] = useState(false)
@@ -353,25 +357,28 @@ export default function MapaPage() {
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
     if (name === 'IsOverGym') {
-      flushSync(() => {
-        setOverGym(isTrue)
-        if (isTrue) {
-          if (!gymOpen && !clasesOpen) setGymOpen(true)
-        } else {
-          setGymOpen(false)
-        }
-      })
+      flushSync(() => setOverGym(isTrue))
+      if (isTrue) {
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        if (!gymOpen && !clasesOpen) setGymOpen(true)
+      } else {
+        // Small delay before closing — prevents mobile touch-release from instantly closing
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        gymCloseRef.current = setTimeout(() => setGymOpen(false), 600)
+      }
     }
     if (name === 'IsOverSchool') {
-      flushSync(() => {
-        setOverSchool(isTrue)
-        if (isTrue) {
-          if (!clasesOpen && !gymOpen) setClasesOpen(true)
-        } else {
+      flushSync(() => setOverSchool(isTrue))
+      if (isTrue) {
+        if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
+        if (!clasesOpen && !gymOpen) setClasesOpen(true)
+      } else {
+        if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
+        claseCloseRef.current = setTimeout(() => {
           setClasesOpen(false)
           setClaseSeleccionada(null)
-        }
-      })
+        }, 600)
+      }
     }
   }, [clasesOpen, gymOpen])
 
@@ -449,8 +456,8 @@ export default function MapaPage() {
                 <motion.div key="cl-instrs"
                   initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
 
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center justify-between mb-6">
@@ -638,8 +645,8 @@ export default function MapaPage() {
               <motion.div key="gym-instrs"
                 initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                 transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl"
-                style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+                className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
+                style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
 
                 <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                 <div className="flex items-center justify-between mb-6">
