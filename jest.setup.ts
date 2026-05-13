@@ -1,5 +1,12 @@
 import '@testing-library/jest-dom'
 
+// ── Global fetch stub ──────────────────────────────────────────
+// Prevents "fetch is not defined" in hooks that call API routes.
+// Tests that need specific responses should override per-test.
+global.fetch = jest.fn(() =>
+  Promise.resolve({ ok: false, json: () => Promise.resolve(null) } as Response)
+)
+
 // ── Framer-motion: render children directly, skip animations ────
 // AnimatePresence exit animations never fire in JSDOM, causing elements
 // to stay in the DOM after state changes. This mock makes it synchronous.
