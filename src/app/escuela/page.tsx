@@ -337,6 +337,9 @@ export default function MapaPage() {
   // Logout
   const [showLogout, setShowLogout] = useState(false)
 
+  // On mobile, Spline never loads — expose direct navigation buttons
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+
   // Delayed close refs — prevent mobile touch-release from instantly closing panels
   const gymCloseRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const claseCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -733,6 +736,37 @@ export default function MapaPage() {
 
             </AnimatePresence>
           </PanelBase>
+        )}
+      </AnimatePresence>
+
+      {/* ── Navegación directa en móvil (Spline no carga en < 768px) ── */}
+      <AnimatePresence>
+        {isMobile && !showTapeteHint && !clasesOpen && !gymOpen && (
+          <motion.div
+            key="mobile-nav"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.3 }}
+            className="absolute bottom-10 left-0 right-0 z-20 flex justify-center gap-4 px-6"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => setClasesOpen(true)}
+              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-4 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', boxShadow: '0 0 28px rgba(61,184,250,0.3)' }}
+            >
+              <span>📚</span> Clases
+            </motion.button>
+            <motion.button
+              whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
+              onClick={() => setGymOpen(true)}
+              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-4 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', boxShadow: '0 0 28px rgba(236,72,138,0.3)' }}
+            >
+              <span>🏋️</span> Gym
+            </motion.button>
+          </motion.div>
         )}
       </AnimatePresence>
 

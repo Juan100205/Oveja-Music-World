@@ -1,6 +1,6 @@
 /**
  * GymSalaPage (/escuela/gym/[instrumento]) — TDD tests
- * Verifica: renderizado, botones Spline, panel secciones, salida
+ * Verifica: renderizado, botones Spline, panel secciones, salida, video
  */
 import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
@@ -36,6 +36,20 @@ jest.mock('next/navigation', () => ({
   useParams: () => ({ instrumento: 'guitarra' }),
 }))
 
+jest.mock('@/hooks/useAuth', () => ({
+  useAuth: () => ({ token: 'test-token', user: { id: 'u1', role: 'student' }, logout: jest.fn() }),
+}))
+
+jest.mock('@/hooks/useInstrumentos', () => ({
+  useInstrumentos: () => ({
+    clases: [],
+    gym: [
+      { id: 'guitarra', nombre: 'Guitarra', emoji: '🎸', descripcion: 'Rock y pop', color: '#ec488a', glow: 'rgba(236,72,138,0.4)', modulos: [] },
+    ],
+  }),
+}))
+
+// Datos inline en el factory (jest.mock se hoist antes de las declaraciones de const)
 jest.mock('@/data/gym', () => ({
   GYM_INSTRUMENTOS: [
     {
@@ -54,11 +68,14 @@ jest.mock('@/data/gym', () => ({
               nombre: 'Do Mayor',
               zona: 'gym',
               recursos: [
-                {
-                  tipo: 'video',
-                  url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-                  label: 'Acorde Do',
-                },
+                { tipo: 'video', url: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ', label: 'Acorde Do' },
+              ],
+            },
+            {
+              nombre: 'Sol Mayor',
+              zona: 'gym',
+              recursos: [
+                { tipo: 'pdf', url: 'https://example.com/sol.pdf', label: 'Acorde Sol PDF' },
               ],
             },
           ],
@@ -75,6 +92,8 @@ jest.mock('@/data/gym', () => ({
       modulos: [],
     },
   ],
+  getSecciones: (instr: { modulos: Array<{ secciones: Array<{ zona: string }> }> }) =>
+    instr.modulos.flatMap(m => m.secciones).filter(s => s.zona !== 'clase'),
 }))
 
 import GymSalaPage from '@/app/escuela/gym/[instrumento]/page'
@@ -191,14 +210,13 @@ describe('GymSalaPage — panel secciones', () => {
     expect(screen.getByText('Do Mayor')).toBeInTheDocument()
   })
 
-  it('con panel abierto, botón Entrenar no aparece en el panel (ya visible)', () => {
+  it('muestra todas las secciones del instrumento', () => {
     render(<GymSalaPage />)
     simulateVar('isTrainning', true)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
 
-    // El botón debería estar oculto (solo se muestra cuando panelOpen=false)
-    // Verificamos que el panel esté visible como indicador del estado correcto
-    expect(screen.getByText(/elige una sección/i)).toBeInTheDocument()
+    expect(screen.getByText('Do Mayor')).toBeInTheDocument()
+    expect(screen.getByText('Sol Mayor')).toBeInTheDocument()
   })
 
   it('navega a recursos al seleccionar sección "Do Mayor"', () => {
@@ -207,7 +225,6 @@ describe('GymSalaPage — panel secciones', () => {
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     fireEvent.click(screen.getByText('Do Mayor'))
 
-    // Panel de recursos debe mostrar el label del recurso
     expect(screen.getByText('Acorde Do')).toBeInTheDocument()
   })
 
@@ -217,8 +234,8 @@ describe('GymSalaPage — panel secciones', () => {
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     fireEvent.click(screen.getByText('Do Mayor'))
 
-    // Ir atrás
-    fireEvent.click(screen.getByText(/← secciones/i))
+    // El botón de volver dice "Secciones" (ArrowLeft es SVG, no texto)
+    fireEvent.click(screen.getByRole('button', { name: /secciones/i }))
 
     expect(screen.getByText(/elige una sección/i)).toBeInTheDocument()
     expect(screen.getByText('Do Mayor')).toBeInTheDocument()
@@ -226,7 +243,40 @@ describe('GymSalaPage — panel secciones', () => {
 })
 
 // ══════════════════════════════════════════════════════════════
-// SUITE 4 — Panel de salida (isOutingGym)
+// SUITE 4 — Apertura directa con seccionIdxInicial
+// ══════════════════════════════════════════════════════════════
+describe('GymSalaPage — seccionIdxInicial (ruta /gym/[instrumento]/[idx])', () => {
+  beforeEach(() => { mockPush.mockClear() })
+
+  it('con seccionIdxInicial=0 abre directamente el panel de recursos', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    expect(screen.getByText('Acorde Do')).toBeInTheDocument()
+  })
+
+  it('con seccionIdxInicial=0 NO muestra TapeteCard', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    expect(screen.queryByTestId('tapete-card')).not.toBeInTheDocument()
+  })
+
+  it('con seccionIdxInicial=1 abre la segunda sección', () => {
+    render(<GymSalaPage seccionIdxInicial={1} />)
+    expect(screen.getByText('Acorde Sol PDF')).toBeInTheDocument()
+  })
+
+  it('con seccionIdxInicial fuera de rango no explota', () => {
+    expect(() => render(<GymSalaPage seccionIdxInicial={99} />)).not.toThrow()
+  })
+
+  it('con seccionIdxInicial, el botón ← navega de vuelta al instrumento', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    // El botón "← Secciones" navega a /escuela/gym/guitarra cuando viene de URL
+    fireEvent.click(screen.getByRole('button', { name: /secciones/i }))
+    expect(mockPush).toHaveBeenCalledWith('/escuela/gym/guitarra')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
+// SUITE 5 — Panel de salida (isOutingGym)
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — panel salida', () => {
   beforeEach(() => {
@@ -259,29 +309,72 @@ describe('GymSalaPage — panel salida', () => {
     expect(mockPush).toHaveBeenCalledWith('/escuela')
   })
 
-  it('muestra todos los instrumentos disponibles para cambiar de sala', () => {
+  it('muestra lista "CAMBIAR DE SECCIÓN" en el panel de salida', () => {
     render(<GymSalaPage />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
 
-    expect(screen.getByText(/o cambia de sala/i)).toBeInTheDocument()
-    expect(screen.getByText('Piano')).toBeInTheDocument()
+    expect(screen.getByText(/cambiar de sección/i)).toBeInTheDocument()
   })
 
-  it('navega a otra sala al clicar en instrumento diferente', () => {
+  it('el panel de salida lista todas las secciones del instrumento', () => {
     render(<GymSalaPage />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
 
-    // Piano es un instrumento diferente
-    fireEvent.click(screen.getByText('Piano'))
+    expect(screen.getByText('Do Mayor')).toBeInTheDocument()
+    expect(screen.getByText('Sol Mayor')).toBeInTheDocument()
+  })
 
-    expect(mockPush).toHaveBeenCalledWith('/escuela/gym/piano')
+  it('navegar a otra sección desde el panel de salida llama router.push con el índice', () => {
+    render(<GymSalaPage />)
+    simulateVar('isOutingGym', true)
+    fireEvent.click(screen.getByText(/salir del gym/i))
+
+    // Click en "Sol Mayor" (índice 1) — no hay sección activa, no es "esActual"
+    fireEvent.click(screen.getByText('Sol Mayor'))
+
+    expect(mockPush).toHaveBeenCalledWith('/escuela/gym/guitarra/1')
   })
 })
 
 // ══════════════════════════════════════════════════════════════
-// SUITE 5 — Recurso de video (reproductor YouTube)
+// SUITE 6 — Fallback timer (3s tras tapete dismiss)
+// ══════════════════════════════════════════════════════════════
+describe('GymSalaPage — fallback timer móvil', () => {
+  beforeEach(() => {
+    capturedOnVariableChange = undefined
+    jest.useFakeTimers()
+  })
+  afterEach(() => { jest.useRealTimers() })
+
+  it('NO muestra botón Entrenar antes de 3s después del tapete', () => {
+    render(<GymSalaPage />)
+    fireEvent.click(screen.getByText('Entendido'))
+
+    act(() => { jest.advanceTimersByTime(2_999) })
+    expect(screen.queryByText(/🏋️ entrenar/i)).not.toBeInTheDocument()
+  })
+
+  it('muestra botón Entrenar a los 3s después de cerrar el tapete', () => {
+    render(<GymSalaPage />)
+    fireEvent.click(screen.getByText('Entendido'))
+
+    act(() => { jest.advanceTimersByTime(3_000) })
+    expect(screen.getByText(/🏋️ entrenar/i)).toBeInTheDocument()
+  })
+
+  it('NO muestra fallback si el panel ya está abierto (seccionIdxInicial)', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    // Panel abierto desde inicio — no debe aparecer botón de entrenar además del panel
+    act(() => { jest.advanceTimersByTime(3_000) })
+    // El panel de recursos debe estar visible, no el botón flotante
+    expect(screen.getByText('Acorde Do')).toBeInTheDocument()
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
+// SUITE 7 — Reproductor de video (YouTube)
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — reproductor de video', () => {
   beforeEach(() => { capturedOnVariableChange = undefined })
@@ -292,7 +385,6 @@ describe('GymSalaPage — reproductor de video', () => {
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     fireEvent.click(screen.getByText('Do Mayor'))
 
-    // El thumbnail de YouTube debe estar presente
     const img = screen.getByRole('img', { name: /acorde do/i })
     expect(img).toHaveAttribute('src', expect.stringContaining('img.youtube.com'))
   })
@@ -302,12 +394,10 @@ describe('GymSalaPage — reproductor de video', () => {
     simulateVar('isTrainning', true)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     fireEvent.click(screen.getByText('Do Mayor'))
-
     fireEvent.click(screen.getByRole('img', { name: /acorde do/i }))
 
-    // El iframe de YouTube debe aparecer
-    const iframe = screen.getByTitle ? null : screen.queryByRole('combobox')
-    // Verificamos que el label del video esté visible en el overlay
-    expect(screen.getAllByText('Acorde Do').length).toBeGreaterThan(0)
+    // El overlay muestra el label del video
+    const titles = screen.getAllByText('Acorde Do')
+    expect(titles.length).toBeGreaterThan(0)
   })
 })

@@ -16,6 +16,8 @@ const config: Config = {
   ],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    // @splinetool packages are ESM-only — redirect to a CJS stub for Jest
+    '^@splinetool/(.*)$': '<rootDir>/src/__mocks__/splinetool/$1.js',
   },
   testEnvironment: 'jsdom',
   setupFilesAfterEnv: ['<rootDir>/jest.setup.ts'],

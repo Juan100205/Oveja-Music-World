@@ -1,21 +1,17 @@
 /**
  * SplineScene TDD tests
- * Verifica: loader, mobile fallback, error/timeout, retry, polling de variables
+ * Verifica: loader, mobile fallback, error/timeout, auto-retry, polling de variables
  */
 import React from 'react'
 import { render, screen, act, fireEvent, waitFor } from '@testing-library/react'
 
 // ── Bridge para comunicar el mock con los tests ────────────────
-// Objeto mutable accesible dentro y fuera del factory hoisted
 const splineBridge: {
   onLoad?: (app: unknown) => void
   scene?: string
 } = {}
 
-// jest.mock se hoist — usamos require('react') dentro del factory
-// y accedemos a splineBridge (declarado antes del mock factory body se ejecuta)
 jest.mock('next/dynamic', () => {
-  // require disponible en factory (jest hoisting permite esto)
   // eslint-disable-next-line @typescript-eslint/no-var-requires
   const React = require('react')
   return (_importFn: unknown) => {
@@ -24,9 +20,8 @@ jest.mock('next/dynamic', () => {
       onLoad?: (app: unknown) => void
       style?: React.CSSProperties
     }) {
-      // Guardar callbacks para que los tests puedan llamarlos
-      splineBridge.onLoad  = props.onLoad
-      splineBridge.scene   = props.scene
+      splineBridge.onLoad = props.onLoad
+      splineBridge.scene  = props.scene
       return React.createElement('div', {
         'data-testid': 'spline-canvas',
         'data-scene': props.scene,
@@ -53,7 +48,6 @@ function triggerLoad(app: unknown = makeSplineApp()) {
   act(() => { splineBridge.onLoad?.(app) })
 }
 
-// Importar DESPUÉS de los mocks
 import SplineScene from '@/components/spline/SplineScene'
 
 // ══════════════════════════════════════════════════════════════
@@ -62,8 +56,8 @@ import SplineScene from '@/components/spline/SplineScene'
 describe('SplineScene — desktop', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1280 })
-    splineBridge.onLoad  = undefined
-    splineBridge.scene   = undefined
+    splineBridge.onLoad = undefined
+    splineBridge.scene  = undefined
   })
 
   it('muestra el loader mientras Spline no ha disparado onLoad', () => {
@@ -96,10 +90,13 @@ describe('SplineScene — desktop', () => {
 
 // ══════════════════════════════════════════════════════════════
 // SUITE 2 — Mobile fallback (< 768px)
+// Spline NO carga en móvil — protege contra crash de WebGL.
+// Las páginas con fallback timer (gym) manejan el contenido por su cuenta.
 // ══════════════════════════════════════════════════════════════
 describe('SplineScene — mobile fallback', () => {
   beforeEach(() => {
     Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 })
+    splineBridge.onLoad = undefined
   })
 
   afterEach(() => {
@@ -120,6 +117,14 @@ describe('SplineScene — mobile fallback', () => {
     render(<SplineScene scene={SCENE_MAP} />)
     expect(screen.queryByText(/cargando mundo 3d/i)).not.toBeInTheDocument()
   })
+
+  it('NO muestra error fallback en móvil aunque pase mucho tiempo', () => {
+    jest.useFakeTimers()
+    render(<SplineScene scene={SCENE_MAP} />)
+    act(() => { jest.advanceTimersByTime(120_000) })
+    expect(screen.queryByText(/no se pudo cargar/i)).not.toBeInTheDocument()
+    jest.useRealTimers()
+  })
 })
 
 // ══════════════════════════════════════════════════════════════
@@ -136,26 +141,26 @@ describe('SplineScene — error fallback', () => {
     jest.useRealTimers()
   })
 
-  it('muestra error fallback tras 90 s sin que Spline cargue', () => {
-    render(<SplineScene scene={SCENE_MAP} />)
-    act(() => { jest.advanceTimersByTime(90000) })
+  it('muestra error fallback tras agotar el timeout sin que Spline cargue', () => {
+    render(<SplineScene scene={SCENE_MAP} loadTimeoutMs={5_000} />)
+    act(() => { jest.advanceTimersByTime(5_000) })
 
     expect(screen.getByText(/no se pudo cargar/i)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /reintentar/i })).toBeInTheDocument()
   })
 
   it('NO muestra error si Spline carga antes del timeout', () => {
-    render(<SplineScene scene={SCENE_MAP} />)
-    act(() => { jest.advanceTimersByTime(30000) })
+    render(<SplineScene scene={SCENE_MAP} loadTimeoutMs={20_000} />)
+    act(() => { jest.advanceTimersByTime(5_000) })
     triggerLoad()
-    act(() => { jest.advanceTimersByTime(60000) })
+    act(() => { jest.advanceTimersByTime(20_000) })
 
     expect(screen.queryByText(/no se pudo cargar/i)).not.toBeInTheDocument()
   })
 
   it('reintentar resetea el error y vuelve a mostrar el canvas', () => {
-    render(<SplineScene scene={SCENE_MAP} />)
-    act(() => { jest.advanceTimersByTime(90000) })
+    render(<SplineScene scene={SCENE_MAP} loadTimeoutMs={5_000} />)
+    act(() => { jest.advanceTimersByTime(5_000) })
 
     fireEvent.click(screen.getByRole('button', { name: /reintentar/i }))
 
@@ -164,11 +169,20 @@ describe('SplineScene — error fallback', () => {
   })
 
   it('reintentar muestra el loader nuevamente', () => {
-    render(<SplineScene scene={SCENE_MAP} />)
-    act(() => { jest.advanceTimersByTime(90000) })
+    render(<SplineScene scene={SCENE_MAP} loadTimeoutMs={5_000} />)
+    act(() => { jest.advanceTimersByTime(5_000) })
     fireEvent.click(screen.getByRole('button', { name: /reintentar/i }))
 
     expect(screen.getByText(/cargando mundo 3d/i)).toBeInTheDocument()
+  })
+
+  it('con silentOnError: el timeout oculta Spline sin mostrar error UI', () => {
+    render(<SplineScene scene={SCENE_GYM} loadTimeoutMs={5_000} silentOnError />)
+    act(() => { jest.advanceTimersByTime(5_000) })
+
+    // No error UI, no canvas — just disappears
+    expect(screen.queryByText(/no se pudo cargar/i)).not.toBeInTheDocument()
+    expect(screen.queryByTestId('spline-canvas')).not.toBeInTheDocument()
   })
 })
 
@@ -268,6 +282,23 @@ describe('SplineScene — polling de variables', () => {
     act(() => { jest.advanceTimersByTime(100) })
 
     expect(onVariableChange).toHaveBeenCalledWith('IsOverGym', false)
+  })
+
+  // Variables específicas del gym sala
+  it('detecta isTrainning y isOutingGym (variables del gym)', () => {
+    const onVariableChange = jest.fn()
+    render(<SplineScene scene={SCENE_GYM} onVariableChange={onVariableChange} />)
+
+    const app = makeSplineApp({ isTrainning: false, isOutingGym: false })
+    triggerLoad(app)
+
+    app.setVars({ isTrainning: true, isOutingGym: false })
+    act(() => { jest.advanceTimersByTime(100) })
+    expect(onVariableChange).toHaveBeenCalledWith('isTrainning', true)
+
+    app.setVars({ isTrainning: false, isOutingGym: true })
+    act(() => { jest.advanceTimersByTime(100) })
+    expect(onVariableChange).toHaveBeenCalledWith('isOutingGym', true)
   })
 })
 
