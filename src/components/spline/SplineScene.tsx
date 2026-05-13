@@ -14,7 +14,7 @@ const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
 // Default timeout — override per-scene via loadTimeoutMs prop.
 const DEFAULT_LOAD_TIMEOUT_MS = 20_000
-// Two silent auto-retries before giving up (catches transient WebGL init errors on mobile).
+// Two silent auto-retries before giving up (catches transient WebGL init errors).
 const MAX_AUTO_RETRIES = 2
 
 // ── Error boundary for Spline runtime errors ───────────────────
@@ -37,23 +37,6 @@ class SplineErrorBoundary extends Component<
     if (this.state.hasError) return null
     return this.props.children
   }
-}
-
-// ── Mobile-only dark background — no WebGL, no Spline ─────────
-function MobileFallback() {
-  return (
-    <div
-      style={{
-        position: 'absolute', inset: 0,
-        background: '#0a0a1a',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}
-    >
-      <span style={{ fontFamily: 'var(--font-display)', fontSize: 16, color: 'rgba(255,255,255,0.18)', letterSpacing: '0.04em' }}>
-        Oveja Music World
-      </span>
-    </div>
-  )
 }
 
 function SplineLoader() {
@@ -131,9 +114,6 @@ const SplineScene = React.memo(function SplineScene({
   loadTimeoutMs = DEFAULT_LOAD_TIMEOUT_MS,
   silentOnError = false,
 }: SplineSceneProps) {
-  // Detect mobile once on mount — skip WebGL entirely on small screens.
-  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
-
   const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState(false)
   const [hidden, setHidden] = useState(false)
@@ -147,7 +127,6 @@ const SplineScene = React.memo(function SplineScene({
   // Preload the .splinecode scene file so the browser fetches it in parallel
   // with the Spline JS runtime, shaving 1–2 round trips on slow connections.
   useEffect(() => {
-    if (isMobile) return
     const link = document.createElement('link')
     link.rel = 'preload'
     link.href = scene
@@ -157,11 +136,11 @@ const SplineScene = React.memo(function SplineScene({
     return () => {
       if (document.head.contains(link)) document.head.removeChild(link)
     }
-  }, [scene, isMobile])
+  }, [scene])
 
   // Load timeout — restart whenever retryKey changes (auto-retry resets the clock).
   useEffect(() => {
-    if (isMobile || loaded || error || hidden) return
+    if (loaded || error || hidden) return
     timeoutRef.current = setTimeout(() => {
       if (silentOnError) setHidden(true)
       else setError(true)
@@ -169,7 +148,7 @@ const SplineScene = React.memo(function SplineScene({
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [isMobile, loaded, error, hidden, retryKey, loadTimeoutMs, silentOnError])
+  }, [loaded, error, hidden, retryKey, loadTimeoutMs, silentOnError])
 
   // Pause the variable-polling interval when the tab is hidden to free CPU.
   // Resume automatically when the tab becomes visible again.
@@ -229,9 +208,6 @@ const SplineScene = React.memo(function SplineScene({
       setError(true)
     }
   }, [autoRetryCount, silentOnError])
-
-  // On mobile: skip WebGL entirely, rely on page-level fallback timers.
-  if (isMobile) return <MobileFallback />
 
   // After max retries with silentOnError: just disappear, page handles content.
   if (hidden) return null
