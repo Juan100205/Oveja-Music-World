@@ -237,6 +237,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const { isCompleted, completeResource } = useProgress()
   const { user, token, updateUser } = useAuth()
 
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [isInClass,      setIsInClass]     = useState(false)
   const [isOutingClass,  setIsOutingClass] = useState(false)
   const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(() => {
@@ -416,9 +417,9 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
         </div>
       )}
 
-      {/* ── Hint: pisa el tapete ── */}
+      {/* ── Hint: pisa el tapete (no en móvil: botón siempre aparece tras tapete) ── */}
       <AnimatePresence>
-        {!isInClass && !seccionesOpen && (
+        {!isInClass && !isMobile && !seccionesOpen && (
           <motion.p key="hint-tapete" initial={{ opacity: 0 }} animate={{ opacity: [0, 0.55, 0.35, 0.55] }}
             exit={{ opacity: 0 }} transition={{ duration: 3, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
             className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none"
@@ -428,9 +429,9 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
         )}
       </AnimatePresence>
 
-      {/* ── Botón Tomar Lecciones (isInClass) ── */}
+      {/* ── Botón Tomar Lecciones (Spline o móvil tras tapete) ── */}
       <AnimatePresence>
-        {isInClass && !seccionesOpen && (
+        {(isInClass || (isMobile && !tapeteHintOpen)) && !seccionesOpen && (
           <motion.button key="lecciones-btn" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: 16 }} transition={{ duration: 0.3, ease: 'easeOut' }}
             whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }} whileTap={{ scale: 0.95 }}

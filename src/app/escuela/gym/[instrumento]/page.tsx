@@ -251,6 +251,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
   const secciones = gymStatic ? getSecciones(gymStatic) : []
 
+  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(() =>
@@ -299,7 +300,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} loadTimeoutMs={90_000} silentOnError />
+      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} loadTimeoutMs={300_000} silentOnError />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
@@ -321,9 +322,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
         </div>
       )}
 
-      {/* ── Hint: pisa el tapete (solo si no hay sección activa ni panel abierto) ── */}
+      {/* ── Hint: pisa el tapete (solo si no hay sección activa ni panel abierto, ni móvil) ── */}
       <AnimatePresence>
-        {!isTrainning && !fallbackVisible && !panelOpen && !salidaOpen && !seccionActiva && (
+        {!isTrainning && !fallbackVisible && !isMobile && !panelOpen && !salidaOpen && !seccionActiva && (
           <motion.p
             key="hint-tapete-gym"
             initial={{ opacity: 0 }}
@@ -345,9 +346,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
         )}
       </AnimatePresence>
 
-      {/* ── isTrainning o fallback móvil → Entrenar ── */}
+      {/* ── isTrainning, fallback o móvil tras tapete → Entrenar ── */}
       <AnimatePresence>
-        {(isTrainning || fallbackVisible) && !panelOpen && !salidaOpen && (
+        {(isTrainning || fallbackVisible || (isMobile && !tapeteHintOpen)) && !panelOpen && !salidaOpen && (
           <motion.button key="trainning-btn"
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}

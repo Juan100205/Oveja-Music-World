@@ -14,8 +14,8 @@ const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
 // Default timeout — override per-scene via loadTimeoutMs prop.
 const DEFAULT_LOAD_TIMEOUT_MS = 20_000
-// One silent auto-retry before giving up (catches transient WebGL init errors on mobile).
-const MAX_AUTO_RETRIES = 1
+// Two silent auto-retries before giving up (catches transient WebGL init errors on mobile).
+const MAX_AUTO_RETRIES = 2
 
 // ── Error boundary for Spline runtime errors ───────────────────
 class SplineErrorBoundary extends Component<
