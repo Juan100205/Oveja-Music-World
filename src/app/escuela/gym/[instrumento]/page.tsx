@@ -259,23 +259,23 @@ export default function GymSalaPage() {
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
-  const [sceneLoaded,    setSceneLoaded]    = useState(false)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
-  // After scene loads, if isTrainning never fires within 4s, show fallback button
+  // 3s after tapete is dismissed, show fallback button regardless of Spline load state.
+  // This ensures content is accessible on mobile even when the 3D scene is slow or fails.
   useEffect(() => {
-    if (!sceneLoaded || tapeteHintOpen) return
+    if (tapeteHintOpen) return
     if (isTrainning || panelOpen) return
     fallbackTimerRef.current = setTimeout(() => {
-      if (!isTrainning && !panelOpen) setFallbackVisible(true)
-    }, 4000)
+      setFallbackVisible(true)
+    }, 3000)
     return () => {
       if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current)
     }
-  }, [sceneLoaded, tapeteHintOpen]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [tapeteHintOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (isTrainning || panelOpen) {
@@ -300,7 +300,7 @@ export default function GymSalaPage() {
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} onLoad={() => setSceneLoaded(true)} />
+      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 

@@ -12,8 +12,8 @@ if (typeof window !== 'undefined') {
 
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
-// 30 s on mobile is already generous; 90 s was too long to show "retry".
-const LOAD_TIMEOUT_MS = 30_000
+// 20 s — enough for slow mobile connections; after this, show retry button.
+const LOAD_TIMEOUT_MS = 20_000
 
 // ── Error boundary for Spline runtime errors ───────────────────
 class SplineErrorBoundary extends Component<
