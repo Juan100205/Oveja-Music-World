@@ -1,5 +1,5 @@
 import { CURSOS } from './cursos'
-import type { Modulo } from './cursos'
+import type { Modulo, Seccion } from './cursos'
 
 export interface GymInstrumento {
   id: string
@@ -9,6 +9,11 @@ export interface GymInstrumento {
   color: string
   glow: string
   modulos: Modulo[]
+}
+
+/** Todas las secciones de práctica de un instrumento (excluye zona='clase') */
+export function getSecciones(instr: GymInstrumento): Seccion[] {
+  return instr.modulos.flatMap(m => m.secciones).filter(s => s.zona !== 'clase')
 }
 
 // Helpers para extraer módulos específicos por id

@@ -4,12 +4,12 @@ import { useParams, useRouter } from 'next/navigation'
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
-import { X } from 'lucide-react'
+import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
-import { GYM_INSTRUMENTOS, type GymInstrumento } from '@/data/gym'
+import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
 const SCENE_GYM = 'https://prod.spline.design/gYLTlZu92yz616yC/scene.splinecode'
@@ -66,10 +66,6 @@ function getDriveEmbedUrl(url: string): string {
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
   return url
-}
-
-function getSecciones(instr: GymInstrumento): Seccion[] {
-  return instr.modulos.flatMap(m => m.secciones).filter(s => s.zona !== 'clase')
 }
 
 // ── Video thumbnail card ───────────────────────────────────────
@@ -245,36 +241,40 @@ function IframeViewer({ url, label, tipo, onClose }: {
   )
 }
 
-export default function GymSalaPage() {
+export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?: number } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
   const { token } = useAuth()
   const { gym: allGym } = useInstrumentos(token)
 
+  // Content always from static data — DB instruments have modulos: []
+  const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
+  const secciones = gymStatic ? getSecciones(gymStatic) : []
+
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
-  const [panelOpen,      setPanelOpen]      = useState(false)
+  const [panelOpen,      setPanelOpen]      = useState(() =>
+    seccionIdxInicial !== undefined && secciones[seccionIdxInicial] !== undefined
+  )
   const [salidaOpen,     setSalidaOpen]     = useState(false)
-  const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
+  const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(() =>
+    seccionIdxInicial !== undefined ? (secciones[seccionIdxInicial] ?? null) : null
+  )
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
-  const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
+  const [tapeteHintOpen, setTapeteHintOpen] = useState(seccionIdxInicial === undefined)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
+  const gymInstr = allGym.find(g => g.id === instrumento)
+
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
-  // 3s after tapete is dismissed, show fallback button regardless of Spline load state.
-  // This ensures content is accessible on mobile even when the 3D scene is slow or fails.
+  // 3s after tapete is dismissed, show fallback if tapete hasn't triggered
   useEffect(() => {
-    if (tapeteHintOpen) return
-    if (isTrainning || panelOpen) return
-    fallbackTimerRef.current = setTimeout(() => {
-      setFallbackVisible(true)
-    }, 3000)
-    return () => {
-      if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current)
-    }
+    if (tapeteHintOpen || panelOpen || isTrainning) return
+    fallbackTimerRef.current = setTimeout(() => setFallbackVisible(true), 3000)
+    return () => { if (fallbackTimerRef.current) clearTimeout(fallbackTimerRef.current) }
   }, [tapeteHintOpen]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
@@ -290,12 +290,11 @@ export default function GymSalaPage() {
     if (name === 'isOutingGym') flushSync(() => setIsOutingGym(isTrue))
   }, [])
 
-  const gymInstr = allGym.find(g => g.id === instrumento)
-  // DB instruments have modulos: [] — content always lives in static data
-  const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
-  const secciones = gymStatic ? getSecciones(gymStatic) : []
-
-  const cerrarPanel = () => { setPanelOpen(false); setSeccionActiva(null) }
+  const cerrarPanel = () => {
+    setPanelOpen(false)
+    setSeccionActiva(null)
+    if (seccionIdxInicial !== undefined) router.push(`/escuela/gym/${instrumento}`)
+  }
 
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
@@ -314,9 +313,17 @@ export default function GymSalaPage() {
         ← Mapa
       </motion.button>
 
-      {/* ── Hint: pisa el tapete ── */}
+      {/* ── Nombre instrumento + sección activa (top center) ── */}
+      {gymInstr && (
+        <div className="gym-label absolute top-5 left-1/2 -translate-x-1/2 z-20"
+          style={{ background: 'rgba(10,10,26,0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 20px', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
+          {gymInstr.emoji} {gymInstr.nombre}{seccionActiva ? ` · ${seccionActiva.nombre}` : ''}
+        </div>
+      )}
+
+      {/* ── Hint: pisa el tapete (solo si no hay sección activa ni panel abierto) ── */}
       <AnimatePresence>
-        {!isTrainning && !fallbackVisible && !panelOpen && !salidaOpen && (
+        {!isTrainning && !fallbackVisible && !panelOpen && !salidaOpen && !seccionActiva && (
           <motion.p
             key="hint-tapete-gym"
             initial={{ opacity: 0 }}
@@ -442,9 +449,14 @@ export default function GymSalaPage() {
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
-                    <motion.button whileHover={{ x: -3 }} onClick={() => setSeccionActiva(null)}
-                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer' }}>
-                      ← Secciones
+                    <motion.button whileHover={{ x: -3 }}
+                      onClick={() => seccionIdxInicial !== undefined
+                        ? router.push(`/escuela/gym/${instrumento}`)
+                        : setSeccionActiva(null)
+                      }
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowLeft size={13} strokeWidth={1.5} />
+                      {seccionIdxInicial !== undefined ? 'Secciones' : 'Secciones'}
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>
@@ -508,7 +520,12 @@ export default function GymSalaPage() {
             >
               <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
               <div className="flex items-center justify-between mb-6">
-                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>¿A dónde quieres ir?</h2>
+                <div>
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>
+                    {gymInstr?.emoji} {gymInstr?.nombre}
+                  </h2>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>¿A dónde quieres ir?</p>
+                </div>
                 <button onClick={() => setSalidaOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                   style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
               </div>
@@ -516,44 +533,55 @@ export default function GymSalaPage() {
               <motion.button
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => router.push('/escuela')}
-                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-5"
+                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-4"
                 style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none' }}
               >
                 <span style={{ fontSize: 24 }}>🗺️</span>
-                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>Volver al Mapa</p>
+                <div className="text-left">
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>Volver al Mapa</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>Salir al mapa principal</p>
+                </div>
               </motion.button>
 
-              <div className="flex items-center gap-3 mb-4">
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-                <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.3)', letterSpacing: '0.08em' }}>O CAMBIA DE SALA</span>
-                <div className="flex-1 h-px" style={{ background: 'rgba(255,255,255,0.08)' }} />
-              </div>
-
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                {allGym.map((g, i) => {
-                  const esActual = g.id === instrumento
-                  return (
-                    <motion.button key={g.id}
-                      initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.04 }}
-                      whileHover={!esActual ? { scale: 1.04 } : {}} whileTap={!esActual ? { scale: 0.96 } : {}}
-                      onClick={() => { if (!esActual) router.push(`/escuela/gym/${g.id}`) }}
-                      className="relative overflow-hidden rounded-2xl p-4 text-left"
-                      style={{ background: g.color, border: esActual ? '2px solid rgba(255,255,255,0.5)' : 'none', cursor: esActual ? 'default' : 'pointer', opacity: esActual ? 1 : 0.7, minHeight: 90 }}
-                    >
-                      <div className="absolute inset-0 pointer-events-none rounded-2xl"
-                        style={{ background: 'linear-gradient(135deg, rgba(255,255,255,0.18) 0%, transparent 55%)' }} />
-                      <div className="text-2xl mb-1 relative">{g.emoji}</div>
-                      <p className="relative" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 12, color: '#fff' }}>{g.nombre}</p>
-                      {esActual && (
-                        <div className="absolute top-2 right-2"
-                          style={{ background: 'rgba(255,255,255,0.25)', borderRadius: 999, padding: '2px 8px', fontFamily: 'var(--font-body)', fontSize: 9, color: '#fff', letterSpacing: '0.06em' }}>
-                          AQUÍ
-                        </div>
-                      )}
-                    </motion.button>
-                  )
-                })}
-              </div>
+              {secciones.length > 0 && (
+                <>
+                  <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 16 }} />
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', marginBottom: 12 }}>
+                    CAMBIAR DE SECCIÓN
+                  </p>
+                  <div className="flex flex-col gap-2">
+                    {secciones.map((sec, i) => {
+                      const esActual = sec === seccionActiva
+                      return (
+                        <motion.button key={i}
+                          whileHover={!esActual ? { x: 4 } : {}} whileTap={!esActual ? { scale: 0.98 } : {}}
+                          onClick={() => {
+                            if (esActual) return
+                            setSalidaOpen(false)
+                            router.push(`/escuela/gym/${instrumento}/${i}`)
+                          }}
+                          className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 cursor-pointer text-left"
+                          style={{
+                            background: esActual ? 'rgba(61,184,250,0.1)' : 'rgba(255,255,255,0.04)',
+                            border: `1px solid ${esActual ? 'rgba(61,184,250,0.3)' : 'rgba(255,255,255,0.07)'}`,
+                            cursor: esActual ? 'default' : 'pointer',
+                          }}
+                        >
+                          <div className="flex-shrink-0 flex items-center justify-center rounded-full"
+                            style={{ width: 32, height: 32, background: `${gymInstr?.color ?? '#3db8fa'}20`, color: gymInstr?.color ?? '#3db8fa', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>
+                            {i + 1}
+                          </div>
+                          <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: esActual ? '#3db8fa' : '#fff', margin: 0, flex: 1 }}>{sec.nombre}</p>
+                          {esActual
+                            ? <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#3db8fa', letterSpacing: '0.06em' }}>AQUÍ</span>
+                            : <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>›</span>
+                          }
+                        </motion.button>
+                      )
+                    })}
+                  </div>
+                </>
+              )}
             </motion.div>
           </>
         )}
@@ -617,6 +645,11 @@ export default function GymSalaPage() {
         )}
       </AnimatePresence>
 
+      <style>{`
+        @media (max-width: 640px) {
+          .gym-label { max-width: calc(100vw - 140px) !important; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        }
+      `}</style>
     </main>
   )
 }

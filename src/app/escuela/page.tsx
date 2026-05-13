@@ -10,6 +10,7 @@ import TapeteCard from '@/components/ui/TapeteCard'
 import type { ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Modulo } from '@/data/cursos'
+import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 
@@ -331,6 +332,7 @@ export default function MapaPage() {
 
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
+  const [gymInstrSeleccionado, setGymInstrSeleccionado] = useState<GymInstrumento | null>(null)
 
   // Logout
   const [showLogout, setShowLogout] = useState(false)
@@ -364,7 +366,7 @@ export default function MapaPage() {
       } else {
         // Small delay before closing — prevents mobile touch-release from instantly closing
         if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
-        gymCloseRef.current = setTimeout(() => setGymOpen(false), 600)
+        gymCloseRef.current = setTimeout(() => { setGymOpen(false); setGymInstrSeleccionado(null) }, 600)
       }
     }
     if (name === 'IsOverSchool') {
@@ -385,7 +387,7 @@ export default function MapaPage() {
   const anyOpen = clasesOpen || gymOpen
 
   const cerrarClases = () => { setClasesOpen(false); setClaseSeleccionada(null) }
-  const cerrarGym = () => setGymOpen(false)
+  const cerrarGym = () => { setGymOpen(false); setGymInstrSeleccionado(null) }
 
   useEffect(() => {
     if (!token || !claseSeleccionada?.cursoId || modulosDb[claseSeleccionada.cursoId]) return
@@ -418,6 +420,11 @@ export default function MapaPage() {
     : []
 
   const { clases: allClases, gym: allGym } = useInstrumentos(token ?? null)
+
+  // Secciones del instrumento gym seleccionado (siempre de datos estáticos)
+  const gymSeccionesVista = gymInstrSeleccionado
+    ? getSecciones(GYM_INSTRUMENTOS.find(g => g.id === gymInstrSeleccionado.id) ?? gymInstrSeleccionado)
+    : []
 
   // Filtrar por acceso — admins ven todo
   const isAdmin = user?.role === 'admin'
@@ -641,32 +648,88 @@ export default function MapaPage() {
           <PanelBase onClose={cerrarGym}>
             <AnimatePresence mode="wait">
 
-              {/* Instrumentos */}
-              <motion.div key="gym-instrs"
-                initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
-                transition={{ type: 'spring', damping: 28, stiffness: 300 }}
-                className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
+              {/* Paso 1: instrumentos */}
+              {!gymInstrSeleccionado && (
+                <motion.div key="gym-instrs"
+                  initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
 
-                <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>¿Qué vas a practicar?</h2>
-                    <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
+                  <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                  <div className="flex items-center justify-between mb-6">
+                    <div>
+                      <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>¿Qué vas a practicar?</h2>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige tu instrumento</p>
+                    </div>
+                    <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
-                  <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                    style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
-                </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                  {gymVisibles.length === 0 ? (
-                    <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                      Sin instrumentos asignados
-                    </p>
-                  ) : gymVisibles.map((g, i) => (
-                    <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => router.push(`/escuela/gym/${g.id}`)} />
-                  ))}
-                </div>
-              </motion.div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                    {gymVisibles.length === 0 ? (
+                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                        Sin instrumentos asignados
+                      </p>
+                    ) : gymVisibles.map((g, i) => (
+                      <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => setGymInstrSeleccionado(g)} />
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Paso 2: secciones */}
+              {gymInstrSeleccionado && (
+                <motion.div key="gym-secciones"
+                  initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}>
+
+                  <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                  <div className="flex items-center gap-3 mb-6">
+                    <motion.button whileHover={{ x: -3 }} onClick={() => setGymInstrSeleccionado(null)}
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowLeft size={13} strokeWidth={1.5} /> Instrumentos
+                    </motion.button>
+                    <span style={{ color: 'rgba(255,255,255,0.15)' }}>|</span>
+                    <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff', flex: 1 }}>
+                      {gymInstrSeleccionado.emoji} {gymInstrSeleccionado.nombre}
+                    </h2>
+                    <button onClick={cerrarGym} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
+                  </div>
+
+                  {gymSeccionesVista.length === 0
+                    ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
+                    : (
+                      <div className="flex flex-col gap-3">
+                        {gymSeccionesVista.map((sec, i) => (
+                          <motion.button key={i}
+                            initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
+                            whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
+                            onClick={() => router.push(`/escuela/gym/${gymInstrSeleccionado.id}/${i}`)}
+                            className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
+                            <div className="flex items-center gap-4">
+                              <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
+                                style={{ width: 34, height: 34, background: gymInstrSeleccionado.color, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
+                                {i + 1}
+                              </div>
+                              <div>
+                                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.2 }}>{sec.nombre}</p>
+                                <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>
+                                  {sec.recursos.length} {sec.recursos.length === 1 ? 'recurso' : 'recursos'}
+                                </p>
+                              </div>
+                            </div>
+                            <ChevronRight size={16} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
+                          </motion.button>
+                        ))}
+                      </div>
+                    )
+                  }
+                </motion.div>
+              )}
 
             </AnimatePresence>
           </PanelBase>
