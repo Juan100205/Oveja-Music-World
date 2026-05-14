@@ -255,9 +255,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
-  const [panelOpen,      setPanelOpen]      = useState(() =>
-    seccionIdxInicial !== undefined && secciones[seccionIdxInicial] !== undefined
-  )
+  const [panelOpen,      setPanelOpen]      = useState(false)
   const [salidaOpen,     setSalidaOpen]     = useState(false)
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(() =>
     seccionIdxInicial !== undefined ? (secciones[seccionIdxInicial] ?? null) : null
@@ -299,8 +297,6 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
 
   const cerrarPanel = () => {
     setPanelOpen(false)
-    setSeccionActiva(null)
-    router.push('/escuela')
   }
 
   // Sin sección preseleccionada → redirigiendo al mapa (ver useEffect arriba)
@@ -355,9 +351,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
         )}
       </AnimatePresence>
 
-      {/* ── isTrainning, fallback o móvil tras tapete → Entrenar ── */}
+      {/* ── Botón Entrenar: siempre visible cuando el panel está cerrado ── */}
       <AnimatePresence>
-        {(isTrainning || fallbackVisible || (isMobile && !tapeteHintOpen)) && !panelOpen && !salidaOpen && (
+        {!panelOpen && !salidaOpen && (
           <motion.button key="trainning-btn"
             initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
             transition={{ duration: 0.3, ease: 'easeOut' }}
