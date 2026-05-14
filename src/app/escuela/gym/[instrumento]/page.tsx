@@ -286,6 +286,11 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
     }
   }, [isTrainning, panelOpen])
 
+  // Sin sección preseleccionada → el usuario debe pasar por el mapa
+  useEffect(() => {
+    if (seccionIdxInicial === undefined) router.replace('/escuela')
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
     if (name === 'isTrainning') flushSync(() => setIsTrainning(isTrue))
@@ -295,8 +300,11 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const cerrarPanel = () => {
     setPanelOpen(false)
     setSeccionActiva(null)
-    if (seccionIdxInicial !== undefined) router.push(`/escuela/gym/${instrumento}`)
+    router.push('/escuela')
   }
+
+  // Sin sección preseleccionada → redirigiendo al mapa (ver useEffect arriba)
+  if (seccionIdxInicial === undefined) return null
 
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
@@ -452,13 +460,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
                     <motion.button whileHover={{ x: -3 }}
-                      onClick={() => seccionIdxInicial !== undefined
-                        ? router.push(`/escuela/gym/${instrumento}`)
-                        : setSeccionActiva(null)
-                      }
+                      onClick={() => router.push('/escuela')}
                       style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ArrowLeft size={13} strokeWidth={1.5} />
-                      {seccionIdxInicial !== undefined ? 'Secciones' : 'Secciones'}
+                      <ArrowLeft size={13} strokeWidth={1.5} /> Mapa
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>

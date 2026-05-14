@@ -337,8 +337,8 @@ export default function MapaPage() {
   // Logout
   const [showLogout, setShowLogout] = useState(false)
 
-  // On mobile, Spline never loads — expose direct navigation buttons
-  const [isMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768)
+  const [isMobile, setIsMobile] = useState(false)
+  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
 
   // Delayed close refs — prevent mobile touch-release from instantly closing panels
   const gymCloseRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
