@@ -9,9 +9,16 @@
  * a partir del módulo para garantizar idempotencia.
  */
 import { NextRequest, NextResponse } from 'next/server'
+import { createHash } from 'crypto'
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { CURSOS } from '@/data/cursos'
+
+/** Genera un UUID v4 determinista a partir de un string (MD5-based). */
+function slugUUID(slug: string): string {
+  const h = createHash('md5').update(slug).digest('hex')
+  return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-${((parseInt(h[16],16)&0x3)|0x8).toString(16)}${h.slice(17,20)}-${h.slice(20,32)}`
+}
 
 function adminGuard(req: NextRequest) {
   const token = extractTokenFromHeader(req.headers.get('authorization') ?? '')
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
   // ── 2. Módulos ────────────────────────────────────────────────
   const modulosRows = CURSOS.flatMap(c =>
     c.modulos.map((m, i) => ({
-      id:       m.id,
+      id:       slugUUID(m.id),
       nombre:   m.nombre,
       orden:    i,
       curso_id: c.id,
@@ -55,15 +62,20 @@ export async function POST(req: NextRequest) {
 
   if (eModulos) return NextResponse.json({ error: `modulos: ${eModulos.message}` }, { status: 500 })
 
+  // Mapa slug → UUID para referencias cruzadas
+  const moduloUUID = Object.fromEntries(
+    CURSOS.flatMap(c => c.modulos.map(m => [m.id, slugUUID(m.id)]))
+  )
+
   // ── 3. Secciones ──────────────────────────────────────────────
   const seccionesRows = CURSOS.flatMap(c =>
     c.modulos.flatMap(m =>
       m.secciones.map((s, i) => ({
-        id:        `${m.id}-sec-${i}`,
+        id:        slugUUID(`${m.id}-sec-${i}`),
         nombre:    s.nombre,
         zona:      s.zona ?? 'ambos',
         orden:     i,
-        modulo_id: m.id,
+        modulo_id: moduloUUID[m.id],
       }))
     )
   )
@@ -78,9 +90,9 @@ export async function POST(req: NextRequest) {
   const recursosRows = CURSOS.flatMap(c =>
     c.modulos.flatMap(m =>
       m.secciones.flatMap((s, si) => {
-        const secId = `${m.id}-sec-${si}`
+        const secId = slugUUID(`${m.id}-sec-${si}`)
         return s.recursos.map((r, ri) => ({
-          id:         `${secId}-rec-${ri}`,
+          id:         slugUUID(`${m.id}-sec-${si}-rec-${ri}`),
           url:        r.url,
           label:      r.label ?? null,
           tipo:       r.tipo,
