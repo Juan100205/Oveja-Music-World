@@ -9,9 +9,8 @@ import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
-import { CURSOS } from '@/data/cursos'
 import type { Modulo, Seccion } from '@/data/cursos'
-import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
+import type { GymInstrumento } from '@/data/gym'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
@@ -436,28 +435,16 @@ export default function MapaPage() {
       .catch(() => {})
   }, [token, gymInstrSeleccionado?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const modulosClase = claseSeleccionada
-    ? (CURSOS.find(c => c.id === claseSeleccionada.cursoId)?.modulos ?? [])
-      .filter(m => !isPracticeModule(m.nombre))
-    : []
-
-  // ── Instrumentos dinámicos (hook combina estáticos + DB) ──────
+  // Solo DB — sin fallback estático, para ver exactamente qué hay en Supabase
   const modulosClaseVista = claseSeleccionada
-    ? ((modulosDb[claseSeleccionada.cursoId]?.length
-      ? modulosDb[claseSeleccionada.cursoId]
-      : modulosClase))
-      .filter(m => !isPracticeModule(m.nombre))
+    ? (modulosDb[claseSeleccionada.cursoId] ?? []).filter(m => !isPracticeModule(m.nombre))
     : []
 
-  const { clases: allClases, gym: allGym } = useInstrumentos(token ?? null)
+  const { dbClases, dbGym, loading: instrLoading } = useInstrumentos(token ?? null)
 
-  // Secciones del instrumento gym seleccionado (DB-first, static fallback)
+  // Secciones del instrumento gym seleccionado (solo DB)
   const gymSeccionesVista = gymInstrSeleccionado
-    ? (() => {
-        const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
-        return gymDbSecciones[cursoId]
-          ?? getSecciones(GYM_INSTRUMENTOS.find(g => g.id === gymInstrSeleccionado.id) ?? gymInstrSeleccionado)
-      })()
+    ? gymDbSecciones[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id] ?? []
     : []
 
   // Filtrar por acceso — admins ven todo
@@ -465,11 +452,11 @@ export default function MapaPage() {
   const acceso = user?.clases_acceso ?? []
 
   const clasesVisibles = isAdmin
-    ? allClases
-    : allClases.filter(c => acceso.includes(c.id))
+    ? dbClases
+    : dbClases.filter(c => acceso.includes(c.id))
   const gymVisibles = isAdmin
-    ? allGym
-    : allGym.filter(g => g.id === 'gym-general' || acceso.includes(g.id))
+    ? dbGym
+    : dbGym.filter(g => g.id === 'gym-general' || acceso.includes(g.id))
 
   return (
     <main className="relative w-full overflow-hidden"
@@ -512,9 +499,13 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {clasesVisibles.length === 0 ? (
+                    {instrLoading ? (
                       <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                        Sin clases asignadas
+                        Cargando clases...
+                      </p>
+                    ) : clasesVisibles.length === 0 ? (
+                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                        Sin clases en Supabase
                       </p>
                     ) : clasesVisibles.map((c, i) => (
                       <InstrCard key={c.id} {...c} delay={i * 0.055} onClick={() => setClaseSeleccionada(c)} />
@@ -702,9 +693,13 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    {gymVisibles.length === 0 ? (
+                    {instrLoading ? (
                       <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                        Sin instrumentos asignados
+                        Cargando instrumentos...
+                      </p>
+                    ) : gymVisibles.length === 0 ? (
+                      <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
+                        Sin instrumentos en Supabase
                       </p>
                     ) : gymVisibles.map((g, i) => (
                       <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => setGymInstrSeleccionado(g)} />

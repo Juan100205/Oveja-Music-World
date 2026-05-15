@@ -125,5 +125,7 @@ export function useInstrumentos(token: string | null) {
     gym:       merge(GYM_INSTRUMENTOS, dynGym),
     cursosMap: mergeCursos(STATIC_CURSOS_MAP, dynCursos),
     loading,
+    dbClases:  dynClases,
+    dbGym:     dynGym,
   }
 }
