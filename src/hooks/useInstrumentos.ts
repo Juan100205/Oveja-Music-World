@@ -90,6 +90,7 @@ export function useInstrumentos(token: string | null) {
             color:       i.color,
             glow:        i.glow,
             modulos:     [],
+            cursoId:     i.curso_id ?? i.id,
           }))
         )
 

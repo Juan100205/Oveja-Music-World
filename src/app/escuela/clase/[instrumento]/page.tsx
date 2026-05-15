@@ -7,6 +7,8 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
+import RotateScreen from '@/components/ui/RotateScreen'
+import { useOrientation } from '@/hooks/useOrientation'
 import { CLASES_CONFIG, type ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Seccion, Recurso, Modulo } from '@/data/cursos'
@@ -237,8 +239,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const { isCompleted, completeResource } = useProgress()
   const { user, token, updateUser } = useAuth()
 
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
+  const { isMobile, isPortrait } = useOrientation()
   const [isInClass,      setIsInClass]     = useState(false)
   const [isOutingClass,  setIsOutingClass] = useState(false)
   const [moduloActivo,   setModuloActivo] = useState<Modulo | null>(() => {
@@ -390,7 +391,11 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
+      {isMobile && isPortrait && <RotateScreen />}
+
+      {(!isMobile || !isPortrait) && (
+        <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
+      )}
 
       <LevelProgressPanel
         puntos={user?.puntos ?? 0}

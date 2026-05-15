@@ -7,8 +7,10 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
+import RotateScreen from '@/components/ui/RotateScreen'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
+import { useOrientation } from '@/hooks/useOrientation'
 import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
@@ -247,18 +249,21 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const { token } = useAuth()
   const { gym: allGym } = useInstrumentos(token)
 
-  // Content always from static data — DB instruments have modulos: []
+  // Static data (fallback)
   const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
-  const secciones = gymStatic ? getSecciones(gymStatic) : []
+  const staticSecciones = gymStatic ? getSecciones(gymStatic) : []
 
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
+  // DB content state (DB-first; static is fallback)
+  const [dbSecciones, setDbSecciones] = useState<Seccion[] | null>(null)
+  const secciones = dbSecciones ?? staticSecciones
+
+  const { isMobile, isPortrait } = useOrientation()
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(false)
   const [salidaOpen,     setSalidaOpen]     = useState(false)
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(() =>
-    seccionIdxInicial !== undefined ? (secciones[seccionIdxInicial] ?? null) : null
+    seccionIdxInicial !== undefined ? (staticSecciones[seccionIdxInicial] ?? null) : null
   )
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
@@ -267,6 +272,26 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const gymInstr = allGym.find(g => g.id === instrumento)
+  const cursoId = gymInstr?.cursoId ?? gymStatic?.cursoId
+
+  // Fetch content from DB; use static data only if DB has nothing
+  useEffect(() => {
+    if (!token || !cursoId) return
+    fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const allSecs = (data?.modulos ?? []).flatMap(
+          (m: { secciones?: Seccion[] }) => m.secciones ?? []
+        )
+        const gymSecs = allSecs.filter((s: Seccion) => s.zona !== 'clase')
+        if (gymSecs.length === 0) return
+        setDbSecciones(gymSecs)
+        if (seccionIdxInicial !== undefined) {
+          setSeccionActiva(gymSecs[seccionIdxInicial] ?? null)
+        }
+      })
+      .catch(() => {})
+  }, [cursoId, token]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
@@ -305,7 +330,11 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
+      {isMobile && isPortrait && <RotateScreen />}
+
+      {(!isMobile || !isPortrait) && (
+        <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
+      )}
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 

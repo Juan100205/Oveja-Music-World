@@ -9,6 +9,7 @@ export interface GymInstrumento {
   color: string
   glow: string
   modulos: Modulo[]
+  cursoId?: string  // id del curso en Supabase; puede diferir del id del instrumento
 }
 
 /** Todas las secciones de práctica de un instrumento (excluye zona='clase') */
@@ -27,22 +28,22 @@ function getModulos(cursoId: string, moduloIds?: string[]): Modulo[] {
 export const GYM_INSTRUMENTOS: GymInstrumento[] = [
   {
     id: 'bateria',
+    cursoId: 'bateria',
     nombre: 'Batería',
     emoji: '🥁',
     descripcion: 'Recursos, práctica y material complementario',
     color: 'linear-gradient(135deg, #3db8fa, #6dd5ff)',
     glow: 'rgba(61,184,250,0.45)',
-    // Secciones de práctica dentro del nivel 1
     modulos: getModulos('bateria', ['bateria-nivel-1']),
   },
   {
     id: 'piano',
+    cursoId: 'piano',
     nombre: 'Piano',
     emoji: '🎹',
     descripcion: 'Juegos, repertorio y obras de repaso',
     color: 'linear-gradient(135deg, #ec488a, #ff7eb3)',
     glow: 'rgba(236,72,138,0.45)',
-    // Solo módulos de práctica (3, 5, 9, 11, 13)
     modulos: getModulos('piano', [
       'piano-modulo-3',
       'piano-modulo-5',
@@ -53,42 +54,42 @@ export const GYM_INSTRUMENTOS: GymInstrumento[] = [
   },
   {
     id: 'violin',
+    cursoId: 'violin',
     nombre: 'Violín',
     emoji: '🎻',
     descripcion: 'Ejercicios técnicos y repertorio',
     color: 'linear-gradient(135deg, #ec488a, #ffa737)',
     glow: 'rgba(236,72,138,0.45)',
-    // Módulos de práctica (3 y 5)
     modulos: getModulos('violin', ['violin-modulo-3', 'violin-modulo-5']),
   },
   {
     id: 'canto',
+    cursoId: 'canto',
     nombre: 'Canto',
     emoji: '🎤',
     descripcion: 'Calentamiento, repertorio y karaoke',
     color: 'linear-gradient(135deg, #9b54f9, #c084ff)',
     glow: 'rgba(155,84,249,0.45)',
-    // Módulo de práctica (3)
     modulos: getModulos('canto', ['canto-modulo-3']),
   },
   {
     id: 'guitarra',
+    cursoId: 'guitarra-ninos',
     nombre: 'Guitarra',
     emoji: '🎸',
     descripcion: 'Videos, ejercicios y Scratch interactivo',
     color: 'linear-gradient(135deg, #ffa737, #ffcc80)',
     glow: 'rgba(255,167,55,0.45)',
-    // Nivel 1 de guitarra niños (tiene Scratch + videos de práctica)
     modulos: getModulos('guitarra-ninos', ['guitarra-ninos-nivel-1']),
   },
   {
     id: 'introduccion',
+    cursoId: 'ciudad-musical',
     nombre: 'Introducción Musical',
     emoji: '🎵',
     descripcion: 'Ejercicios de ritmo y teoría musical',
     color: 'linear-gradient(135deg, #3db8fa, #9b54f9)',
     glow: 'rgba(100,150,255,0.45)',
-    // Módulos de práctica de Ciudad Musical
     modulos: getModulos('ciudad-musical'),
   },
 ]

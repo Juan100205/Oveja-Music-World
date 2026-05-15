@@ -7,12 +7,14 @@ import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronRight, Settings, LogOut, X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
+import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
 import type { Modulo } from '@/data/cursos'
 import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
+import { useOrientation } from '@/hooks/useOrientation'
 
 function WasdKey({ label, wide, width, height }: { label: React.ReactNode; wide?: boolean; width?: number; height?: number }) {
   return (
@@ -337,19 +339,24 @@ export default function MapaPage() {
   // Logout
   const [showLogout, setShowLogout] = useState(false)
 
-  const [isMobile, setIsMobile] = useState(false)
-  useEffect(() => { setIsMobile(window.innerWidth < 768) }, [])
+  const { isMobile, isPortrait } = useOrientation()
 
   // Delayed close refs — prevent mobile touch-release from instantly closing panels
   const gymCloseRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
   const claseCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Aviso tapete primero; luego tutorial WASD
-  const [showTapeteHint, setShowTapeteHint] = useState(true)
+  // Tapete hint: persist dismissal in localStorage so it doesn't repeat on every navigation
+  const [showTapeteHint, setShowTapeteHint] = useState(false)
+  useEffect(() => {
+    const dismissed = localStorage.getItem('tapete_dismissed_mapa')
+    if (!dismissed) setShowTapeteHint(true)
+  }, [])
+
   const [showTutorial, setShowTutorial] = useState(false)
 
   const dismissTapeteHint = useCallback(() => {
     setShowTapeteHint(false)
+    localStorage.setItem('tapete_dismissed_mapa', '1')
     const count = user?.id ? getTutorialCount(user.id) : 0
     if (count < 5) setShowTutorial(true)
   }, [user?.id])
@@ -444,10 +451,16 @@ export default function MapaPage() {
     <main className="relative w-full overflow-hidden"
       style={{ width: '100vw', height: '100dvh', background: '#0a0a1a' }}>
 
-      <SplineScene
-        scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"
-        onVariableChange={handleVariableChange}
-      />
+      {/* Bloquear en móvil portrait — Spline no carga ni se descarga */}
+      {isMobile && isPortrait && <RotateScreen />}
+
+      {/* Spline solo en desktop o móvil landscape */}
+      {(!isMobile || !isPortrait) && (
+        <SplineScene
+          scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"
+          onVariableChange={handleVariableChange}
+        />
+      )}
 
       <TapeteCard show={showTapeteHint} onDismiss={dismissTapeteHint} sala="mapa" />
 
@@ -739,9 +752,9 @@ export default function MapaPage() {
         )}
       </AnimatePresence>
 
-      {/* ── Navegación directa en móvil (Spline no carga en < 768px) ── */}
+      {/* ── Navegación directa en móvil landscape ── */}
       <AnimatePresence>
-        {isMobile && !showTapeteHint && !clasesOpen && !gymOpen && (
+        {isMobile && !isPortrait && !clasesOpen && !gymOpen && (
           <motion.div
             key="mobile-nav"
             initial={{ opacity: 0, y: 20 }}

@@ -10,6 +10,8 @@ if (typeof window !== 'undefined') {
   void import('@splinetool/react-spline')
 }
 
+// @splinetool/react-spline/next is an async Server Component — cannot be used
+// inside a Client Component. We use the standard client-only export via dynamic.
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 
 // Two silent auto-retries on JS runtime errors before giving up.
