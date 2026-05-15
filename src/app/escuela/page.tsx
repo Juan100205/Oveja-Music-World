@@ -505,7 +505,7 @@ export default function MapaPage() {
                       </p>
                     ) : clasesVisibles.length === 0 ? (
                       <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                        Sin clases en Supabase
+                        Sin clases disponibles
                       </p>
                     ) : clasesVisibles.map((c, i) => (
                       <InstrCard key={c.id} {...c} delay={i * 0.055} onClick={() => setClaseSeleccionada(c)} />
@@ -699,7 +699,7 @@ export default function MapaPage() {
                       </p>
                     ) : gymVisibles.length === 0 ? (
                       <p className="col-span-2 text-center py-8" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                        Sin instrumentos en Supabase
+                        Sin instrumentos disponibles
                       </p>
                     ) : gymVisibles.map((g, i) => (
                       <InstrCard key={g.id} {...g} delay={i * 0.055} onClick={() => setGymInstrSeleccionado(g)} />

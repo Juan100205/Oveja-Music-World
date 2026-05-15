@@ -1,6 +1,13 @@
 /**
  * GymSalaPage (/escuela/gym/[instrumento]) — TDD tests
- * Verifica: renderizado, botones Spline, panel secciones, salida, video
+ *
+ * El componente SIEMPRE requiere `seccionIdxInicial` para renderizar.
+ * Sin él, redirige a /escuela y devuelve null.
+ *
+ * Flujos probados:
+ *  - seccionIdxInicial={0}     → seccionActiva=Do Mayor, panel cerrado al inicio
+ *  - seccionIdxInicial={99}    → seccionActiva=null (fuera de rango), hint visible
+ *  - sin seccionIdxInicial     → null (redirige)
  */
 import React from 'react'
 import { render, screen, fireEvent, act } from '@testing-library/react'
@@ -30,6 +37,11 @@ jest.mock('@/components/ui/TapeteCard', () => ({
   ),
 }))
 
+jest.mock('@/components/ui/RotateScreen', () => ({
+  __esModule: true,
+  default: jest.fn(() => <div data-testid="rotate-screen" />),
+}))
+
 const mockPush = jest.fn()
 jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
@@ -42,11 +54,16 @@ jest.mock('@/hooks/useAuth', () => ({
 
 jest.mock('@/hooks/useInstrumentos', () => ({
   useInstrumentos: () => ({
-    clases: [],
-    gym: [
-      { id: 'guitarra', nombre: 'Guitarra', emoji: '🎸', descripcion: 'Rock y pop', color: '#ec488a', glow: 'rgba(236,72,138,0.4)', modulos: [] },
-    ],
+    clases:   [],
+    gym:      [{ id: 'guitarra', nombre: 'Guitarra', emoji: '🎸', descripcion: 'Rock y pop', color: '#ec488a', glow: 'rgba(236,72,138,0.4)', modulos: [], cursoId: 'guitarra' }],
+    dbClases: [],
+    dbGym:    [{ id: 'guitarra', nombre: 'Guitarra', emoji: '🎸', descripcion: 'Rock y pop', color: '#ec488a', glow: 'rgba(236,72,138,0.4)', modulos: [], cursoId: 'guitarra' }],
+    loading:  false,
   }),
+}))
+
+jest.mock('@/hooks/useOrientation', () => ({
+  useOrientation: () => ({ isMobile: false, isPortrait: false }),
 }))
 
 // Datos inline en el factory (jest.mock se hoist antes de las declaraciones de const)
@@ -98,13 +115,14 @@ jest.mock('@/data/gym', () => ({
 
 import GymSalaPage from '@/app/escuela/gym/[instrumento]/page'
 
-// ── Helper ─────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────
 function simulateVar(name: string, value: unknown) {
   act(() => { capturedOnVariableChange?.(name, value) })
 }
 
 // ══════════════════════════════════════════════════════════════
 // SUITE 1 — Renderizado base
+// Requiere seccionIdxInicial para renderizar. Sin él → null.
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — renderizado base', () => {
   beforeEach(() => {
@@ -112,12 +130,12 @@ describe('GymSalaPage — renderizado base', () => {
     mockPush.mockClear()
   })
 
-  it('monta sin errores', () => {
-    expect(() => render(<GymSalaPage />)).not.toThrow()
+  it('monta sin errores con seccionIdxInicial', () => {
+    expect(() => render(<GymSalaPage seccionIdxInicial={0} />)).not.toThrow()
   })
 
   it('renderiza SplineScene con la URL del gym', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     expect(screen.getByTestId('spline-scene')).toHaveAttribute(
       'data-scene',
       'https://prod.spline.design/gYLTlZu92yz616yC/scene.splinecode'
@@ -125,30 +143,29 @@ describe('GymSalaPage — renderizado base', () => {
   })
 
   it('muestra botón ← Mapa', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     expect(screen.getByText(/← mapa/i)).toBeInTheDocument()
   })
 
   it('botón ← Mapa navega a /escuela', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     fireEvent.click(screen.getByText(/← mapa/i))
     expect(mockPush).toHaveBeenCalledWith('/escuela')
   })
 
-  it('muestra TapeteCard al inicio', () => {
-    render(<GymSalaPage />)
-    expect(screen.getByTestId('tapete-card')).toBeInTheDocument()
-  })
-
-  it('TapeteCard desaparece al hacer clic en Entendido', () => {
-    render(<GymSalaPage />)
-    fireEvent.click(screen.getByText('Entendido'))
+  it('NO muestra TapeteCard (viene desde mapa con sección preseleccionada)', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
     expect(screen.queryByTestId('tapete-card')).not.toBeInTheDocument()
   })
 
-  it('muestra hint "pisa el tapete para iniciar"', () => {
-    render(<GymSalaPage />)
-    expect(screen.getByText(/pisa el tapete para iniciar/i)).toBeInTheDocument()
+  it('muestra botón "🏋️ Entrenar →" desde el inicio (panel cerrado)', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    expect(screen.getByText(/🏋️ entrenar/i)).toBeInTheDocument()
+  })
+
+  it('sin seccionIdxInicial renderiza null y redirige', () => {
+    const { container } = render(<GymSalaPage />)
+    expect(container.firstChild).toBeNull()
   })
 })
 
@@ -156,89 +173,81 @@ describe('GymSalaPage — renderizado base', () => {
 // SUITE 2 — Variables de Spline → botones
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — variables Spline', () => {
-  beforeEach(() => { capturedOnVariableChange = undefined })
+  beforeEach(() => {
+    capturedOnVariableChange = undefined
+    mockPush.mockClear()
+  })
 
-  it('botón "🏋️ Entrenar →" aparece cuando isTrainning = true', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+  it('"🏋️ Entrenar →" está visible cuando el panel está cerrado', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
     expect(screen.getByText(/🏋️ entrenar/i)).toBeInTheDocument()
   })
 
-  it('botón "← Salir del Gym" aparece cuando isOutingGym = true', () => {
-    render(<GymSalaPage />)
+  it('"← Salir del Gym" aparece cuando isOutingGym = true', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     expect(screen.getByText(/salir del gym/i)).toBeInTheDocument()
   })
 
-  it('isTrainning acepta string "true"', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', 'true')
-    expect(screen.getByText(/🏋️ entrenar/i)).toBeInTheDocument()
-  })
-
   it('isOutingGym acepta string "true"', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', 'true')
     expect(screen.getByText(/salir del gym/i)).toBeInTheDocument()
   })
 
   it('variables desconocidas no rompen la UI', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     expect(() => simulateVar('variableRara', 123)).not.toThrow()
   })
 })
 
 // ══════════════════════════════════════════════════════════════
 // SUITE 3 — Panel de secciones
+// Usa seccionIdxInicial=99 → seccionActiva=null → panel muestra lista
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — panel secciones', () => {
-  beforeEach(() => { capturedOnVariableChange = undefined })
+  beforeEach(() => {
+    capturedOnVariableChange = undefined
+    mockPush.mockClear()
+  })
 
   it('abre panel al clicar Entrenar', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+    render(<GymSalaPage seccionIdxInicial={99} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-
     expect(screen.getByText(/elige una sección/i)).toBeInTheDocument()
   })
 
   it('muestra sección "Do Mayor" en el panel', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+    render(<GymSalaPage seccionIdxInicial={99} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-
     expect(screen.getByText('Do Mayor')).toBeInTheDocument()
   })
 
   it('muestra todas las secciones del instrumento', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+    render(<GymSalaPage seccionIdxInicial={99} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-
     expect(screen.getByText('Do Mayor')).toBeInTheDocument()
     expect(screen.getByText('Sol Mayor')).toBeInTheDocument()
   })
 
   it('navega a recursos al seleccionar sección "Do Mayor"', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+    render(<GymSalaPage seccionIdxInicial={99} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     fireEvent.click(screen.getByText('Do Mayor'))
-
     expect(screen.getByText('Acorde Do')).toBeInTheDocument()
   })
 
-  it('botón ← Secciones vuelve a la lista de secciones', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+  it('X cierra el panel de secciones', () => {
+    render(<GymSalaPage seccionIdxInicial={99} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-    fireEvent.click(screen.getByText('Do Mayor'))
-
-    // El botón de volver dice "Secciones" (ArrowLeft es SVG, no texto)
-    fireEvent.click(screen.getByRole('button', { name: /secciones/i }))
-
     expect(screen.getByText(/elige una sección/i)).toBeInTheDocument()
-    expect(screen.getByText('Do Mayor')).toBeInTheDocument()
+
+    // El X del panel de secciones cierra el panel
+    const xButtons = screen.getAllByRole('button')
+    const closeBtn = xButtons.find(b => b.querySelector('svg'))
+    if (closeBtn) fireEvent.click(closeBtn)
+
+    expect(screen.queryByText(/elige una sección/i)).not.toBeInTheDocument()
   })
 })
 
@@ -246,10 +255,14 @@ describe('GymSalaPage — panel secciones', () => {
 // SUITE 4 — Apertura directa con seccionIdxInicial
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — seccionIdxInicial (ruta /gym/[instrumento]/[idx])', () => {
-  beforeEach(() => { mockPush.mockClear() })
+  beforeEach(() => {
+    capturedOnVariableChange = undefined
+    mockPush.mockClear()
+  })
 
-  it('con seccionIdxInicial=0 abre directamente el panel de recursos', () => {
+  it('con seccionIdxInicial=0: al clicar Entrenar ve recursos de "Do Mayor"', () => {
     render(<GymSalaPage seccionIdxInicial={0} />)
+    fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     expect(screen.getByText('Acorde Do')).toBeInTheDocument()
   })
 
@@ -258,8 +271,9 @@ describe('GymSalaPage — seccionIdxInicial (ruta /gym/[instrumento]/[idx])', ()
     expect(screen.queryByTestId('tapete-card')).not.toBeInTheDocument()
   })
 
-  it('con seccionIdxInicial=1 abre la segunda sección', () => {
+  it('con seccionIdxInicial=1: al clicar Entrenar ve recursos de "Sol Mayor"', () => {
     render(<GymSalaPage seccionIdxInicial={1} />)
+    fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     expect(screen.getByText('Acorde Sol PDF')).toBeInTheDocument()
   })
 
@@ -267,11 +281,13 @@ describe('GymSalaPage — seccionIdxInicial (ruta /gym/[instrumento]/[idx])', ()
     expect(() => render(<GymSalaPage seccionIdxInicial={99} />)).not.toThrow()
   })
 
-  it('con seccionIdxInicial, el botón ← navega de vuelta al instrumento', () => {
+  it('"← Mapa" en el panel de recursos navega a /escuela', () => {
     render(<GymSalaPage seccionIdxInicial={0} />)
-    // El botón "← Secciones" navega a /escuela/gym/guitarra cuando viene de URL
-    fireEvent.click(screen.getByRole('button', { name: /secciones/i }))
-    expect(mockPush).toHaveBeenCalledWith('/escuela/gym/guitarra')
+    fireEvent.click(screen.getByText(/🏋️ entrenar/i))
+    // Dentro del panel de recursos hay un botón con texto "Mapa"
+    const mapaButtons = screen.getAllByText(/mapa/i)
+    fireEvent.click(mapaButtons[0])
+    expect(mockPush).toHaveBeenCalledWith('/escuela')
   })
 })
 
@@ -285,90 +301,83 @@ describe('GymSalaPage — panel salida', () => {
   })
 
   it('abre panel de salida al clicar "← Salir del Gym"', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
-
     expect(screen.getByText(/a dónde quieres ir/i)).toBeInTheDocument()
   })
 
   it('muestra opción "Volver al Mapa"', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
-
     expect(screen.getByText('Volver al Mapa')).toBeInTheDocument()
   })
 
   it('"Volver al Mapa" navega a /escuela', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
     fireEvent.click(screen.getByText('Volver al Mapa'))
-
     expect(mockPush).toHaveBeenCalledWith('/escuela')
   })
 
   it('muestra lista "CAMBIAR DE SECCIÓN" en el panel de salida', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
-
     expect(screen.getByText(/cambiar de sección/i)).toBeInTheDocument()
   })
 
   it('el panel de salida lista todas las secciones del instrumento', () => {
-    render(<GymSalaPage />)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
-
     expect(screen.getByText('Do Mayor')).toBeInTheDocument()
     expect(screen.getByText('Sol Mayor')).toBeInTheDocument()
   })
 
-  it('navegar a otra sección desde el panel de salida llama router.push con el índice', () => {
-    render(<GymSalaPage />)
+  it('navegar a Sol Mayor desde salida llama router.push con índice 1', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
     simulateVar('isOutingGym', true)
     fireEvent.click(screen.getByText(/salir del gym/i))
-
-    // Click en "Sol Mayor" (índice 1) — no hay sección activa, no es "esActual"
+    // seccionActiva=Do Mayor (idx=0), Sol Mayor (idx=1) no es la actual → navega
     fireEvent.click(screen.getByText('Sol Mayor'))
-
     expect(mockPush).toHaveBeenCalledWith('/escuela/gym/guitarra/1')
   })
 })
 
 // ══════════════════════════════════════════════════════════════
-// SUITE 6 — Fallback timer (3s tras tapete dismiss)
+// SUITE 6 — Hint "pisa el tapete" (solo visible cuando seccionActiva=null)
 // ══════════════════════════════════════════════════════════════
-describe('GymSalaPage — fallback timer móvil', () => {
+describe('GymSalaPage — hint pisa el tapete', () => {
   beforeEach(() => {
     capturedOnVariableChange = undefined
     jest.useFakeTimers()
   })
   afterEach(() => { jest.useRealTimers() })
 
-  it('NO muestra botón Entrenar antes de 3s después del tapete', () => {
-    render(<GymSalaPage />)
-    fireEvent.click(screen.getByText('Entendido'))
-
-    act(() => { jest.advanceTimersByTime(2_999) })
-    expect(screen.queryByText(/🏋️ entrenar/i)).not.toBeInTheDocument()
+  it('muestra hint cuando seccionActiva es null (idx fuera de rango)', () => {
+    render(<GymSalaPage seccionIdxInicial={99} />)
+    expect(screen.getByText(/pisa el tapete para iniciar/i)).toBeInTheDocument()
   })
 
-  it('muestra botón Entrenar a los 3s después de cerrar el tapete', () => {
-    render(<GymSalaPage />)
-    fireEvent.click(screen.getByText('Entendido'))
+  it('NO muestra hint cuando seccionActiva está establecida (idx válido)', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
+    expect(screen.queryByText(/pisa el tapete para iniciar/i)).not.toBeInTheDocument()
+  })
 
+  it('hint desaparece después de 3s (fallback timer)', () => {
+    render(<GymSalaPage seccionIdxInicial={99} />)
+    expect(screen.getByText(/pisa el tapete para iniciar/i)).toBeInTheDocument()
     act(() => { jest.advanceTimersByTime(3_000) })
-    expect(screen.getByText(/🏋️ entrenar/i)).toBeInTheDocument()
+    expect(screen.queryByText(/pisa el tapete para iniciar/i)).not.toBeInTheDocument()
   })
 
   it('NO muestra fallback si el panel ya está abierto (seccionIdxInicial)', () => {
     render(<GymSalaPage seccionIdxInicial={0} />)
-    // Panel abierto desde inicio — no debe aparecer botón de entrenar además del panel
+    fireEvent.click(screen.getByText(/🏋️ entrenar/i))
     act(() => { jest.advanceTimersByTime(3_000) })
-    // El panel de recursos debe estar visible, no el botón flotante
     expect(screen.getByText('Acorde Do')).toBeInTheDocument()
   })
 })
@@ -377,26 +386,20 @@ describe('GymSalaPage — fallback timer móvil', () => {
 // SUITE 7 — Reproductor de video (YouTube)
 // ══════════════════════════════════════════════════════════════
 describe('GymSalaPage — reproductor de video', () => {
-  beforeEach(() => { capturedOnVariableChange = undefined })
+  beforeEach(() => { capturedOnVariableChange = undefined }
+  )
 
-  it('muestra thumbnail de YouTube al abrir sección con video', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+  it('muestra thumbnail de YouTube al abrir panel con sección de video', () => {
+    render(<GymSalaPage seccionIdxInicial={0} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-    fireEvent.click(screen.getByText('Do Mayor'))
-
     const img = screen.getByRole('img', { name: /acorde do/i })
     expect(img).toHaveAttribute('src', expect.stringContaining('img.youtube.com'))
   })
 
   it('abre el overlay de video al clicar el thumbnail', () => {
-    render(<GymSalaPage />)
-    simulateVar('isTrainning', true)
+    render(<GymSalaPage seccionIdxInicial={0} />)
     fireEvent.click(screen.getByText(/🏋️ entrenar/i))
-    fireEvent.click(screen.getByText('Do Mayor'))
     fireEvent.click(screen.getByRole('img', { name: /acorde do/i }))
-
-    // El overlay muestra el label del video
     const titles = screen.getAllByText('Acorde Do')
     expect(titles.length).toBeGreaterThan(0)
   })

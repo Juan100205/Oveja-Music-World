@@ -636,8 +636,36 @@ export default function AdminPage() {
                 No hay instrumentos registrados todavía.
               </p>
               <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
-                Usa el botón &quot;Nuevo instrumento&quot; para agregar.
+                Usa el botón de abajo para cargar los instrumentos base, o &quot;Nuevo instrumento&quot; para agregar uno manual.
               </p>
+              <motion.button
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                onClick={async () => {
+                  try {
+                    const res = await fetch('/api/admin/seed-instrumentos', {
+                      method: 'POST',
+                      headers: { Authorization: `Bearer ${token}` },
+                    })
+                    const data = await res.json()
+                    if (res.ok) {
+                      await fetchInstrumentos()
+                    } else {
+                      setError(data.error ?? 'Error al cargar instrumentos')
+                    }
+                  } catch {
+                    setError('Error de conexión')
+                  }
+                }}
+                style={{
+                  marginTop: 20, padding: '12px 28px', borderRadius: 999,
+                  background: 'linear-gradient(135deg, var(--om-blue), var(--om-purple))',
+                  border: 'none', color: '#fff',
+                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                  cursor: 'pointer', boxShadow: '0 0 24px rgba(61,184,250,0.3)',
+                }}
+              >
+                🎵 Cargar instrumentos base
+              </motion.button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

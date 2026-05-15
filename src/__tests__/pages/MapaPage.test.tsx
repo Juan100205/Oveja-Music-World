@@ -79,32 +79,37 @@ jest.mock('@/data/cursos', () => ({
   CURSOS: [],
 }))
 
+const MOCK_CLASES = [
+  {
+    id: 'guitarra',
+    nombre: 'Guitarra',
+    emoji: '🎸',
+    descripcion: 'Rock y pop',
+    color: '#ec488a',
+    glow: 'rgba(236,72,138,0.4)',
+    cursoId: 'curso-guitarra',
+  },
+]
+const MOCK_GYM = [
+  {
+    id: 'gym-general',
+    nombre: 'General',
+    emoji: '💪',
+    descripcion: 'Entrenamiento general',
+    color: '#3db8fa',
+    glow: 'rgba(61,184,250,0.4)',
+    modulos: [],
+  },
+]
+
 jest.mock('@/hooks/useInstrumentos', () => ({
   useInstrumentos: () => ({
-    clases: [
-      {
-        id: 'guitarra',
-        nombre: 'Guitarra',
-        emoji: '🎸',
-        descripcion: 'Rock y pop',
-        color: '#ec488a',
-        glow: 'rgba(236,72,138,0.4)',
-        cursoId: 'curso-guitarra',
-      },
-    ],
-    gym: [
-      {
-        id: 'gym-general',
-        nombre: 'General',
-        emoji: '💪',
-        descripcion: 'Entrenamiento general',
-        color: '#3db8fa',
-        glow: 'rgba(61,184,250,0.4)',
-        modulos: [],
-      },
-    ],
+    clases:    MOCK_CLASES,
+    gym:       MOCK_GYM,
+    dbClases:  MOCK_CLASES,
+    dbGym:     MOCK_GYM,
     cursosMap: [],
-    loading: false,
+    loading:   false,
   }),
 }))
 
@@ -112,10 +117,13 @@ import MapaPage from '@/app/escuela/page'
 
 // ── Helpers ────────────────────────────────────────────────────
 function setDesktop() {
-  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 1280 })
+  Object.defineProperty(window, 'innerWidth',  { writable: true, configurable: true, value: 1280 })
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 800 })
 }
 function setMobile() {
-  Object.defineProperty(window, 'innerWidth', { writable: true, configurable: true, value: 375 })
+  // landscape: width > height so isPortrait=false and mobile buttons appear
+  Object.defineProperty(window, 'innerWidth',  { writable: true, configurable: true, value: 667 })
+  Object.defineProperty(window, 'innerHeight', { writable: true, configurable: true, value: 375 })
 }
 
 function simulateVar(name: string, value: unknown) {
@@ -336,22 +344,23 @@ describe('MapaPage — panel Gym', () => {
 describe('MapaPage — filtro clases_acceso', () => {
   beforeEach(() => {
     setDesktop()
+    localStorage.clear()
     capturedOnVariableChange = undefined
     mockUser = { role: 'admin', clases_acceso: ['guitarra'] }
   })
 
-  it('usuario student sin clases_acceso ve "Sin clases asignadas"', () => {
+  it('usuario student sin clases_acceso ve "Sin clases disponibles"', () => {
     mockUser = { role: 'student' }
     render(<MapaPage />)
     simulateVar('IsOverSchool', true)
-    expect(screen.getByText(/sin clases asignadas/i)).toBeInTheDocument()
+    expect(screen.getByText(/sin clases disponibles/i)).toBeInTheDocument()
   })
 
-  it('usuario student con clases_acceso=[] ve "Sin clases asignadas"', () => {
+  it('usuario student con clases_acceso=[] ve "Sin clases disponibles"', () => {
     mockUser = { role: 'student', clases_acceso: [] }
     render(<MapaPage />)
     simulateVar('IsOverSchool', true)
-    expect(screen.getByText(/sin clases asignadas/i)).toBeInTheDocument()
+    expect(screen.getByText(/sin clases disponibles/i)).toBeInTheDocument()
   })
 
   it('usuario student con clases_acceso=["guitarra"] ve Guitarra', () => {
@@ -359,7 +368,7 @@ describe('MapaPage — filtro clases_acceso', () => {
     render(<MapaPage />)
     simulateVar('IsOverSchool', true)
     expect(screen.getByText('Guitarra')).toBeInTheDocument()
-    expect(screen.queryByText(/sin clases asignadas/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/sin clases disponibles/i)).not.toBeInTheDocument()
   })
 
   it('gym-general siempre visible sin clases_acceso', () => {
@@ -392,6 +401,7 @@ describe('MapaPage — filtro clases_acceso', () => {
 describe('MapaPage — navegación móvil', () => {
   beforeEach(() => {
     setMobile()
+    localStorage.clear()
     capturedOnVariableChange = undefined
     mockUser = { role: 'admin', clases_acceso: ['guitarra'] }
     mockPush.mockClear()
@@ -399,12 +409,13 @@ describe('MapaPage — navegación móvil', () => {
 
   afterEach(() => {
     setDesktop()
+    localStorage.clear()
   })
 
-  it('NO muestra botones móviles mientras el tapete está activo', () => {
+  it('muestra botones móviles en landscape aunque el tapete esté activo', () => {
     render(<MapaPage />)
-    expect(screen.queryByRole('button', { name: /clases/i })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: /gym/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /clases/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /gym/i })).toBeInTheDocument()
   })
 
   it('muestra botón "📚 Clases" tras cerrar el tapete', () => {
