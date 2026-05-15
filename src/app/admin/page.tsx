@@ -625,19 +625,17 @@ export default function AdminPage() {
       {activeTab === 'instrumentos' && (
         <div style={{ padding: '24px 20px', maxWidth: 860, margin: '0 auto' }}>
 
-          {fetchingInstrs ? (
-            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
-              Cargando instrumentos...
-            </div>
-          ) : instrumentos.length === 0 ? (
-            <div style={{ textAlign: 'center', padding: '60px 0' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>🎵</div>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>
-                No hay instrumentos registrados todavía.
-              </p>
-              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.2)', marginTop: 6 }}>
-                Usa el botón de abajo para cargar los instrumentos base, o &quot;Nuevo instrumento&quot; para agregar uno manual.
-              </p>
+          {/* Botón de sincronización — siempre visible para subir datos a la base */}
+          {!fetchingInstrs && (
+            <div style={{ marginBottom: 20, padding: '14px 18px', borderRadius: 14, background: 'rgba(61,184,250,0.07)', border: '1px solid rgba(61,184,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+              <div>
+                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
+                  {instrumentos.length === 0 ? '⚠️ Sin datos en la base — los instrumentos solo existen en el código' : `✅ ${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''} en la base`}
+                </p>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
+                  {instrumentos.length === 0 ? 'Sincroniza para que aparezcan en la app' : 'Vuelve a sincronizar si agregaste o editaste instrumentos en el código'}
+                </p>
+              </div>
               <motion.button
                 whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
                 onClick={async () => {
@@ -650,22 +648,28 @@ export default function AdminPage() {
                     if (res.ok) {
                       await fetchInstrumentos()
                     } else {
-                      setError(data.error ?? 'Error al cargar instrumentos')
+                      setError(data.error ?? 'Error al sincronizar')
                     }
                   } catch {
                     setError('Error de conexión')
                   }
                 }}
                 style={{
-                  marginTop: 20, padding: '12px 28px', borderRadius: 999,
+                  padding: '10px 22px', borderRadius: 999, flexShrink: 0,
                   background: 'linear-gradient(135deg, var(--om-blue), var(--om-purple))',
                   border: 'none', color: '#fff',
-                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
-                  cursor: 'pointer', boxShadow: '0 0 24px rgba(61,184,250,0.3)',
+                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
+                  cursor: 'pointer', boxShadow: '0 0 20px rgba(61,184,250,0.25)',
                 }}
               >
-                🎵 Cargar instrumentos base
+                🔄 Sincronizar con la app
               </motion.button>
+            </div>
+          )}
+
+          {fetchingInstrs ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
+              Cargando instrumentos...
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
