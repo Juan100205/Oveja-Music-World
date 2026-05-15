@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
       m.secciones.map((s, i) => ({
         id:        slugUUID(`${m.id}-sec-${i}`),
         nombre:    s.nombre,
-        zona:      s.zona ?? 'ambos',
+        zona:      s.zona ?? null,
         orden:     i,
         modulo_id: moduloUUID[m.id],
       }))
