@@ -330,11 +330,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
+      {/* Spline siempre montado — RotateScreen lo cubre en portrait como overlay */}
+      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
       {isMobile && isPortrait && <RotateScreen />}
-
-      {(!isMobile || !isPortrait) && (
-        <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
-      )}
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 

@@ -10,7 +10,7 @@ import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
 import { CURSOS } from '@/data/cursos'
-import type { Modulo } from '@/data/cursos'
+import type { Modulo, Seccion } from '@/data/cursos'
 import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
@@ -335,6 +335,7 @@ export default function MapaPage() {
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
   const [gymInstrSeleccionado, setGymInstrSeleccionado] = useState<GymInstrumento | null>(null)
+  const [gymDbSecciones, setGymDbSecciones] = useState<Record<string, Seccion[]>>({})
 
   // Logout
   const [showLogout, setShowLogout] = useState(false)
@@ -416,6 +417,25 @@ export default function MapaPage() {
       .catch(() => { /* fallback silencioso a datos estaticos */ })
   }, [token, claseSeleccionada?.cursoId, modulosDb])
 
+  // Fetch gym sections from DB when an instrument is selected
+  useEffect(() => {
+    if (!token || !gymInstrSeleccionado) return
+    const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
+    if (gymDbSecciones[cursoId]) return
+    fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
+      .then(r => r.ok ? r.json() : null)
+      .then(data => {
+        const allSecs = (data?.modulos ?? []).flatMap(
+          (m: { secciones?: Seccion[] }) => m.secciones ?? []
+        )
+        const gymSecs = allSecs.filter((s: Seccion) => s.zona !== 'clase')
+        if (gymSecs.length > 0) {
+          setGymDbSecciones(prev => ({ ...prev, [cursoId]: gymSecs }))
+        }
+      })
+      .catch(() => {})
+  }, [token, gymInstrSeleccionado?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const modulosClase = claseSeleccionada
     ? (CURSOS.find(c => c.id === claseSeleccionada.cursoId)?.modulos ?? [])
       .filter(m => !isPracticeModule(m.nombre))
@@ -431,9 +451,13 @@ export default function MapaPage() {
 
   const { clases: allClases, gym: allGym } = useInstrumentos(token ?? null)
 
-  // Secciones del instrumento gym seleccionado (siempre de datos estáticos)
+  // Secciones del instrumento gym seleccionado (DB-first, static fallback)
   const gymSeccionesVista = gymInstrSeleccionado
-    ? getSecciones(GYM_INSTRUMENTOS.find(g => g.id === gymInstrSeleccionado.id) ?? gymInstrSeleccionado)
+    ? (() => {
+        const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
+        return gymDbSecciones[cursoId]
+          ?? getSecciones(GYM_INSTRUMENTOS.find(g => g.id === gymInstrSeleccionado.id) ?? gymInstrSeleccionado)
+      })()
     : []
 
   // Filtrar por acceso — admins ven todo
@@ -451,16 +475,12 @@ export default function MapaPage() {
     <main className="relative w-full overflow-hidden"
       style={{ width: '100vw', height: '100dvh', background: '#0a0a1a' }}>
 
-      {/* Bloquear en móvil portrait — Spline no carga ni se descarga */}
+      {/* Spline siempre montado — RotateScreen lo cubre en portrait como overlay */}
+      <SplineScene
+        scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"
+        onVariableChange={handleVariableChange}
+      />
       {isMobile && isPortrait && <RotateScreen />}
-
-      {/* Spline solo en desktop o móvil landscape */}
-      {(!isMobile || !isPortrait) && (
-        <SplineScene
-          scene="https://prod.spline.design/WpjnQukgytAKxnYq/scene.splinecode"
-          onVariableChange={handleVariableChange}
-        />
-      )}
 
       <TapeteCard show={showTapeteHint} onDismiss={dismissTapeteHint} sala="mapa" />
 

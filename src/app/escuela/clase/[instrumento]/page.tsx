@@ -391,11 +391,9 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
+      {/* Spline siempre montado — RotateScreen lo cubre en portrait como overlay */}
+      <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
       {isMobile && isPortrait && <RotateScreen />}
-
-      {(!isMobile || !isPortrait) && (
-        <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
-      )}
 
       <LevelProgressPanel
         puntos={user?.puntos ?? 0}
