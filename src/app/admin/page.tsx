@@ -60,6 +60,45 @@ const ROLES = [
   { value: 'admin',   label: 'Admin' },
 ]
 
+// ── Sync content button ────────────────────────────────────────
+function SyncContentButton({ token, onError }: { token: string; onError: (msg: string) => void }) {
+  const [syncing, setSyncing] = useState(false)
+  const [result, setResult] = useState<{ cursos: number; modulos: number; secciones: number; recursos: number } | null>(null)
+
+  return (
+    <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(155,84,249,0.07)', border: '1px solid rgba(155,84,249,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+      <div>
+        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
+          {result ? `✅ ${result.cursos} cursos · ${result.modulos} módulos · ${result.secciones} secciones · ${result.recursos} recursos` : '📚 Contenido: cursos, módulos, secciones y recursos'}
+        </p>
+        <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
+          {result ? 'Sincronizado correctamente' : 'Videos, PDFs y materiales de clase y gym'}
+        </p>
+      </div>
+      <motion.button
+        whileHover={{ scale: syncing ? 1 : 1.04 }} whileTap={{ scale: syncing ? 1 : 0.97 }}
+        onClick={async () => {
+          if (syncing) return
+          setSyncing(true)
+          try {
+            const res = await fetch('/api/admin/seed-content', {
+              method: 'POST',
+              headers: { Authorization: `Bearer ${token}` },
+            })
+            const data = await res.json()
+            if (res.ok) setResult(data)
+            else onError(data.error ?? 'Error al sincronizar contenido')
+          } catch { onError('Error de conexión') }
+          finally { setSyncing(false) }
+        }}
+        style={{ padding: '10px 22px', borderRadius: 999, flexShrink: 0, background: 'linear-gradient(135deg, var(--om-purple), #c084ff)', border: 'none', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.7 : 1, boxShadow: '0 0 20px rgba(155,84,249,0.25)' }}
+      >
+        {syncing ? '⏳ Sincronizando...' : '🔄 Sincronizar contenido'}
+      </motion.button>
+    </div>
+  )
+}
+
 // ── Helpers visuales ───────────────────────────────────────────
 function initials(u: AdminUser) {
   if (u.nombre) return u.nombre.split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2)
@@ -625,45 +664,42 @@ export default function AdminPage() {
       {activeTab === 'instrumentos' && (
         <div style={{ padding: '24px 20px', maxWidth: 860, margin: '0 auto' }}>
 
-          {/* Botón de sincronización — siempre visible para subir datos a la base */}
+          {/* ── Sincronización de datos ── */}
           {!fetchingInstrs && (
-            <div style={{ marginBottom: 20, padding: '14px 18px', borderRadius: 14, background: 'rgba(61,184,250,0.07)', border: '1px solid rgba(61,184,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-              <div>
-                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
-                  {instrumentos.length === 0 ? '⚠️ Sin datos en la base — los instrumentos solo existen en el código' : `✅ ${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''} en la base`}
-                </p>
-                <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
-                  {instrumentos.length === 0 ? 'Sincroniza para que aparezcan en la app' : 'Vuelve a sincronizar si agregaste o editaste instrumentos en el código'}
-                </p>
+            <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
+
+              {/* Instrumentos */}
+              <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(61,184,250,0.07)', border: '1px solid rgba(61,184,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
+                    {instrumentos.length === 0 ? '⚠️ Instrumentos: solo en el código' : `✅ ${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''} en la base`}
+                  </p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
+                    Instrumentos que aparecen en el mapa de la escuela
+                  </p>
+                </div>
+                <motion.button
+                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
+                  onClick={async () => {
+                    try {
+                      const res = await fetch('/api/admin/seed-instrumentos', {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${token}` },
+                      })
+                      const data = await res.json()
+                      if (res.ok) await fetchInstrumentos()
+                      else setError(data.error ?? 'Error al sincronizar')
+                    } catch { setError('Error de conexión') }
+                  }}
+                  style={{ padding: '10px 22px', borderRadius: 999, flexShrink: 0, background: 'linear-gradient(135deg, var(--om-blue), var(--om-purple))', border: 'none', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 0 20px rgba(61,184,250,0.25)' }}
+                >
+                  🔄 Sincronizar instrumentos
+                </motion.button>
               </div>
-              <motion.button
-                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                onClick={async () => {
-                  try {
-                    const res = await fetch('/api/admin/seed-instrumentos', {
-                      method: 'POST',
-                      headers: { Authorization: `Bearer ${token}` },
-                    })
-                    const data = await res.json()
-                    if (res.ok) {
-                      await fetchInstrumentos()
-                    } else {
-                      setError(data.error ?? 'Error al sincronizar')
-                    }
-                  } catch {
-                    setError('Error de conexión')
-                  }
-                }}
-                style={{
-                  padding: '10px 22px', borderRadius: 999, flexShrink: 0,
-                  background: 'linear-gradient(135deg, var(--om-blue), var(--om-purple))',
-                  border: 'none', color: '#fff',
-                  fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
-                  cursor: 'pointer', boxShadow: '0 0 20px rgba(61,184,250,0.25)',
-                }}
-              >
-                🔄 Sincronizar con la app
-              </motion.button>
+
+              {/* Contenido (cursos, módulos, secciones, recursos) */}
+              <SyncContentButton token={token ?? ''} onError={setError} />
+
             </div>
           )}
 
