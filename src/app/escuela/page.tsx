@@ -9,8 +9,8 @@ import SplineScene from '@/components/spline/SplineScene'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
-import type { Modulo, Seccion } from '@/data/cursos'
-import type { GymInstrumento } from '@/data/gym'
+import { CURSOS, type Modulo, type Seccion } from '@/data/cursos'
+import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
@@ -435,16 +435,27 @@ export default function MapaPage() {
       .catch(() => {})
   }, [token, gymInstrSeleccionado?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Solo DB — sin fallback estático, para ver exactamente qué hay en Supabase
+  // DB primero, fallback a datos estáticos si DB está vacía
   const modulosClaseVista = claseSeleccionada
-    ? (modulosDb[claseSeleccionada.cursoId] ?? []).filter(m => !isPracticeModule(m.nombre))
+    ? (() => {
+        const dbMods = modulosDb[claseSeleccionada.cursoId]
+        if (dbMods && dbMods.length > 0) return dbMods.filter(m => !isPracticeModule(m.nombre))
+        const curso = CURSOS.find(c => c.id === claseSeleccionada.cursoId)
+        return (curso?.modulos ?? []).filter(m => !isPracticeModule(m.nombre))
+      })()
     : []
 
   const { dbClases, dbGym, loading: instrLoading } = useInstrumentos(token ?? null)
 
-  // Secciones del instrumento gym seleccionado (solo DB)
+  // Secciones del instrumento gym: DB primero, fallback a estático
   const gymSeccionesVista = gymInstrSeleccionado
-    ? gymDbSecciones[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id] ?? []
+    ? (() => {
+        const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
+        const dbSecs = gymDbSecciones[cursoId]
+        if (dbSecs && dbSecs.length > 0) return dbSecs
+        const staticInstr = GYM_INSTRUMENTOS.find(g => g.id === gymInstrSeleccionado.id)
+        return staticInstr ? getSecciones(staticInstr) : []
+      })()
     : []
 
   // Filtrar por acceso — admins ven todo
