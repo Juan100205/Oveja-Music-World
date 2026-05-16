@@ -337,8 +337,14 @@ export default function MapaPage() {
   const { isMobile, isPortrait } = useOrientation()
 
   // Delayed close refs — prevent mobile touch-release from instantly closing panels
-  const gymCloseRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const gymCloseRef   = useRef<ReturnType<typeof setTimeout> | null>(null)
   const claseCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  // Refs espejo de los estados de panel — para usarlos en handleVariableChange
+  // sin añadirlos como dependencias del useCallback (lo haría inestable).
+  const gymOpenRef   = useRef(false)
+  const clasesOpenRef = useRef(false)
+  useEffect(() => { gymOpenRef.current   = gymOpen   }, [gymOpen])
+  useEffect(() => { clasesOpenRef.current = clasesOpen }, [clasesOpen])
 
   // Tapete hint: persist dismissal in localStorage so it doesn't repeat on every navigation
   const [showTapeteHint, setShowTapeteHint] = useState(false)
@@ -367,9 +373,9 @@ export default function MapaPage() {
       flushSync(() => setOverGym(isTrue))
       if (isTrue) {
         if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
-        if (!gymOpen && !clasesOpen) setGymOpen(true)
+        // Lee del ref para no necesitar gymOpen/clasesOpen como dependencias
+        if (!gymOpenRef.current && !clasesOpenRef.current) setGymOpen(true)
       } else {
-        // Small delay before closing — prevents mobile touch-release from instantly closing
         if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
         gymCloseRef.current = setTimeout(() => { setGymOpen(false); setGymInstrSeleccionado(null) }, 600)
       }
@@ -378,7 +384,7 @@ export default function MapaPage() {
       flushSync(() => setOverSchool(isTrue))
       if (isTrue) {
         if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
-        if (!clasesOpen && !gymOpen) setClasesOpen(true)
+        if (!clasesOpenRef.current && !gymOpenRef.current) setClasesOpen(true)
       } else {
         if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
         claseCloseRef.current = setTimeout(() => {
@@ -387,7 +393,7 @@ export default function MapaPage() {
         }, 600)
       }
     }
-  }, [clasesOpen, gymOpen])
+  }, []) // estable — usa refs en lugar de estado directo
 
   const anyOpen = clasesOpen || gymOpen
 

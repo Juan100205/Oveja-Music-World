@@ -136,8 +136,8 @@ const SplineScene = React.memo(function SplineScene({
     }
   }, [scene])
 
-  // Pause the variable-polling interval when the tab is hidden to free CPU.
-  // Resume automatically when the tab becomes visible again.
+  // Restart the poll whenever onVariableChange changes (parent re-renders with a new callback).
+  // Also handles tab visibility: pause when hidden, resume when visible.
   useEffect(() => {
     if (!loaded || !onVariableChange) return
 
@@ -166,6 +166,11 @@ const SplineScene = React.memo(function SplineScene({
       if (document.hidden) stopPoll()
       else startPoll()
     }
+
+    // Always (re)start the poll when this effect runs — covers the case where a
+    // new onVariableChange caused the previous effect's cleanup to call stopPoll().
+    stopPoll()
+    if (!document.hidden) startPoll()
 
     document.addEventListener('visibilitychange', handleVisibility)
     return () => {
