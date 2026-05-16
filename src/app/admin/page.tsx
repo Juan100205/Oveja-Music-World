@@ -45,14 +45,6 @@ const EMPTY_INSTR_FORM = {
 }
 
 // ── Mapa de cursos disponibles ─────────────────────────────────
-const CURSOS_MAP = [
-  { cursoId: 'piano',          claseId: 'piano',        label: 'Piano',      emoji: '🎹', color: '#ec488a' },
-  { cursoId: 'bateria',        claseId: 'bateria',      label: 'Batería',    emoji: '🥁', color: '#3db8fa' },
-  { cursoId: 'guitarra-adultos', claseId: 'guitarra',   label: 'Guitarra',   emoji: '🎸', color: '#ffa737' },
-  { cursoId: 'violin',         claseId: 'violin',       label: 'Violín',     emoji: '🎻', color: '#9b54f9' },
-  { cursoId: 'ciudad-musical', claseId: 'introduccion', label: 'Iniciación', emoji: '🎵', color: '#3db8fa' },
-  { cursoId: 'canto',          claseId: 'canto',        label: 'Canto',      emoji: '🎤', color: '#ffa737' },
-]
 
 const ROLES = [
   { value: 'student', label: 'Estudiante' },
@@ -60,44 +52,6 @@ const ROLES = [
   { value: 'admin',   label: 'Admin' },
 ]
 
-// ── Sync content button ────────────────────────────────────────
-function SyncContentButton({ token, onError }: { token: string; onError: (msg: string) => void }) {
-  const [syncing, setSyncing] = useState(false)
-  const [result, setResult] = useState<{ cursos: number; modulos: number; secciones: number; recursos: number } | null>(null)
-
-  return (
-    <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(155,84,249,0.07)', border: '1px solid rgba(155,84,249,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-      <div>
-        <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
-          {result ? `✅ ${result.cursos} cursos · ${result.modulos} módulos · ${result.secciones} secciones · ${result.recursos} recursos` : '📚 Contenido: cursos, módulos, secciones y recursos'}
-        </p>
-        <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
-          {result ? 'Sincronizado correctamente' : 'Videos, PDFs y materiales de clase y gym'}
-        </p>
-      </div>
-      <motion.button
-        whileHover={{ scale: syncing ? 1 : 1.04 }} whileTap={{ scale: syncing ? 1 : 0.97 }}
-        onClick={async () => {
-          if (syncing) return
-          setSyncing(true)
-          try {
-            const res = await fetch('/api/admin/seed-content', {
-              method: 'POST',
-              headers: { Authorization: `Bearer ${token}` },
-            })
-            const data = await res.json()
-            if (res.ok) setResult(data)
-            else onError(data.error ?? 'Error al sincronizar contenido')
-          } catch { onError('Error de conexión') }
-          finally { setSyncing(false) }
-        }}
-        style={{ padding: '10px 22px', borderRadius: 999, flexShrink: 0, background: 'linear-gradient(135deg, var(--om-purple), #c084ff)', border: 'none', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, cursor: syncing ? 'wait' : 'pointer', opacity: syncing ? 0.7 : 1, boxShadow: '0 0 20px rgba(155,84,249,0.25)' }}
-      >
-        {syncing ? '⏳ Sincronizando...' : '🔄 Sincronizar contenido'}
-      </motion.button>
-    </div>
-  )
-}
 
 // ── Helpers visuales ───────────────────────────────────────────
 function initials(u: AdminUser) {
@@ -302,26 +256,8 @@ export default function AdminPage() {
     if (isAuthenticated && user?.role === 'admin') fetchUsers()
   }, [isAuthenticated, user, fetchUsers])
 
-  // ── Instrumentos consolidados (Estáticos + DB) ───────
-  const mergeInstrs = (staticList: any[], dynamicList: Instrumento[]): Instrumento[] => {
-    const dynIds = new Set(dynamicList.map(d => d.id))
-    const filteredStatic = staticList.map(s => ({
-      id: s.id || s.claseId,
-      nombre: s.nombre || s.label,
-      emoji: s.emoji,
-      descripcion: s.descripcion || '',
-      color: s.color?.includes('gradient') ? s.color.match(/#[0-9a-fA-F]{6}/)?.[0] ?? '#ec488a' : s.color,
-      glow: s.glow || 'rgba(255,255,255,0.2)',
-      zona: 'clase',
-      curso_id: s.cursoId || s.claseId,
-      orden: 0,
-      activo: true
-    })).filter(s => !dynIds.has(s.id))
-    return [...filteredStatic, ...dynamicList]
-  }
-
-  // Usamos el listado de clases estáticas base para asegurar que siempre aparezcan
-  const allInstrumentos = mergeInstrs(CURSOS_MAP, instrumentos)
+  // Solo DB — sin fallback estático
+  const allInstrumentos = instrumentos
 
   const activeCursosMap = allInstrumentos.map(i => ({
     cursoId: i.curso_id ?? i.id,
@@ -664,44 +600,6 @@ export default function AdminPage() {
       {activeTab === 'instrumentos' && (
         <div style={{ padding: '24px 20px', maxWidth: 860, margin: '0 auto' }}>
 
-          {/* ── Sincronización de datos ── */}
-          {!fetchingInstrs && (
-            <div style={{ marginBottom: 20, display: 'flex', flexDirection: 'column', gap: 10 }}>
-
-              {/* Instrumentos */}
-              <div style={{ padding: '14px 18px', borderRadius: 14, background: 'rgba(61,184,250,0.07)', border: '1px solid rgba(61,184,250,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-                <div>
-                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(255,255,255,0.8)', margin: 0 }}>
-                    {instrumentos.length === 0 ? '⚠️ Instrumentos: solo en el código' : `✅ ${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''} en la base`}
-                  </p>
-                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
-                    Instrumentos que aparecen en el mapa de la escuela
-                  </p>
-                </div>
-                <motion.button
-                  whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}
-                  onClick={async () => {
-                    try {
-                      const res = await fetch('/api/admin/seed-instrumentos', {
-                        method: 'POST',
-                        headers: { Authorization: `Bearer ${token}` },
-                      })
-                      const data = await res.json()
-                      if (res.ok) await fetchInstrumentos()
-                      else setError(data.error ?? 'Error al sincronizar')
-                    } catch { setError('Error de conexión') }
-                  }}
-                  style={{ padding: '10px 22px', borderRadius: 999, flexShrink: 0, background: 'linear-gradient(135deg, var(--om-blue), var(--om-purple))', border: 'none', color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: '0 0 20px rgba(61,184,250,0.25)' }}
-                >
-                  🔄 Sincronizar instrumentos
-                </motion.button>
-              </div>
-
-              {/* Contenido (cursos, módulos, secciones, recursos) */}
-              <SyncContentButton token={token ?? ''} onError={setError} />
-
-            </div>
-          )}
 
           {fetchingInstrs ? (
             <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
@@ -710,7 +608,6 @@ export default function AdminPage() {
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {allInstrumentos.map(inst => {
-                const isStaticOnly = !instrumentos.some(i => i.id === inst.id)
                 return (
                   <motion.div
                     key={inst.id}
@@ -721,7 +618,6 @@ export default function AdminPage() {
                       padding: '14px 18px', borderRadius: 14,
                       background: 'rgba(255,255,255,0.03)',
                       border: `1px solid ${inst.color}33`,
-                      opacity: isStaticOnly ? 0.7 : 1,
                     }}
                   >
                     {/* Emoji + color dot */}
@@ -748,11 +644,6 @@ export default function AdminPage() {
                         }}>
                           {inst.zona === 'clase' ? '🏫 Clase' : inst.zona === 'gym' ? '🏋️ Gym' : '↔ Ambos'}
                         </span>
-                        {isStaticOnly && (
-                          <span style={{ fontSize: 9, padding: '1px 5px', borderRadius: 4, background: 'rgba(255,255,255,0.1)', color: 'rgba(255,255,255,0.4)' }}>
-                            Código estático
-                          </span>
-                        )}
                       </div>
                       {inst.descripcion && (
                         <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.35)', margin: '3px 0 0' }}>
@@ -792,20 +683,18 @@ export default function AdminPage() {
                         <Pencil size={13} strokeWidth={1.5} />
                       </motion.button>
 
-                      {!isStaticOnly && (
-                        <motion.button
-                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-                          onClick={() => setInstrToDelete(inst)}
-                          style={{
-                            width: 32, height: 32, borderRadius: 8,
-                            background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
-                            color: 'rgba(255,82,82,0.7)', cursor: 'pointer',
-                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          }}
-                        >
-                          <Trash2 size={13} strokeWidth={1.5} />
-                        </motion.button>
-                      )}
+                      <motion.button
+                        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                        onClick={() => setInstrToDelete(inst)}
+                        style={{
+                          width: 32, height: 32, borderRadius: 8,
+                          background: 'rgba(255,82,82,0.1)', border: '1px solid rgba(255,82,82,0.2)',
+                          color: 'rgba(255,82,82,0.7)', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        }}
+                      >
+                        <Trash2 size={13} strokeWidth={1.5} />
+                      </motion.button>
                     </div>
                   </motion.div>
                 )

@@ -121,16 +121,22 @@ if (SEED_INSTRUMENTOS && SEED_INSTRUMENTOS.length > 0) {
   lines.push('')
 }
 
+function isPracticeModule(nombre) {
+  const n = nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  return n.includes('practica')
+}
+
 // ── Módulos ───────────────────────────────────────────────────
 lines.push('-- 4. Módulos')
-lines.push('INSERT INTO modulos (id, nombre, orden, curso_id) VALUES')
+lines.push('INSERT INTO modulos (id, nombre, zona, orden, curso_id) VALUES')
 const modulosRows = []
 const moduloUUID = {}
 CURSOS.forEach(c => {
   c.modulos.forEach((m, i) => {
     const uuid = slugUUID(m.id)
     moduloUUID[m.id] = uuid
-    modulosRows.push(`  (${sq(uuid)}, ${sq(m.nombre)}, ${i}, ${sq(c.id)})`)
+    const zona = isPracticeModule(m.nombre) ? 'gym' : 'clase'
+    modulosRows.push(`  (${sq(uuid)}, ${sq(m.nombre)}, ${sq(zona)}, ${i}, ${sq(c.id)})`)
   })
 })
 lines.push(modulosRows.join(',\n') + ';')

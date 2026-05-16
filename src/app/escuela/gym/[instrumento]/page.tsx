@@ -14,6 +14,14 @@ import { useOrientation } from '@/hooks/useOrientation'
 import type { GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
+interface ModuloGym {
+  id: string
+  nombre: string
+  zona: string | null
+  orden: number
+  secciones: Seccion[]
+}
+
 const SCENE_GYM = 'https://prod.spline.design/gYLTlZu92yz616yC/scene.splinecode'
 
 const TIPO_ICON: Record<string, string> = {
@@ -243,25 +251,25 @@ function IframeViewer({ url, label, tipo, onClose }: {
   )
 }
 
-export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?: number } = {}) {
+export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: string } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
   const { token } = useAuth()
   const { gym: allGym } = useInstrumentos(token)
 
   // Solo DB
-  const [dbSecciones, setDbSecciones] = useState<Seccion[]>([])
-  const secciones = dbSecciones
+  const [dbModulos, setDbModulos] = useState<ModuloGym[]>([])
 
   const { isMobile, isPortrait } = useOrientation()
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(false)
   const [salidaOpen,     setSalidaOpen]     = useState(false)
+  const [moduloActivo,   setModuloActivo]   = useState<ModuloGym | null>(null)
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
-  const [tapeteHintOpen, setTapeteHintOpen] = useState(seccionIdxInicial === undefined)
+  const [tapeteHintOpen, setTapeteHintOpen] = useState(!moduloIdInicial)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -274,13 +282,20 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
     fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const allSecs = (data?.modulos ?? []).flatMap(
-          (m: { secciones?: Seccion[] }) => m.secciones ?? []
-        )
-        const gymSecs = allSecs.filter((s: Seccion) => s.zona === 'gym' || s.zona === null)
-        setDbSecciones(gymSecs)
-        if (seccionIdxInicial !== undefined) {
-          setSeccionActiva(gymSecs[seccionIdxInicial] ?? null)
+        const mods: ModuloGym[] = (data?.modulos ?? [])
+          .filter((m: ModuloGym) => m.zona !== 'clase')
+          .map((m: ModuloGym) => ({
+            ...m,
+            secciones: (m.secciones ?? []).filter(
+              (s: Seccion) => s.zona === 'gym' || s.zona === null
+            ),
+          }))
+          .filter((m: ModuloGym) => m.secciones.length > 0)
+        setDbModulos(mods)
+        if (moduloIdInicial) {
+          const mod = mods.find(m => m.id === moduloIdInicial) ?? null
+          setModuloActivo(mod)
+          if (mod) setPanelOpen(true)
         }
       })
       .catch(() => {})
@@ -302,9 +317,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
     }
   }, [isTrainning, panelOpen])
 
-  // Sin sección preseleccionada → el usuario debe pasar por el mapa
+  // Sin módulo preseleccionado → el usuario debe pasar por el mapa
   useEffect(() => {
-    if (seccionIdxInicial === undefined) router.replace('/escuela')
+    if (!moduloIdInicial) router.replace('/escuela')
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
@@ -315,10 +330,12 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
 
   const cerrarPanel = () => {
     setPanelOpen(false)
+    setSeccionActiva(null)
+    // moduloActivo se conserva para que "Entrenar" reabra en secciones del mismo módulo
   }
 
-  // Sin sección preseleccionada → redirigiendo al mapa (ver useEffect arriba)
-  if (seccionIdxInicial === undefined) return null
+  // Sin módulo preseleccionado → redirigiendo al mapa (ver useEffect arriba)
+  if (!moduloIdInicial) return null
 
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
@@ -343,7 +360,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
       {gymInstr && (
         <div className="gym-label absolute top-5 left-1/2 -translate-x-1/2 z-20"
           style={{ background: 'rgba(10,10,26,0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 20px', fontFamily: 'var(--font-display)', fontSize: 13, fontWeight: 700, color: 'rgba(255,255,255,0.8)', whiteSpace: 'nowrap' }}>
-          {gymInstr.emoji} {gymInstr.nombre}{seccionActiva ? ` · ${seccionActiva.nombre}` : ''}
+          {gymInstr.emoji} {gymInstr.nombre}{moduloActivo ? ` · ${moduloActivo.nombre}` : ''}
         </div>
       )}
 
@@ -417,9 +434,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
 
             <AnimatePresence mode="wait">
 
-              {/* Lista de secciones */}
-              {!seccionActiva && (
-                <motion.div key="panel-secciones"
+              {/* Nivel 1 — Lista de módulos */}
+              {!moduloActivo && !seccionActiva && (
+                <motion.div key="panel-modulos"
                   initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
@@ -431,15 +448,67 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                       <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20, color: '#fff' }}>
                         {gymInstr?.emoji} {gymInstr?.nombre}
                       </h2>
-                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige una sección</p>
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>Elige un módulo</p>
                     </div>
                     <button onClick={cerrarPanel} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
                   <div className="flex flex-col gap-3">
-                    {secciones.map((sec, i) => (
-                      <motion.button key={i}
+                    {dbModulos.map((mod, i) => (
+                      <motion.button key={mod.id}
+                        initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
+                        whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
+                        onClick={() => setModuloActivo(mod)}
+                        className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                        style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
+                            style={{ width: 34, height: 34, background: gymInstr?.color ?? 'rgba(255,255,255,0.1)', color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
+                            {i + 1}
+                          </div>
+                          <div>
+                            <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.2 }}>{mod.nombre}</p>
+                            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>
+                              {mod.secciones.length} {mod.secciones.length === 1 ? 'sección' : 'secciones'}
+                            </p>
+                          </div>
+                        </div>
+                        <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 18 }}>›</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Nivel 2 — Secciones del módulo */}
+              {moduloActivo && !seccionActiva && (
+                <motion.div key="panel-secciones"
+                  initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
+                  transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+                  className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}
+                >
+                  <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
+                  <div className="flex items-center gap-3 mb-5">
+                    <motion.button whileHover={{ x: -3 }}
+                      onClick={cerrarPanel}
+                      style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <ArrowLeft size={13} strokeWidth={1.5} /> Cerrar
+                    </motion.button>
+                    <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
+                      style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>
+                  </div>
+
+                  <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fff', marginBottom: 4 }}>
+                    {moduloActivo.nombre}
+                  </h2>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.38)', marginBottom: 20 }}>Elige una sección</p>
+
+                  <div className="flex flex-col gap-3">
+                    {moduloActivo.secciones.map((sec, i) => (
+                      <motion.button key={sec.nombre}
                         initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
                         whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
                         onClick={() => setSeccionActiva(sec)}
@@ -465,7 +534,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                 </motion.div>
               )}
 
-              {/* Recursos de la sección */}
+              {/* Nivel 3 — Recursos de la sección */}
               {seccionActiva && (
                 <motion.div key="panel-recursos"
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
@@ -476,9 +545,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
                     <motion.button whileHover={{ x: -3 }}
-                      onClick={() => router.push('/escuela')}
+                      onClick={() => setSeccionActiva(null)}
                       style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.5)', fontSize: 13, fontFamily: 'var(--font-body)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 4 }}>
-                      <ArrowLeft size={13} strokeWidth={1.5} /> Mapa
+                      <ArrowLeft size={13} strokeWidth={1.5} /> {moduloActivo?.nombre ?? 'Secciones'}
                     </motion.button>
                     <button onClick={cerrarPanel} className="ml-auto w-8 h-8 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.5)', border: 'none', fontSize: 13 }}><X size={14} strokeWidth={1.5} /></button>
@@ -565,22 +634,22 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                 </div>
               </motion.button>
 
-              {secciones.length > 0 && (
+              {dbModulos.length > 0 && (
                 <>
                   <div style={{ height: 1, background: 'rgba(255,255,255,0.07)', marginBottom: 16 }} />
                   <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', letterSpacing: '0.06em', marginBottom: 12 }}>
-                    CAMBIAR DE SECCIÓN
+                    CAMBIAR DE MÓDULO
                   </p>
                   <div className="flex flex-col gap-2">
-                    {secciones.map((sec, i) => {
-                      const esActual = sec === seccionActiva
+                    {dbModulos.map((mod, i) => {
+                      const esActual = mod.id === moduloIdInicial
                       return (
-                        <motion.button key={i}
+                        <motion.button key={mod.id}
                           whileHover={!esActual ? { x: 4 } : {}} whileTap={!esActual ? { scale: 0.98 } : {}}
                           onClick={() => {
                             if (esActual) return
                             setSalidaOpen(false)
-                            router.push(`/escuela/gym/${instrumento}/${i}`)
+                            router.push(`/escuela/gym/${instrumento}/${mod.id}`)
                           }}
                           className="w-full flex items-center gap-4 rounded-2xl px-4 py-3 cursor-pointer text-left"
                           style={{
@@ -593,7 +662,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
                             style={{ width: 32, height: 32, background: `${gymInstr?.color ?? '#3db8fa'}20`, color: gymInstr?.color ?? '#3db8fa', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13 }}>
                             {i + 1}
                           </div>
-                          <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: esActual ? '#3db8fa' : '#fff', margin: 0, flex: 1 }}>{sec.nombre}</p>
+                          <p style={{ fontFamily: 'var(--font-body)', fontWeight: 600, fontSize: 13, color: esActual ? '#3db8fa' : '#fff', margin: 0, flex: 1 }}>{mod.nombre}</p>
                           {esActual
                             ? <span style={{ fontFamily: 'var(--font-display)', fontSize: 10, fontWeight: 700, color: '#3db8fa', letterSpacing: '0.06em' }}>AQUÍ</span>
                             : <span style={{ color: 'rgba(255,255,255,0.25)', fontSize: 16 }}>›</span>

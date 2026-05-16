@@ -20,6 +20,11 @@ function slugUUID(slug: string): string {
   return `${h.slice(0,8)}-${h.slice(8,12)}-4${h.slice(13,16)}-${((parseInt(h[16],16)&0x3)|0x8).toString(16)}${h.slice(17,20)}-${h.slice(20,32)}`
 }
 
+function isPracticeModule(nombre: string): boolean {
+  const n = nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
+  return n.includes('practica')
+}
+
 function adminGuard(req: NextRequest) {
   const token = extractTokenFromHeader(req.headers.get('authorization') ?? '')
   if (!token) return null
@@ -51,6 +56,7 @@ export async function POST(req: NextRequest) {
     c.modulos.map((m, i) => ({
       id:       slugUUID(m.id),
       nombre:   m.nombre,
+      zona:     isPracticeModule(m.nombre) ? 'gym' : 'clase',
       orden:    i,
       curso_id: c.id,
     }))

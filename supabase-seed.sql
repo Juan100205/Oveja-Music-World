@@ -1,4 +1,4 @@
--- ════════════════════════════════════════════════════════
+﻿-- ════════════════════════════════════════════════════════
 -- OVEJA MUSIC WORLD — Seed completo de Supabase
 -- Generado: 2026-05-16T00:17:57.999Z
 -- Pegar en Supabase SQL Editor y ejecutar
@@ -32,43 +32,86 @@ INSERT INTO instrumentos (id, nombre, emoji, descripcion, color, glow, zona, cur
   ('introduccion', 'Introducción Musical', '🎵', 'Fundamentos del lenguaje musical', 'linear-gradient(135deg, #3db8fa, #9b54f9)', 'rgba(100,150,255,0.45)', 'ambos', 'ciudad-musical', 5, true);
 
 -- Módulos
-INSERT INTO modulos (id, nombre, orden, curso_id) VALUES
-  ('f936759b-4f2b-4d00-bef0-ed00eeb466e3', 'Nivel 1', 0, 'bateria'),
-  ('742b4347-94a0-4517-a566-7a5c368ab3c2', 'General', 0, 'gym-musical'),
-  ('0d226e09-81a8-429c-a2a8-75bb16a0a9c8', 'Nivel 1', 1, 'gym-musical'),
-  ('869cd315-bfc6-4390-b6db-073bdbfff682', 'Módulo 1: Introducción', 0, 'piano'),
-  ('bb4ff1ac-e628-48d8-affc-c53f012e4996', 'Módulo 2: Nivel 1 – Clases', 1, 'piano'),
-  ('795136bd-7b95-454f-874c-886b1ecca218', 'Módulo 3: Nivel 1 – Práctica', 2, 'piano'),
-  ('4e0ed432-eade-4ab2-b51c-be7558bd0884', 'Módulo 4: Nivel 2 – Clases', 3, 'piano'),
-  ('9145eb4c-4013-4ff7-95c1-75b09ff17b06', 'Módulo 5: Nivel 2 – Práctica', 4, 'piano'),
-  ('918b9cb0-dfa1-48f5-bdf9-81d24d020ddd', 'Módulo 6: Nivel 3 – Clases', 5, 'piano'),
-  ('fdfd57b3-d7ad-4a16-a6d3-30eb6909b920', 'Módulo 8: Nivel 4 – Clases', 6, 'piano'),
-  ('2ab49509-57e2-422c-99a6-ae6976ce92e0', 'Módulo 9: Nivel 4 – Práctica', 7, 'piano'),
-  ('4ef14cee-f8e3-49c0-b022-02df8934e30e', 'Módulo 10: Nivel 5 – Clases', 8, 'piano'),
-  ('59359d8b-8183-4a11-951b-05bde660762d', 'Módulo 11: Nivel 5 – Práctica', 9, 'piano'),
-  ('5c98a944-b5e9-4eaa-89b2-ce30a3007bc4', 'Módulo 12: Nivel 6 – Clases', 10, 'piano'),
-  ('fefd5d94-6d18-42b1-ad57-97cc3616b43a', 'Módulo 13: Nivel 6 – Práctica', 11, 'piano'),
-  ('bb44a525-f2d4-4dc3-923b-726b0e95b158', 'Módulo 1: Preparatorio', 0, 'violin'),
-  ('408695fe-ca07-49af-a489-9c0458ae67e4', 'Módulo 2: Nivel 1 – Clases', 1, 'violin'),
-  ('b9e868eb-d331-414b-8d0c-6a798e52b6bc', 'Módulo 3: Nivel 1 – Práctica', 2, 'violin'),
-  ('69867d0c-4ea8-4b3e-88dd-73dad9f65fd8', 'Módulo 4: Nivel 2 – Clases', 3, 'violin'),
-  ('3bde30ce-e96e-426e-97fa-e07572cc3217', 'Módulo 5: Nivel 2 – Práctica', 4, 'violin'),
-  ('7f6276e1-7302-4a21-9eff-8fca0516078f', 'Módulo 1: Introducción al Canto', 0, 'canto'),
-  ('605f5a47-5a59-4680-9556-ee24a7e8d90f', 'Módulo 2: Nivel 1 – Clases', 1, 'canto'),
-  ('6e03d886-3db9-4de6-b439-441e1911581b', 'Módulo 3: Nivel 1 – Práctica', 2, 'canto'),
-  ('73c41967-c7c0-4300-9eec-fc4d802290fb', 'Armonía Nivel 1', 0, 'armonia'),
-  ('bae21087-a8f0-4a11-b923-6a9191d4fdd1', 'Nivel 1', 0, 'guitarra-adultos'),
-  ('b0281f65-a209-48bb-b3da-863504876e13', 'Nivel 1', 0, 'guitarra-electrica'),
-  ('1992862e-28f9-49c3-b437-f5599a06489f', 'Videos preparatorios', 0, 'guitarra-clases'),
-  ('c0addfa8-de58-49ca-ada5-51b2c719003d', 'Nivel 1', 0, 'guitarra-ninos'),
-  ('8e6f5973-7439-4a26-94a9-12cf3c196b67', 'Nivel 2', 1, 'guitarra-ninos'),
-  ('a48e454c-9521-4962-8a0f-b9045f512d29', 'Nivel 3', 2, 'guitarra-ninos'),
-  ('8d9e8f30-5d85-4f08-8ff8-d776bf4756db', 'Nivel 4', 3, 'guitarra-ninos'),
-  ('b5ba3b28-f211-411f-9eb7-851aaaa24096', 'General', 0, 'recursos-adicionales'),
-  ('5acd020b-117e-4d15-a759-0b948a17ef3d', 'Introducción', 0, 'ciudad-musical'),
-  ('7c80d97d-88a4-480a-b52a-a6b00a9181f9', 'Nivel 1', 1, 'ciudad-musical'),
-  ('a217a90c-737b-49fc-99c0-49bf2ac80a6c', 'Nivel 2', 2, 'ciudad-musical'),
-  ('92868ec9-a618-49da-bea5-411a63cd6665', 'Nivel 3', 3, 'ciudad-musical');
+-- Columnas: id, nombre, zona, orden, curso_id
+-- zona = 'clase' → solo aparece en Escuela
+-- zona = 'gym'   → solo aparece en Gym
+-- zona = NULL    → aparece en ambos
+
+INSERT INTO modulos (id, nombre, zona, orden, curso_id) VALUES
+
+  -- ════════════════════════════════════════════════════════
+  -- ESCUELA (zona = 'clase')
+  -- ════════════════════════════════════════════════════════
+
+  -- 🥁 Batería
+  ('f936759b-4f2b-4d00-bef0-ed00eeb466e3', 'Nivel 1',              'clase', 0, 'bateria'),
+
+  -- 🎹 Piano
+  ('869cd315-bfc6-4390-b6db-073bdbfff682', 'Introducción',         'clase', 0, 'piano'),
+  ('bb4ff1ac-e628-48d8-affc-c53f012e4996', 'Nivel 1',              'clase', 1, 'piano'),
+  ('4e0ed432-eade-4ab2-b51c-be7558bd0884', 'Nivel 2',              'clase', 3, 'piano'),
+  ('918b9cb0-dfa1-48f5-bdf9-81d24d020ddd', 'Nivel 3',              'clase', 5, 'piano'),
+  ('fdfd57b3-d7ad-4a16-a6d3-30eb6909b920', 'Nivel 4',              'clase', 6, 'piano'),
+  ('4ef14cee-f8e3-49c0-b022-02df8934e30e', 'Nivel 5',              'clase', 8, 'piano'),
+  ('5c98a944-b5e9-4eaa-89b2-ce30a3007bc4', 'Nivel 6',              'clase',10, 'piano'),
+
+  -- 🎻 Violín
+  ('bb44a525-f2d4-4dc3-923b-726b0e95b158', 'Preparatorio',         'clase', 0, 'violin'),
+  ('408695fe-ca07-49af-a489-9c0458ae67e4', 'Nivel 1',              'clase', 1, 'violin'),
+  ('69867d0c-4ea8-4b3e-88dd-73dad9f65fd8', 'Nivel 2',              'clase', 3, 'violin'),
+
+  -- 🎤 Canto
+  ('7f6276e1-7302-4a21-9eff-8fca0516078f', 'Introducción',         'clase', 0, 'canto'),
+  ('605f5a47-5a59-4680-9556-ee24a7e8d90f', 'Nivel 1',              'clase', 1, 'canto'),
+
+  -- 🎵 Armonía
+  ('73c41967-c7c0-4300-9eec-fc4d802290fb', 'Armonía Nivel 1',      'clase', 0, 'armonia'),
+
+  -- 🎸 Guitarra Adultos
+  ('bae21087-a8f0-4a11-b923-6a9191d4fdd1', 'Nivel 1',              'clase', 0, 'guitarra-adultos'),
+
+  -- 🎸 Guitarra Eléctrica
+  ('b0281f65-a209-48bb-b3da-863504876e13', 'Nivel 1',              'clase', 0, 'guitarra-electrica'),
+
+  -- 🎸 Guitarra – Clases
+  ('1992862e-28f9-49c3-b437-f5599a06489f', 'Videos preparatorios', 'clase', 0, 'guitarra-clases'),
+
+  -- 👦 Guitarra Niños
+  ('c0addfa8-de58-49ca-ada5-51b2c719003d', 'Nivel 1',              'clase', 0, 'guitarra-ninos'),
+  ('8e6f5973-7439-4a26-94a9-12cf3c196b67', 'Nivel 2',              'clase', 1, 'guitarra-ninos'),
+  ('a48e454c-9521-4962-8a0f-b9045f512d29', 'Nivel 3',              'clase', 2, 'guitarra-ninos'),
+  ('8d9e8f30-5d85-4f08-8ff8-d776bf4756db', 'Nivel 4',              'clase', 3, 'guitarra-ninos'),
+
+  -- 🌐 Recursos Adicionales
+  ('b5ba3b28-f211-411f-9eb7-851aaaa24096', 'General',              'clase', 0, 'recursos-adicionales'),
+
+  -- 🎶 Ciudad Musical
+  ('5acd020b-117e-4d15-a759-0b948a17ef3d', 'Introducción',         'clase', 0, 'ciudad-musical'),
+  ('7c80d97d-88a4-480a-b52a-a6b00a9181f9', 'Nivel 1',              'clase', 1, 'ciudad-musical'),
+  ('a217a90c-737b-49fc-99c0-49bf2ac80a6c', 'Nivel 2',              'clase', 2, 'ciudad-musical'),
+  ('92868ec9-a618-49da-bea5-411a63cd6665', 'Nivel 3',              'clase', 3, 'ciudad-musical'),
+
+  -- ════════════════════════════════════════════════════════
+  -- GYM (zona = 'gym')
+  -- ════════════════════════════════════════════════════════
+
+  -- 🏋️ Gym Musical
+  ('742b4347-94a0-4517-a566-7a5c368ab3c2', 'General',              'gym', 0, 'gym-musical'),
+  ('0d226e09-81a8-429c-a2a8-75bb16a0a9c8', 'Nivel 1',              'gym', 1, 'gym-musical'),
+
+  -- 🎹 Piano — Práctica
+  ('795136bd-7b95-454f-874c-886b1ecca218', 'Nivel 1 – Práctica',   'gym', 2, 'piano'),
+  ('9145eb4c-4013-4ff7-95c1-75b09ff17b06', 'Nivel 2 – Práctica',   'gym', 4, 'piano'),
+  ('2ab49509-57e2-422c-99a6-ae6976ce92e0', 'Nivel 4 – Práctica',   'gym', 7, 'piano'),
+  ('59359d8b-8183-4a11-951b-05bde660762d', 'Nivel 5 – Práctica',   'gym', 9, 'piano'),
+  ('fefd5d94-6d18-42b1-ad57-97cc3616b43a', 'Nivel 6 – Práctica',   'gym',11, 'piano'),
+
+  -- 🎻 Violín — Práctica
+  ('b9e868eb-d331-414b-8d0c-6a798e52b6bc', 'Nivel 1 – Práctica',   'gym', 2, 'violin'),
+  ('3bde30ce-e96e-426e-97fa-e07572cc3217', 'Nivel 2 – Práctica',   'gym', 4, 'violin'),
+
+  -- 🎤 Canto — Práctica
+  ('6e03d886-3db9-4de6-b439-441e1911581b', 'Nivel 1 – Práctica',   'gym', 2, 'canto');
 
 -- Secciones
 INSERT INTO secciones (id, nombre, zona, orden, modulo_id) VALUES

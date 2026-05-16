@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
   const { data: modulos, error: me } = await db
     .from('modulos')
-    .select('id, nombre, orden')
+    .select('id, nombre, zona, orden')
     .eq('curso_id', cursoId)
     .order('orden')
 
@@ -67,6 +67,7 @@ export async function GET(req: NextRequest) {
       return {
         id:       m.id,
         nombre:   m.nombre,
+        zona:     (m as { zona?: string }).zona ?? undefined,
         secciones: seccionesConRecursos,
       }
     })

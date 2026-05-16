@@ -301,11 +301,6 @@ function ModulosList({
   )
 }
 
-function isPracticeModule(nombre: string): boolean {
-  const normalized = nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '')
-  return normalized.includes('practica')
-}
-
 function getTutorialCount(userId: string): number {
   return parseInt(localStorage.getItem(`tutorial_wasd_${userId}`) ?? '0', 10)
 }
@@ -334,7 +329,7 @@ export default function MapaPage() {
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
   const [gymInstrSeleccionado, setGymInstrSeleccionado] = useState<GymInstrumento | null>(null)
-  const [gymDbSecciones, setGymDbSecciones] = useState<Record<string, Seccion[]>>({})
+  const [gymDbModulos, setGymDbModulos] = useState<Record<string, Modulo[]>>({})
 
   // Logout
   const [showLogout, setShowLogout] = useState(false)
@@ -416,35 +411,38 @@ export default function MapaPage() {
       .catch(() => { /* fallback silencioso a datos estaticos */ })
   }, [token, claseSeleccionada?.cursoId, modulosDb])
 
-  // Fetch gym sections from DB when an instrument is selected
+  // Fetch gym modules from DB when an instrument is selected
   useEffect(() => {
     if (!token || !gymInstrSeleccionado) return
     const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
-    if (gymDbSecciones[cursoId]) return
+    if (gymDbModulos[cursoId]) return
     fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
-        const allSecs = (data?.modulos ?? []).flatMap(
-          (m: { secciones?: Seccion[] }) => m.secciones ?? []
-        )
-        const gymSecs = allSecs.filter((s: Seccion) => s.zona !== 'clase')
-        if (gymSecs.length > 0) {
-          setGymDbSecciones(prev => ({ ...prev, [cursoId]: gymSecs }))
+        const mods: Modulo[] = (data?.modulos ?? [])
+          .filter((m: Modulo) => m.zona !== 'clase')
+          .map((m: Modulo) => ({
+            ...m,
+            secciones: (m.secciones ?? []).filter((s: Seccion) => s.zona !== 'clase'),
+          }))
+          .filter((m: Modulo) => m.secciones.length > 0)
+        if (mods.length > 0) {
+          setGymDbModulos(prev => ({ ...prev, [cursoId]: mods }))
         }
       })
       .catch(() => {})
   }, [token, gymInstrSeleccionado?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Solo DB
+  // Solo DB — excluir módulos de gym (zona='gym'); zona=null o 'clase' aparecen en clase
   const modulosClaseVista = claseSeleccionada
-    ? (modulosDb[claseSeleccionada.cursoId] ?? []).filter(m => !isPracticeModule(m.nombre))
+    ? (modulosDb[claseSeleccionada.cursoId] ?? []).filter(m => m.zona !== 'gym')
     : []
 
   const { dbClases, dbGym, loading: instrLoading } = useInstrumentos(token ?? null)
 
   // Solo DB
-  const gymSeccionesVista = gymInstrSeleccionado
-    ? gymDbSecciones[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id] ?? []
+  const gymModulosVista = gymInstrSeleccionado
+    ? gymDbModulos[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id] ?? []
     : []
 
   // Filtrar por acceso — admins ven todo
@@ -708,9 +706,9 @@ export default function MapaPage() {
                 </motion.div>
               )}
 
-              {/* Paso 2: secciones */}
+              {/* Paso 2: módulos */}
               {gymInstrSeleccionado && (
-                <motion.div key="gym-secciones"
+                <motion.div key="gym-modulos"
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
@@ -730,34 +728,13 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
-                  {gymSeccionesVista.length === 0
+                  {gymModulosVista.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
-                    : (
-                      <div className="flex flex-col gap-3">
-                        {gymSeccionesVista.map((sec, i) => (
-                          <motion.button key={i}
-                            initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
-                            whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
-                            onClick={() => router.push(`/escuela/gym/${gymInstrSeleccionado.id}/${i}`)}
-                            className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
-                            style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                            <div className="flex items-center gap-4">
-                              <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
-                                style={{ width: 34, height: 34, background: gymInstrSeleccionado.color, color: '#fff', fontFamily: 'var(--font-display)', fontSize: 13 }}>
-                                {i + 1}
-                              </div>
-                              <div>
-                                <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, color: '#fff', lineHeight: 1.2 }}>{sec.nombre}</p>
-                                <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.38)', marginTop: 2 }}>
-                                  {sec.recursos.length} {sec.recursos.length === 1 ? 'recurso' : 'recursos'}
-                                </p>
-                              </div>
-                            </div>
-                            <ChevronRight size={16} strokeWidth={1.5} style={{ color: 'rgba(255,255,255,0.25)', flexShrink: 0 }} />
-                          </motion.button>
-                        ))}
-                      </div>
-                    )
+                    : <ModulosList
+                        modulos={gymModulosVista}
+                        color={gymInstrSeleccionado.color}
+                        onSelect={(m) => router.push(`/escuela/gym/${gymInstrSeleccionado.id}/${m.id}`)}
+                      />
                   }
                 </motion.div>
               )}

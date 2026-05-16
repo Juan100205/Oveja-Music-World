@@ -10,19 +10,26 @@ function adminGuard(req: NextRequest) {
 }
 
 // PATCH /api/admin/content/modulos/[id]
-// body: { nombre }
+// body: { nombre?, zona? }
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   if (!adminGuard(req)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const { id } = await params
-  const { nombre } = await req.json()
+  const { nombre, zona } = await req.json()
 
-  if (!nombre?.trim())
-    return NextResponse.json({ error: 'nombre es requerido' }, { status: 400 })
+  if (!nombre?.trim() && zona === undefined)
+    return NextResponse.json({ error: 'nombre o zona son requeridos' }, { status: 400 })
+
+  if (zona !== undefined && zona !== null && !['clase', 'gym'].includes(zona))
+    return NextResponse.json({ error: 'zona debe ser clase, gym o null' }, { status: 400 })
+
+  const updates: Record<string, unknown> = {}
+  if (nombre?.trim()) updates.nombre = nombre.trim()
+  if (zona !== undefined) updates.zona = zona
 
   const db = getSupabaseAdmin()
   const { data, error } = await db
-    .from('modulos').update({ nombre: nombre.trim() }).eq('id', id).select().single()
+    .from('modulos').update(updates).eq('id', id).select().single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ modulo: data })

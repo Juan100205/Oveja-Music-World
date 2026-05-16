@@ -15,10 +15,13 @@ export async function POST(req: NextRequest) {
   if (!adminGuard(req)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const body = await req.json()
-  const { curso_id, nombre } = body
+  const { curso_id, nombre, zona } = body
 
   if (!curso_id || !nombre?.trim())
     return NextResponse.json({ error: 'curso_id y nombre son requeridos' }, { status: 400 })
+
+  if (zona && !['clase', 'gym'].includes(zona))
+    return NextResponse.json({ error: 'zona debe ser clase, gym o null' }, { status: 400 })
 
   const db = getSupabaseAdmin()
 
@@ -28,11 +31,11 @@ export async function POST(req: NextRequest) {
   if (countError)
     return NextResponse.json({ error: 'Error al calcular el orden del módulo' }, { status: 500 })
 
-  const id = `${curso_id}-modulo-${Date.now()}`
+  const id = crypto.randomUUID()
 
   const { data, error } = await db
     .from('modulos')
-    .insert({ id, curso_id, nombre: nombre.trim(), orden: count ?? 0 })
+    .insert({ id, curso_id, nombre: nombre.trim(), zona: zona ?? null, orden: count ?? 0 })
     .select()
     .single()
 

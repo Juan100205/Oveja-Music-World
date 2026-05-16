@@ -4,8 +4,7 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Piano, Drum, Guitar, Mic, Music2, BookOpen,
-  GraduationCap, Dumbbell,
+  Music2,
   Trash2, Pencil, ChevronRight, ChevronDown, Plus, X, Check,
   Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link, LayoutList,
   Zap, Clock,
@@ -41,6 +40,7 @@ interface Seccion {
 interface Modulo {
   id: string
   nombre: string
+  zona?: 'clase' | 'gym' | null
   orden: number
   secciones: Seccion[]
 }
@@ -965,6 +965,17 @@ function ModuloPanel({
     onUpdate({ ...modulo, nombre })
   }, [apiBase, modulo, onUpdate, authHeaders])
 
+  const changeModuloZona = useCallback(async (zona: string) => {
+    const res = await fetch(`${apiBase}/modulos/${modulo.id}`, {
+      method: 'PATCH', headers: authHeaders, body: JSON.stringify({ zona: zona || null }),
+    })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: 'Error desconocido' }))
+      throw new Error(err.error || `Error ${res.status}`)
+    }
+    onUpdate({ ...modulo, zona: (zona || null) as Modulo['zona'] })
+  }, [apiBase, modulo, onUpdate, authHeaders])
+
   const addSeccion = async () => {
     if (!newSecNombre.trim()) return
     setSaving(true)
@@ -1016,6 +1027,11 @@ function ModuloPanel({
           onClick={e => e.stopPropagation()}>
           <InlineEdit value={modulo.nombre} onSave={renameModulo} placeholder="Nombre del módulo" />
         </span>
+
+        {/* Zona del módulo */}
+        <div onClick={e => e.stopPropagation()}>
+          <ZonaSelect value={modulo.zona ?? ''} onChange={changeModuloZona} />
+        </div>
 
         <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
           {seccionesFiltradas.length} secc.
@@ -1154,7 +1170,11 @@ function CursoEditor({
     }
 
     setSaving(true)
-    const requestBody = { curso_id: curso.id, nombre: newModNombre.trim() }
+    const requestBody = {
+      curso_id: curso.id,
+      nombre:   newModNombre.trim(),
+      zona:     zonaTab === 'escuela' ? 'clase' : 'gym',
+    }
     console.log('[Frontend addModulo] Enviando POST a:', `${apiBase}/modulos`)
     console.log('[Frontend addModulo] Body:', requestBody)
 
@@ -1278,13 +1298,13 @@ function CursoEditor({
     )
   }
 
-  // Módulos del curso - MOSTRAR TODOS (incluyendo vacíos)
-  console.log('[Frontend render] Total módulos en curso:', curso?.modulos?.length || 0)
-  console.log('[Frontend render] Módulos:', curso?.modulos)
-
-  const modulosVisibles = (curso?.modulos ?? [])
-
-  console.log('[Frontend render] Módulos a renderizar:', modulosVisibles.length)
+  // Filtrar módulos por zona según el tab activo
+  // escuela → zona='clase' o zona=null (ambos)
+  // gym     → zona='gym'   o zona=null (ambos)
+  const zonaActual = zonaTab === 'escuela' ? 'clase' : 'gym'
+  const modulosVisibles = (curso?.modulos ?? []).filter(m =>
+    m.zona == null || m.zona === zonaActual
+  )
 
   // Stats del tab actual (filtrar secciones por zona)
   const seccionesTab = modulosVisibles.reduce((a, m) =>
@@ -1477,17 +1497,6 @@ function colorFromId(id: string): string {
   return `hsl(${hue}, 52%, 58%)`
 }
 
-// ── Instrumentos principales (sidebar fijo) ───────────────────
-const INSTRUMENTOS_PRINCIPALES = [
-  { id: 'piano',            nombre: 'Piano',             Icon: Piano,       color: '#ec488a', emoji: '🎹' },
-  { id: 'bateria',          nombre: 'Batería',            Icon: Drum,        color: '#3db8fa', emoji: '🥁' },
-  { id: 'guitarra-adultos', nombre: 'Guitarra',           Icon: Guitar,      color: '#ffa737', emoji: '🎸' },
-  { id: 'violin',           nombre: 'Violín',             Icon: Music2,      color: '#9b54f9', emoji: '🎻' },
-  { id: 'canto',            nombre: 'Canto',              Icon: Mic,         color: '#ec488a', emoji: '🎤' },
-  { id: 'ciudad-musical',   nombre: 'Iniciación Musical', Icon: BookOpen,    color: '#3db8fa', emoji: '🎵' },
-  // Mismo id que CURSOS / tabla `cursos` (evita 404 si un instrumento en BD usa id autogenerado)
-]
-
 // ══════════════════════════════════════════════════════════════
 // CONTENT MANAGER — Componente raíz
 // ══════════════════════════════════════════════════════════════
@@ -1508,8 +1517,6 @@ export default function ContentManager({
   apiBase?: string
   allowedCursoIds?: string[]
 }) {
-  const staticMeta = useMemo(() => new Map(INSTRUMENTOS_PRINCIPALES.map(s => [s.id, s])), [])
-
   // Fuente de verdad: tabla `instrumentos` en Supabase
   const [instrsApi, setInstrsApi] = useState<Array<{
     id: string; nombre: string; emoji: string; color: string
@@ -1541,19 +1548,18 @@ export default function ContentManager({
       const cid = (ins.curso_id?.trim()) || ins.id
       if (!cid || seen.has(cid)) continue
       seen.add(cid)
-      const s = staticMeta.get(cid)
       out.push({
         id:     cid,
         nombre: ins.nombre,
         emoji:  ins.emoji,
-        color:  ins.color || s?.color || colorFromId(cid),
-        Icon:   s?.Icon ?? Music2,
+        color:  ins.color || colorFromId(cid),
+        Icon:   Music2,
       })
     }
 
     if (allowedCursoIds?.length) return out.filter(i => allowedCursoIds.includes(i.id))
     return out
-  }, [instrsApi, staticMeta, allowedCursoIds])
+  }, [instrsApi, allowedCursoIds])
 
   const [selectedId, setSelectedId] = useState('')
   useEffect(() => {
