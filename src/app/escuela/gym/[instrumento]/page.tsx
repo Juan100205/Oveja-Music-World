@@ -11,7 +11,7 @@ import RotateScreen from '@/components/ui/RotateScreen'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
-import { GYM_INSTRUMENTOS, getSecciones, type GymInstrumento } from '@/data/gym'
+import type { GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
 const SCENE_GYM = 'https://prod.spline.design/gYLTlZu92yz616yC/scene.splinecode'
@@ -249,22 +249,16 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const { token } = useAuth()
   const { gym: allGym } = useInstrumentos(token)
 
-  // Static data (fallback)
-  const gymStatic = GYM_INSTRUMENTOS.find(g => g.id === instrumento)
-  const staticSecciones = gymStatic ? getSecciones(gymStatic) : []
-
-  // DB content state (DB-first; static is fallback)
-  const [dbSecciones, setDbSecciones] = useState<Seccion[] | null>(null)
-  const secciones = dbSecciones ?? staticSecciones
+  // Solo DB
+  const [dbSecciones, setDbSecciones] = useState<Seccion[]>([])
+  const secciones = dbSecciones
 
   const { isMobile, isPortrait } = useOrientation()
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(false)
   const [salidaOpen,     setSalidaOpen]     = useState(false)
-  const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(() =>
-    seccionIdxInicial !== undefined ? (staticSecciones[seccionIdxInicial] ?? null) : null
-  )
+  const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(seccionIdxInicial === undefined)
@@ -272,9 +266,9 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const gymInstr = allGym.find(g => g.id === instrumento)
-  const cursoId = gymInstr?.cursoId ?? gymStatic?.cursoId
+  const cursoId = gymInstr?.cursoId ?? instrumento
 
-  // Fetch content from DB; use static data only if DB has nothing
+  // Fetch desde DB
   useEffect(() => {
     if (!token || !cursoId) return
     fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
@@ -283,8 +277,7 @@ export default function GymSalaPage({ seccionIdxInicial }: { seccionIdxInicial?:
         const allSecs = (data?.modulos ?? []).flatMap(
           (m: { secciones?: Seccion[] }) => m.secciones ?? []
         )
-        const gymSecs = allSecs.filter((s: Seccion) => s.zona !== 'clase')
-        if (gymSecs.length === 0) return
+        const gymSecs = allSecs.filter((s: Seccion) => s.zona === 'gym' || s.zona === null)
         setDbSecciones(gymSecs)
         if (seccionIdxInicial !== undefined) {
           setSeccionActiva(gymSecs[seccionIdxInicial] ?? null)
