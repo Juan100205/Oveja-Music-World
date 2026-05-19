@@ -138,7 +138,7 @@ export default function GymPage() {
                   style={{
                     background: 'rgba(12,12,28,0.98)',
                     backdropFilter: 'blur(24px)',
-                    padding: '20px 24px 44px',
+                    padding: '20px 20px 32px',
                     borderTop: '1px solid rgba(255,255,255,0.07)',
                   }}
                 >
@@ -205,8 +205,8 @@ export default function GymPage() {
                     background: 'rgba(12,12,28,0.98)',
                     backdropFilter: 'blur(24px)',
                     borderTop: '1px solid rgba(255,255,255,0.07)',
-                    maxHeight: '78vh',
-                    padding: '20px 24px 44px',
+                    maxHeight: '78dvh',
+                    padding: '20px 20px 32px',
                   }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -281,8 +281,8 @@ export default function GymPage() {
                     background: 'rgba(12,12,28,0.98)',
                     backdropFilter: 'blur(24px)',
                     borderTop: '1px solid rgba(255,255,255,0.07)',
-                    maxHeight: '78vh',
-                    padding: '20px 24px 44px',
+                    maxHeight: '78dvh',
+                    padding: '20px 20px 32px',
                   }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
@@ -357,8 +357,8 @@ export default function GymPage() {
                     background: 'rgba(12,12,28,0.98)',
                     backdropFilter: 'blur(24px)',
                     borderTop: '1px solid rgba(255,255,255,0.07)',
-                    maxHeight: '78vh',
-                    padding: '20px 24px 44px',
+                    maxHeight: '78dvh',
+                    padding: '20px 20px 32px',
                   }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />

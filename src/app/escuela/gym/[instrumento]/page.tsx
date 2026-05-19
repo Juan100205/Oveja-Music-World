@@ -440,7 +440,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                   initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh', padding: '20px 20px 32px' }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center justify-between mb-6">
@@ -488,7 +488,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh', padding: '20px 20px 32px' }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
@@ -540,7 +540,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh', padding: '20px 20px 32px' }}
                 >
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-5">
@@ -607,7 +607,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
               initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
               transition={{ type: 'spring', damping: 28, stiffness: 300 }}
               className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl overflow-y-auto"
-              style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '80vh', padding: '20px 24px 44px' }}
+              style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '80dvh', padding: '20px 20px 32px' }}
             >
               <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
               <div className="flex items-center justify-between mb-6">

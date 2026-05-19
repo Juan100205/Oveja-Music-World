@@ -46,15 +46,17 @@ export default function TapeteCard({ show, onDismiss, sala }: TapeteCardProps) {
             transition={{ type: 'spring', damping: 22, stiffness: 280 }}
             className="fixed inset-0 m-auto z-[60]"
             style={{
-              width: 'min(340px, 92vw)',
+              width: 'min(320px, 90vw)',
+              maxHeight: 'calc(100dvh - 32px)',
               height: 'fit-content',
               background: 'rgba(8,20,28,0.97)',
               border: `1px solid rgba(34,211,238,0.3)`,
               borderRadius: 20,
               boxShadow: `0 0 60px ${CYAN_GLOW}, 0 0 120px rgba(34,211,238,0.06), 0 24px 48px rgba(0,0,0,0.65)`,
-              padding: '28px 24px 24px',
+              padding: '20px 20px 18px',
               textAlign: 'center',
-              overflow: 'hidden',
+              overflow: 'auto',
+              position: 'fixed',
             }}
           >
             {/* Top glow line */}
@@ -65,72 +67,63 @@ export default function TapeteCard({ show, onDismiss, sala }: TapeteCardProps) {
             }} />
 
             {/* Corner accents */}
-            <div style={{ position: 'absolute', top: 12, left: 12, width: 16, height: 16, borderTop: `2px solid ${CYAN}`, borderLeft: `2px solid ${CYAN}`, borderRadius: '3px 0 0 0', opacity: 0.5 }} />
-            <div style={{ position: 'absolute', top: 12, right: 12, width: 16, height: 16, borderTop: `2px solid ${CYAN}`, borderRight: `2px solid ${CYAN}`, borderRadius: '0 3px 0 0', opacity: 0.5 }} />
-            <div style={{ position: 'absolute', bottom: 12, left: 12, width: 16, height: 16, borderBottom: `2px solid ${CYAN}`, borderLeft: `2px solid ${CYAN}`, borderRadius: '0 0 0 3px', opacity: 0.5 }} />
-            <div style={{ position: 'absolute', bottom: 12, right: 12, width: 16, height: 16, borderBottom: `2px solid ${CYAN}`, borderRight: `2px solid ${CYAN}`, borderRadius: '0 0 3px 0', opacity: 0.5 }} />
+            <div style={{ position: 'absolute', top: 10, left: 10, width: 14, height: 14, borderTop: `2px solid ${CYAN}`, borderLeft: `2px solid ${CYAN}`, borderRadius: '3px 0 0 0', opacity: 0.5 }} />
+            <div style={{ position: 'absolute', top: 10, right: 10, width: 14, height: 14, borderTop: `2px solid ${CYAN}`, borderRight: `2px solid ${CYAN}`, borderRadius: '0 3px 0 0', opacity: 0.5 }} />
+            <div style={{ position: 'absolute', bottom: 10, left: 10, width: 14, height: 14, borderBottom: `2px solid ${CYAN}`, borderLeft: `2px solid ${CYAN}`, borderRadius: '0 0 0 3px', opacity: 0.5 }} />
+            <div style={{ position: 'absolute', bottom: 10, right: 10, width: 14, height: 14, borderBottom: `2px solid ${CYAN}`, borderRight: `2px solid ${CYAN}`, borderRadius: '0 0 3px 0', opacity: 0.5 }} />
 
             {/* Room emoji */}
             <motion.div
               animate={{ scale: [1, 1.08, 1] }}
               transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-              style={{ fontSize: 42, lineHeight: 1, marginBottom: 14 }}
+              style={{ fontSize: 34, lineHeight: 1, marginBottom: 10 }}
             >
               {emoji}
             </motion.div>
 
             {/* Title */}
             <h2 style={{
-              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 20,
-              color: CYAN, marginBottom: 6, letterSpacing: '0.03em',
+              fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 17,
+              color: CYAN, marginBottom: 8, letterSpacing: '0.03em',
               textShadow: `0 0 20px ${CYAN_GLOW}`,
             }}>
               ¡Pisa el tapete!
             </h2>
 
             <p style={{
-              fontFamily: 'var(--font-display)', fontWeight: 600, fontSize: 15,
-              color: CYAN, marginBottom: 10, letterSpacing: '0.02em',
-              textShadow: `0 0 14px ${CYAN_GLOW}`,
-            }}>
-              ¡Salta sobre el tapete!
-            </p>
-
-            <p style={{
-              fontFamily: 'var(--font-body)', fontSize: 13,
-              color: 'rgba(255,255,255,0.5)', marginBottom: 24,
-              lineHeight: 1.55, padding: '0 8px',
+              fontFamily: 'var(--font-body)', fontSize: 12,
+              color: 'rgba(255,255,255,0.5)', marginBottom: 16,
+              lineHeight: 1.5, padding: '0 4px',
             }}>
               {subtitle}
             </p>
 
             {/* Tapete visual */}
             <div style={{
-              margin: '0 auto 24px',
-              width: 120, height: 52,
-              borderRadius: 12,
+              margin: '0 auto 16px',
+              width: 100, height: 40,
+              borderRadius: 10,
               background: CYAN_DIM,
               border: `1px solid rgba(34,211,238,0.4)`,
-              boxShadow: `0 0 24px ${CYAN_GLOW}`,
+              boxShadow: `0 0 20px ${CYAN_GLOW}`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               position: 'relative',
               overflow: 'hidden',
             }}>
-              {/* Scan line animation */}
               <motion.div
-                animate={{ x: [-120, 120] }}
+                animate={{ x: [-100, 100] }}
                 transition={{ duration: 1.8, repeat: Infinity, ease: 'linear' }}
                 style={{
                   position: 'absolute',
                   top: 0, bottom: 0,
-                  width: 40,
+                  width: 36,
                   background: `linear-gradient(90deg, transparent, rgba(34,211,238,0.3), transparent)`,
                   pointerEvents: 'none',
                 }}
               />
-              <span style={{ fontSize: 22, position: 'relative' }}>👟</span>
+              <span style={{ fontSize: 20, position: 'relative' }}>👟</span>
             </div>
 
             {/* CTA */}
@@ -140,14 +133,14 @@ export default function TapeteCard({ show, onDismiss, sala }: TapeteCardProps) {
               onClick={onDismiss}
               style={{
                 width: '100%',
-                padding: '13px 0',
-                borderRadius: 12,
+                padding: '11px 0',
+                borderRadius: 10,
                 border: `1px solid rgba(34,211,238,0.5)`,
                 background: CYAN_DIM,
                 color: CYAN,
                 fontFamily: 'var(--font-display)',
                 fontWeight: 700,
-                fontSize: 15,
+                fontSize: 14,
                 cursor: 'pointer',
                 boxShadow: `0 0 20px rgba(34,211,238,0.15)`,
                 letterSpacing: '0.04em',

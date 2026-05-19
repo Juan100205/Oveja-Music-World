@@ -65,14 +65,15 @@ function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
           transition={{ type: 'spring', damping: 22, stiffness: 300 }}
           className="pointer-events-auto relative"
           style={{
-            width: 'min(340px, 88vw)',
+            width: 'min(320px, 88vw)',
+            maxHeight: 'calc(100dvh - 32px)',
             background: 'rgba(10,10,26,0.97)',
             border: '1px solid rgba(61,184,250,0.22)',
-            borderRadius: 24,
+            borderRadius: 20,
             boxShadow: '0 0 60px rgba(61,184,250,0.12), 0 0 100px rgba(155,84,249,0.08)',
-            padding: '36px 32px 28px',
+            padding: '24px 24px 20px',
             textAlign: 'center',
-            overflow: 'hidden',
+            overflow: 'auto',
           }}
         >
         {/* Glow accent top */}
@@ -84,71 +85,71 @@ function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
 
         {/* Sheep + title */}
         <motion.div
-          animate={{ y: [0, -5, 0] }}
+          animate={{ y: [0, -4, 0] }}
           transition={{ duration: 2.4, repeat: Infinity, ease: 'easeInOut' }}
-          style={{ fontSize: 44, lineHeight: 1, marginBottom: 12 }}
+          style={{ fontSize: 34, lineHeight: 1, marginBottom: 8 }}
         >
           🐑
         </motion.div>
 
         <h2 style={{
-          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18,
+          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16,
           color: '#fff', marginBottom: 4, letterSpacing: '0.02em',
         }}>
           ¡Mueve la oveja!
         </h2>
         <p style={{
-          fontFamily: 'var(--font-body)', fontSize: 13,
-          color: 'rgba(255,255,255,0.45)', marginBottom: 24, lineHeight: 1.5,
+          fontFamily: 'var(--font-body)', fontSize: 12,
+          color: 'rgba(255,255,255,0.45)', marginBottom: 16, lineHeight: 1.5,
         }}>
           Usa el teclado para explorar el mundo
         </p>
 
         {/* WASD keyboard */}
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, marginBottom: 28 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, marginBottom: 18 }}>
 
-          <div style={{ display: 'flex', gap: 16, alignItems: 'center', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'center', justifyContent: 'center' }}>
             {/* WASD */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                <WasdKey label="W" width={38} height={38} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                <WasdKey label="W" width={34} height={34} />
               </div>
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                <WasdKey label="A" width={38} height={38} />
-                <WasdKey label="S" width={38} height={38} />
-                <WasdKey label="D" width={38} height={38} />
+              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                <WasdKey label="A" width={34} height={34} />
+                <WasdKey label="S" width={34} height={34} />
+                <WasdKey label="D" width={34} height={34} />
               </div>
             </div>
 
-            <div style={{ width: 1, height: 40, background: 'rgba(255,255,255,0.08)' }} />
+            <div style={{ width: 1, height: 36, background: 'rgba(255,255,255,0.08)' }} />
 
             {/* Arrows */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5 }}>
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                <WasdKey label="↑" width={38} height={38} />
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4 }}>
+              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                <WasdKey label="↑" width={34} height={34} />
               </div>
-              <div style={{ display: 'flex', gap: 5, justifyContent: 'center' }}>
-                <WasdKey label="←" width={38} height={38} />
-                <WasdKey label="↓" width={38} height={38} />
-                <WasdKey label="→" width={38} height={38} />
+              <div style={{ display: 'flex', gap: 4, justifyContent: 'center' }}>
+                <WasdKey label="←" width={34} height={34} />
+                <WasdKey label="↓" width={34} height={34} />
+                <WasdKey label="→" width={34} height={34} />
               </div>
             </div>
           </div>
 
           {/* Label */}
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
             WASD o flechas para moverte
           </p>
 
           {/* Divider */}
-          <div style={{ width: '60%', height: 1, background: 'rgba(255,255,255,0.08)', margin: '8px 0' }} />
+          <div style={{ width: '60%', height: 1, background: 'rgba(255,255,255,0.08)', margin: '6px 0' }} />
 
           {/* Spacebar */}
           <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
-            <WasdKey label="ESPACIO" wide width={180} height={38} />
+            <WasdKey label="ESPACIO" wide width={160} height={34} />
           </div>
 
-          <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.25)', marginTop: 4 }}>
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 2 }}>
             Barra espaciadora para saltar
           </p>
         </div>
@@ -160,14 +161,14 @@ function WasdTutorialCard({ onDismiss }: { onDismiss: () => void }) {
           onClick={onDismiss}
           style={{
             width: '100%',
-            padding: '14px 0',
-            borderRadius: 12,
+            padding: '11px 0',
+            borderRadius: 10,
             border: 'none',
             background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)',
             color: '#fff',
             fontFamily: 'var(--font-display)',
             fontWeight: 700,
-            fontSize: 15,
+            fontSize: 14,
             cursor: 'pointer',
             boxShadow: '0 0 24px rgba(61,184,250,0.3)',
             letterSpacing: '0.03em',
@@ -491,7 +492,7 @@ export default function MapaPage() {
                   initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 20px 32px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh' }}>
 
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center justify-between mb-6">
@@ -524,7 +525,7 @@ export default function MapaPage() {
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}>
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh', padding: '20px 20px 32px' }}>
 
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-6">
@@ -685,7 +686,7 @@ export default function MapaPage() {
                   initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 24px 44px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh' }}>
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', padding: '20px 20px 32px', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh' }}>
 
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center justify-between mb-6">
@@ -718,7 +719,7 @@ export default function MapaPage() {
                   initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
                   transition={{ type: 'spring', damping: 28, stiffness: 300 }}
                   className="absolute bottom-0 left-0 right-0 z-30 rounded-t-3xl overflow-y-auto"
-                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78vh', padding: '20px 24px 44px' }}>
+                  style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', maxHeight: '78dvh', padding: '20px 20px 32px' }}>
 
                   <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
                   <div className="flex items-center gap-3 mb-6">
