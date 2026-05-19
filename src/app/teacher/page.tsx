@@ -7,6 +7,7 @@ import { GraduationCap, Users, BookOpen, LogOut } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from '@/app/admin/ContentManager'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
+import { usePageScroll } from '@/hooks/usePageScroll'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface Student {
@@ -74,6 +75,7 @@ function NivelBar({ nivel, puntos }: { nivel: number; puntos: number }) {
 // PÁGINA PRINCIPAL
 // ══════════════════════════════════════════════════════════════
 export default function TeacherPage() {
+  usePageScroll()
   const { user, token, logout } = useAuth()
   const router = useRouter()
   const { clases } = useInstrumentos(token ?? null)

@@ -6,6 +6,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
+import { usePageScroll } from '@/hooks/usePageScroll'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface AdminUser {
@@ -109,6 +110,7 @@ function Field({
 // PANEL ADMIN
 // ══════════════════════════════════════════════════════════════
 export default function AdminPage() {
+  usePageScroll()
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
 

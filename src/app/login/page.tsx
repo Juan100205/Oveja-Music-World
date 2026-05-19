@@ -6,10 +6,12 @@ import { motion, AnimatePresence } from 'framer-motion'
 import LoginForm from '@/components/auth/LoginForm'
 import RegisterForm from '@/components/auth/RegisterForm'
 import { useAuth } from '@/hooks/useAuth'
+import { usePageScroll } from '@/hooks/usePageScroll'
 
 type Mode = 'login' | 'register'
 
 export default function LoginPage() {
+  usePageScroll()
   const { login, register, loading, error, isAuthenticated } = useAuth()
   const router = useRouter()
   const [mode, setMode] = useState<Mode>('login')
