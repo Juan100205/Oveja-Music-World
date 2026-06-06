@@ -21,6 +21,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (body.url          !== undefined) updates.url          = body.url.trim()
   if (body.tipo         !== undefined) updates.tipo         = body.tipo
   if (body.label        !== undefined) updates.label        = body.label?.trim() || null
+  if (body.puntos       !== undefined) updates.puntos       = body.puntos
   if (body.interacciones !== undefined) updates.interacciones = Array.isArray(body.interacciones)
     ? body.interacciones
     : []

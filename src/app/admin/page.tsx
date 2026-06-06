@@ -7,6 +7,8 @@ import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2,
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 import { usePageScroll } from '@/hooks/usePageScroll'
+import { LEVEL_CONFIG } from '@/types'
+import { calcularNivel, calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface AdminUser {
@@ -1039,20 +1041,55 @@ export default function AdminPage() {
                   </div>
                 </div>
 
-                {/* ── Stat row ── */}
-                <div style={{ display: 'flex', gap: 16, marginBottom: 14 }}>
-                  {[
-                    { label: 'Nivel',  value: u.nivel },
-                    { label: 'Puntos', value: u.puntos },
-                  ].map(s => (
-                    <div key={s.label} style={{
-                      background: 'rgba(255,255,255,0.04)', borderRadius: 10,
-                      padding: '6px 12px', display: 'flex', alignItems: 'center', gap: 6,
+                {/* ── Nivel + Puntos con barra de progreso ── */}
+                <div style={{ marginBottom: 14 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+                    <div style={{
+                      background: 'linear-gradient(135deg, #f59e0b, #f97316)', borderRadius: 8,
+                      padding: '4px 10px', display: 'flex', alignItems: 'center', gap: 5,
                     }}>
-                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>{s.label}</span>
-                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#fff' }}>{s.value}</span>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#fff' }}>
+                        Nv.{u.nivel}
+                      </span>
                     </div>
-                  ))}
+                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
+                      {LEVEL_CONFIG.find(c => c.nivel === u.nivel)?.nombre ?? ''}
+                    </span>
+                    <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
+                      <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>
+                        {u.puntos}
+                      </span>
+                      <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.3)' }}>
+                        pts
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{
+                    width: '100%', height: 6, borderRadius: 999,
+                    background: 'rgba(255,255,255,0.06)', overflow: 'hidden',
+                  }}>
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${calcularProgreso(u.puntos)}%` }}
+                      transition={{ duration: 0.8, ease: 'easeOut' }}
+                      style={{
+                        height: '100%', borderRadius: 999,
+                        background: 'linear-gradient(90deg, #f59e0b, #f97316)',
+                      }}
+                    />
+                  </div>
+                  {(() => {
+                    const falta = calcularPuntosParaSiguienteNivel(u.puntos)
+                    return falta > 0 ? (
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>
+                        {falta} pts para siguiente nivel
+                      </p>
+                    ) : (
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: '#f59e0b', marginTop: 3 }}>
+                        ¡Nivel máximo!
+                      </p>
+                    )
+                  })()}
                 </div>
 
                 {/* ── Cursos toggles ── */}

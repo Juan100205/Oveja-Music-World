@@ -6,6 +6,7 @@ import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
+import SplineTouchControls from '@/components/spline/SplineTouchControls'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import { useOrientation } from '@/hooks/useOrientation'
@@ -16,9 +17,7 @@ import { useProgress } from '@/hooks/useProgress'
 import { useAuth } from '@/hooks/useAuth'
 import { PUNTOS_POR_TIPO } from '@/types'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
-import { useYouTubePlayer } from '@/hooks/useYouTubePlayer'
-import { InteractionOverlay } from '@/components/video/InteractionOverlay'
-import type { InteractionPoint } from '@/types'
+import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
 
 const SCENE_CLASSROOM = 'https://prod.spline.design/646pGt79P6qgQp6p/scene.splinecode'
 
@@ -109,7 +108,7 @@ function VideoCard({ recurso, ytId, completed, onClick }: {
           <div className="absolute top-2 right-2 px-2 py-1 rounded-full"
             style={{ background: 'rgba(10,10,26,0.7)', backdropFilter: 'blur(6px)', border: '1px solid rgba(255,255,255,0.12)' }}>
             <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,0.7)' }}>
-              +{PUNTOS_POR_TIPO.video} pts
+              +{recurso.puntos ?? PUNTOS_POR_TIPO[recurso.tipo] ?? 5} pts
             </span>
           </div>
         )}
@@ -122,7 +121,7 @@ function VideoCard({ recurso, ytId, completed, onClick }: {
 function ExternalCard({ recurso, index, completed, onClick }: {
   recurso: Recurso; index: number; completed: boolean; onClick: () => void
 }) {
-  const pts = PUNTOS_POR_TIPO[recurso.tipo] ?? 5
+  const pts = recurso.puntos ?? PUNTOS_POR_TIPO[recurso.tipo] ?? 5
   return (
     <motion.button
       initial={{ opacity: 0, y: 10 }}
@@ -259,51 +258,26 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
+  // Refs espejo para usar en handleVariableChange sin dependencias inestables
+  const seccionesOpenRef = useRef(false)
+  useEffect(() => { seccionesOpenRef.current = seccionesOpen }, [seccionesOpen])
+  const claseCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
   // DB-backed instrument: fetched when clase doesn't exist in static CLASES_CONFIG
   const [dbInstrumento, setDbInstrumento] = useState<ClaseConfig | null>(null)
 
   // DB-backed modules: fetched from Supabase, override static data per module id
   const [dbModulos, setDbModulos] = useState<Record<string, Modulo>>({})
 
-
-  const [interacciones, setInteracciones] = useState<InteractionPoint[]>([])
-  const [loadingInteracciones, setLoadingInteracciones] = useState(false)
-
-  const ytIdActivo = videoActivo ? getYouTubeId(videoActivo.url) : null
-  const openVideo = useCallback(async (url: string, label?: string) => {
-    setVideoActivo({ url, label })
-    setLoadingInteracciones(true)
-    try {
-      const res = await fetch(`/api/content/interactions?url=${encodeURIComponent(url)}`)
-      const data = await res.json()
-      setInteracciones(Array.isArray(data?.interacciones) ? data.interacciones : [])
-    } catch {
-      setInteracciones([])
-    } finally {
-      setLoadingInteracciones(false)
-    }
-  }, [])
-
-  const closeVideo = useCallback(() => {
-    setVideoActivo(null)
-    setInteracciones([])
-    setLoadingInteracciones(false)
-  }, [])
-
-  const { containerRef, playerReady, interactionPending, dismissInteraction, setOnVideoEnded } = useYouTubePlayer(ytIdActivo, interacciones)
-
-  useEffect(() => {
+  const handleVideoEnd = useCallback(() => {
     if (!videoActivo?.url) return
-    setOnVideoEnded(() => {
-      completeResource(videoActivo.url, 'video').then(result => {
-        if (result && !result.ya_completado) {
-          setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-          if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
-        }
-      })
+    completeResource(videoActivo.url, 'video').then(result => {
+      if (result && !result.ya_completado) {
+        setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+        if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+      }
     })
-    return () => setOnVideoEnded(null)
-  }, [videoActivo?.url, completeResource, updateUser, setOnVideoEnded])
+  }, [videoActivo?.url, completeResource, updateUser])
 
   const handleOpenResource = useCallback(async (url: string, tipo: string) => {
     const result = await completeResource(url, tipo)
@@ -315,7 +289,19 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
-    if (name === 'isInClass')     flushSync(() => setIsInClass(isTrue))
+    if (name === 'isInClass') {
+      flushSync(() => setIsInClass(isTrue))
+      if (isTrue) {
+        if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
+        if (!seccionesOpenRef.current) {
+          setTapeteHintOpen(false)
+          setSeccionesOpen(true)
+        }
+      } else {
+        if (claseCloseRef.current) clearTimeout(claseCloseRef.current)
+        claseCloseRef.current = setTimeout(() => setSeccionesOpen(false), 600)
+      }
+    }
     if (name === 'isOutingClass') flushSync(() => setIsOutingClass(isTrue))
   }, [])
 
@@ -395,6 +381,8 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
       <SplineScene scene={SCENE_CLASSROOM} onVariableChange={handleVariableChange} />
       {isMobile && isPortrait && <RotateScreen />}
 
+      <SplineTouchControls />
+
       <LevelProgressPanel
         puntos={user?.puntos ?? 0}
         nivel={user?.nivel ?? 1}
@@ -441,7 +429,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
             whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }} whileTap={{ scale: 0.95 }}
             onClick={() => setSeccionesOpen(true)}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, padding: '14px 36px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(236,72,138,0.4)', letterSpacing: '0.02em' }}>
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 16px)', padding: 'clamp(8px, 2vw, 14px) clamp(18px, 5vw, 36px)', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(236,72,138,0.4)', letterSpacing: '0.02em' }}>
             Tomar Lecciones →
           </motion.button>
         )}
@@ -455,7 +443,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
             whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(61,184,250,0.55)' }} whileTap={{ scale: 0.95 }}
             onClick={() => setSalidaOpen(true)}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, padding: '14px 36px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(61,184,250,0.4)', letterSpacing: '0.02em' }}>
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 16px)', padding: 'clamp(8px, 2vw, 14px) clamp(18px, 5vw, 36px)', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(61,184,250,0.4)', letterSpacing: '0.02em' }}>
             ← Volver al Mapa
           </motion.button>
         )}
@@ -495,7 +483,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                       <motion.button key={mod.id} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                         whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
                         onClick={() => setModuloActivo(mod)}
-                        className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-left w-full cursor-pointer"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
@@ -540,7 +528,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                       <motion.button key={seccion.nombre} initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
                         whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
                         onClick={() => setSeccionActiva(seccion)}
-                        className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-left w-full cursor-pointer"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}>
                         <div className="flex items-center gap-4">
                           <div className="flex-shrink-0 flex items-center justify-center rounded-full font-bold"
@@ -585,7 +573,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                       if (ytId) {
                         return (
                           <VideoCard key={i} recurso={recurso} ytId={ytId} completed={isCompleted(recurso.url)}
-                            onClick={() => openVideo(recurso.url, recurso.label)} />
+                            onClick={() => setVideoActivo({ url: recurso.url, label: recurso.label })} />
                         )
                       }
                       return (
@@ -632,7 +620,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
 
               <motion.button whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => router.push('/escuela')}
-                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-4"
+                className="w-full rounded-2xl flex items-center gap-4 px-4 py-3 sm:px-5 sm:py-4 cursor-pointer mb-4"
                 style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none' }}>
                 <span style={{ fontSize: 24 }}>🗺️</span>
                 <div className="text-left">
@@ -676,52 +664,23 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
       </AnimatePresence>
 
       {/* ════════════════════════════════════════
-          OVERLAY — YOUTUBE PLAYER
+          VIDEO PLAYER WITH CARDS
       ════════════════════════════════════════ */}
       <AnimatePresence>
         {videoActivo && (
-          <>
-            <motion.div key="video-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }} onClick={closeVideo}
-              className="absolute inset-0 z-50" style={{ background: 'rgba(5,5,18,0.92)', backdropFilter: 'blur(16px)' }} />
-            <motion.div key="video-player" initial={{ opacity: 0, scale: 0.94, y: 24 }} animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.94, y: 24 }} transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className="absolute z-50" style={{ inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px 16px', pointerEvents: 'none' }}>
-              <div className="w-full flex flex-col gap-3" style={{ maxWidth: 720, pointerEvents: 'auto' }}>
-                <div className="flex items-center justify-between">
-                  {videoActivo.label && (
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>{videoActivo.label}</p>
-                  )}
-                  <motion.button whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }} onClick={closeVideo}
-                    className="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}>
-                    <X size={14} strokeWidth={1.5} />
-                  </motion.button>
-                </div>
-                <div className="w-full rounded-3xl overflow-hidden relative"
-                  style={{ aspectRatio: '16/9', boxShadow: '0 0 80px rgba(236,72,138,0.25)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <div ref={containerRef} className="w-full h-full" />
-                  <InteractionOverlay interaction={interactionPending} onContinue={dismissInteraction} />
-                </div>
-                {isCompleted(videoActivo.url) && (
-                  <div className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl"
-                    style={{ background: 'rgba(52,211,153,0.07)', border: '1px solid rgba(52,211,153,0.2)' }}>
-                    <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: 'rgba(52,211,153,0.6)' }}>✓ Video completado</span>
-                  </div>
-                )}
-                {ytIdActivo && (
-                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, marginTop: 4 }}>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                      {playerReady ? 'Player listo' : 'Cargando player...'}
-                    </span>
-                    <span style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)' }}>
-                      {loadingInteracciones ? 'Cargando interacciones...' : `${interacciones.length} interacciones`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </>
+          <motion.div key="video-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(5,5,18,0.92)', backdropFilter: 'blur(16px)', padding: '24px 16px' }}>
+            <div className="w-full" style={{ maxWidth: 720 }}>
+              <VideoPlayerWithCards
+                videoUrl={videoActivo.url}
+                label={videoActivo.label}
+                onClose={() => setVideoActivo(null)}
+                onVideoEnd={handleVideoEnd}
+              />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 

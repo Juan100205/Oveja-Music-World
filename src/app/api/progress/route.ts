@@ -39,10 +39,10 @@ export async function POST(req: NextRequest) {
 
   const db = getSupabaseAdmin()
 
-  // Validar que la URL corresponde a un recurso real del currículo
+  // Validar que la URL corresponde a un recurso real del currículo y leer puntos config
   const { data: recurso } = await db
     .from('recursos')
-    .select('id')
+    .select('id, puntos')
     .eq('url', body.url)
     .maybeSingle()
 
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ya_completado: true, puntos_ganados: 0 })
   }
 
-  const puntos = PUNTOS_POR_TIPO[body.tipo] ?? 5
+  const puntos = recurso.puntos ?? (PUNTOS_POR_TIPO[body.tipo] ?? 5)
 
   // Registrar completion
   await db.from('completions').insert({

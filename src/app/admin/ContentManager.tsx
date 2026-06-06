@@ -11,6 +11,7 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import VideoCardEditor from './VideoCardEditor'
+import { PUNTOS_POR_TIPO } from '@/types'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface InteractionPoint {
@@ -25,6 +26,7 @@ interface Recurso {
   url:           string
   tipo:          string
   label:         string | null
+  puntos?:       number
   orden:         number
   interacciones: InteractionPoint[]
 }
@@ -356,6 +358,14 @@ function formatSeconds(s: number): string {
   return `${m}:${String(sec).padStart(2, '0')}`
 }
 
+function parseSeconds(str: string): number {
+  const trimmed = str.trim()
+  if (!trimmed) return 0
+  const parts = trimmed.split(':')
+  if (parts.length === 2) return parseInt(parts[0]) * 60 + parseInt(parts[1])
+  return parseInt(trimmed) || 0
+}
+
 // ── Modal Editar/Crear Recurso ─────────────────────────────────
 function RecursoModal({
   recurso,
@@ -366,13 +376,14 @@ function RecursoModal({
 }: {
   recurso?: Recurso
   seccionId: string
-  onSave: (data: { url: string; tipo: Tipo; label: string; interacciones: InteractionPoint[] }) => Promise<void>
+  onSave: (data: { url: string; tipo: Tipo; label: string; puntos?: number; interacciones: InteractionPoint[] }) => Promise<void>
   onClose: () => void
   authHeaders: Record<string, string>
 }) {
   const [url,   setUrl]   = useState(recurso?.url   ?? '')
   const [tipo,  setTipo]  = useState<Tipo>((recurso?.tipo as Tipo) ?? 'video')
   const [label, setLabel] = useState(recurso?.label ?? '')
+  const [puntos, setPuntos] = useState<string>(recurso?.puntos ? String(recurso.puntos) : '')
   const [saving, setSaving] = useState(false)
   const [err,    setErr]    = useState<string | null>(null)
 
@@ -392,8 +403,8 @@ function RecursoModal({
   )
 
   const addInteraction = () => {
-    const secs = parseInt(newAt, 10)
-    if (!newAt || isNaN(secs) || secs < 0) return
+    const secs = parseSeconds(newAt)
+    if (secs <= 0) return
     const msg = newMensaje.trim() || MENSAJES_DEFAULT[newTipoInt]
     setInteractions(prev => [
       ...prev,
@@ -408,9 +419,14 @@ function RecursoModal({
 
   const handleSave = async () => {
     if (!url.trim()) { setErr('La URL es requerida'); return }
+    if (!label.trim()) { setErr('El título es requerido'); return }
     setSaving(true)
     try {
-      await onSave({ url: url.trim(), tipo, label: label.trim(), interacciones: interactions })
+      await onSave({
+        url: url.trim(), tipo, label: label.trim(),
+        puntos: puntos ? parseInt(puntos) : undefined,
+        interacciones: interactions,
+      })
       onClose()
     } catch (e: unknown) {
       setErr(e instanceof Error ? e.message : 'Error al guardar')
@@ -499,17 +515,37 @@ function RecursoModal({
             </div>
           </div>
 
-          {/* Label */}
+          {/* Título */}
           <div>
             <label style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 6 }}>
-              Etiqueta (opcional)
+              Título <span style={{ color: '#ec488a' }}>*</span>
             </label>
             <input
               value={label}
               onChange={e => setLabel(e.target.value)}
-              placeholder="Nombre visible del recurso..."
+              placeholder="Ej: Ejercicio de escalas rápidas"
               style={{
                 width: '100%', background: 'rgba(255,255,255,0.06)',
+                border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+                padding: '10px 14px', color: '#fff',
+                fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none',
+              }}
+            />
+          </div>
+
+          {/* Puntos */}
+          <div>
+            <label style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 6 }}>
+              Puntos <span style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.25)' }}>(vacío = default por tipo)</span>
+            </label>
+            <input
+              type="number"
+              value={puntos}
+              onChange={e => setPuntos(e.target.value)}
+              placeholder={String(PUNTOS_POR_TIPO[tipo] ?? 5)}
+              min={0}
+              style={{
+                width: 100, background: 'rgba(255,255,255,0.06)',
                 border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
                 padding: '10px 14px', color: '#fff',
                 fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none',
@@ -624,25 +660,24 @@ function RecursoModal({
                 </div>
 
                 <div style={{ display: 'flex', gap: 8 }}>
-                  {/* Tiempo mm:ss helper */}
+                  {/* Tiempo mm:ss */}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                     <Clock size={12} color="rgba(255,255,255,0.4)" />
                     <input
-                      type="number"
+                      type="text"
                       value={newAt}
                       onChange={e => setNewAt(e.target.value)}
-                      placeholder="seg"
-                      min={0}
+                      placeholder="mm:ss"
                       style={{
-                        width: 68, background: 'rgba(255,255,255,0.06)',
+                        width: 72, background: 'rgba(255,255,255,0.06)',
                         border: '1px solid rgba(255,255,255,0.12)', borderRadius: 8,
                         padding: '7px 10px', color: '#fff',
                         fontFamily: 'var(--font-body)', fontSize: 12, outline: 'none',
                       }}
                     />
-                    {newAt && !isNaN(parseInt(newAt)) && (
+                    {newAt && parseSeconds(newAt) > 0 && (
                       <span style={{ fontFamily: 'var(--font-display)', fontSize: 11, color: 'rgba(255,255,255,0.4)' }}>
-                        = {formatSeconds(parseInt(newAt))}
+                        = {formatSeconds(parseSeconds(newAt))}
                       </span>
                     )}
                   </div>
@@ -738,14 +773,12 @@ function RecursoRow({
         </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
-          {recurso.label && (
-            <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: '#fff', marginBottom: 1, fontWeight: 500 }}>
-              {recurso.label}
-            </p>
-          )}
+          <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: recurso.label ? '#fff' : 'rgba(255,255,255,0.25)', fontWeight: recurso.label ? 600 : 400, marginBottom: 1 }}>
+            {recurso.label || 'Sin título'}
+          </p>
           <p style={{
             fontFamily: 'var(--font-body)', fontSize: 11,
-            color: 'rgba(255,255,255,0.3)',
+            color: 'rgba(255,255,255,0.25)',
             overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
           }}>
             {shortUrl}
@@ -818,7 +851,7 @@ function SeccionPanel({
     onUpdate({ ...seccion, zona: (zona || null) as Seccion['zona'] })
   }, [apiBase, seccion, onUpdate, authHeaders])
 
-  const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string; interacciones: InteractionPoint[] }) => {
+  const handleSaveRecurso = useCallback(async (data: { url: string; tipo: Tipo; label: string; puntos?: number; interacciones: InteractionPoint[] }) => {
     if (editingRecurso === 'new') {
       const res = await fetch(`${apiBase}/recursos`, {
         method: 'POST', headers: authHeaders,

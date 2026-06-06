@@ -6,11 +6,15 @@ import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
+import SplineTouchControls from '@/components/spline/SplineTouchControls'
+import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
+import { useProgress } from '@/hooks/useProgress'
+import { PUNTOS_POR_TIPO } from '@/types'
 import type { GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso } from '@/data/cursos'
 
@@ -79,9 +83,10 @@ function getEmbedUrl(url: string, tipo: string): string {
 }
 
 // ── Video thumbnail card ───────────────────────────────────────
-function VideoCard({ recurso, ytId, onClick }: {
-  recurso: Recurso; ytId: string; onClick: () => void
+function VideoCard({ recurso, ytId, completed, onClick }: {
+  recurso: Recurso; ytId: string; completed?: boolean; onClick: () => void
 }) {
+  const pts = recurso.puntos ?? PUNTOS_POR_TIPO[recurso.tipo] ?? 5
   return (
     <motion.button
       initial={{ opacity: 0, y: 10 }}
@@ -128,15 +133,31 @@ function VideoCard({ recurso, ytId, onClick }: {
             </p>
           </div>
         )}
+        {/* Puntos preview */}
+        <div className="absolute top-2 right-2 flex items-center gap-1.5 rounded-full px-2.5 py-1"
+          style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <span style={{ fontSize: 10 }}>⭐</span>
+          <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, color: '#fbbf24' }}>
+            +{pts}
+          </span>
+        </div>
+        {/* Completado badge */}
+        {completed && (
+          <div className="absolute top-2 left-2 flex items-center gap-1 rounded-full px-2.5 py-1"
+            style={{ background: 'rgba(52,211,153,0.85)', backdropFilter: 'blur(4px)' }}>
+            <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 10, color: '#fff' }}>✓</span>
+          </div>
+        )}
       </div>
     </motion.button>
   )
 }
 
 // ── External resource card ─────────────────────────────────────
-function ExternalCard({ recurso, index, onClick }: {
-  recurso: Recurso; index: number; onClick: () => void
+function ExternalCard({ recurso, index, completed, onClick }: {
+  recurso: Recurso; index: number; completed?: boolean; onClick: () => void
 }) {
+  const pts = recurso.puntos ?? PUNTOS_POR_TIPO[recurso.tipo] ?? 5
   return (
     <motion.button
       initial={{ opacity: 0, y: 10 }}
@@ -148,19 +169,24 @@ function ExternalCard({ recurso, index, onClick }: {
       className="flex items-center gap-4 rounded-2xl px-4 py-4 w-full cursor-pointer text-left"
       style={{
         background: TIPO_COLOR[recurso.tipo] ?? 'rgba(255,255,255,0.05)',
-        border: `1px solid ${TIPO_BORDER[recurso.tipo] ?? 'rgba(255,255,255,0.08)'}`,
+        border: `1px solid ${completed ? 'rgba(52,211,153,0.3)' : (TIPO_BORDER[recurso.tipo] ?? 'rgba(255,255,255,0.08)')}`,
       }}
     >
       <div className="flex-shrink-0 flex items-center justify-center rounded-xl"
         style={{ width: 44, height: 44, background: 'rgba(255,255,255,0.07)', fontSize: 22 }}>
-        {TIPO_ICON[recurso.tipo] ?? '🔗'}
+        {completed ? (
+          <span style={{ color: '#34d399' }}>✓</span>
+        ) : (
+          TIPO_ICON[recurso.tipo] ?? '🔗'
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <p className="truncate" style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: '#fff', lineHeight: 1.3 }}>
           {recurso.label ?? recurso.url}
+          {completed && <span style={{ color: '#34d399', fontSize: 10, marginLeft: 6 }}>completado</span>}
         </p>
         <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.4)', marginTop: 3 }}>
-          {TIPO_LABEL[recurso.tipo] ?? recurso.tipo} · {TIPO_MODO[recurso.tipo] ?? 'Abre en la app'}
+          {TIPO_LABEL[recurso.tipo] ?? recurso.tipo} · +{pts} pts
         </p>
       </div>
       <div className="flex-shrink-0 flex items-center justify-center rounded-full"
@@ -168,6 +194,36 @@ function ExternalCard({ recurso, index, onClick }: {
         ›
       </div>
     </motion.button>
+  )
+}
+
+// ── Points Toast ────────────────────────────────────────────────
+function PtsToast({ pts, subioNivel, onDone }: { pts: number; subioNivel: boolean; onDone: () => void }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30, scale: 0.9 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.9 }}
+      transition={{ type: 'spring', damping: 22, stiffness: 280 }}
+      onAnimationComplete={() => { setTimeout(onDone, 2500) }}
+      className="fixed z-[70] bottom-8 left-1/2 -translate-x-1/2"
+      style={{ fontFamily: 'var(--font-display)', fontWeight: 700, pointerEvents: 'none' }}
+    >
+      <div style={{
+        background: 'linear-gradient(135deg, rgba(245,158,11,0.95), rgba(249,115,22,0.95))',
+        borderRadius: 16, padding: '12px 24px',
+        boxShadow: '0 0 40px rgba(245,158,11,0.5)',
+        display: 'flex', alignItems: 'center', gap: 10,
+      }}>
+        <span style={{ fontSize: 20 }}>⭐</span>
+        <span style={{ color: '#fff', fontSize: 17, letterSpacing: '0.02em' }}>+{pts} pts</span>
+        {subioNivel && (
+          <span style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, background: 'rgba(255,255,255,0.2)', borderRadius: 6, padding: '2px 8px' }}>
+            ¡Subió de nivel!
+          </span>
+        )}
+      </div>
+    </motion.div>
   )
 }
 
@@ -254,13 +310,16 @@ function IframeViewer({ url, label, tipo, onClose }: {
 export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: string } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
-  const { token } = useAuth()
+  const { token, user, updateUser } = useAuth()
   const { gym: allGym } = useInstrumentos(token)
 
   // Solo DB
   const [dbModulos, setDbModulos] = useState<ModuloGym[]>([])
 
   const { isMobile, isPortrait } = useOrientation()
+  const { isCompleted, completeResource } = useProgress()
+  const [toast, setToast] = useState<{ pts: number; subioNivel: boolean; id: number } | null>(null)
+  const toastCountRef = useRef(0)
   const [isTrainning,    setIsTrainning]    = useState(false)
   const [isOutingGym,    setIsOutingGym]    = useState(false)
   const [panelOpen,      setPanelOpen]      = useState(false)
@@ -272,6 +331,11 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
   const [tapeteHintOpen, setTapeteHintOpen] = useState(!moduloIdInicial)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Refs espejo para usar en handleVariableChange sin dependencias inestables
+  const panelOpenRef = useRef(false)
+  useEffect(() => { panelOpenRef.current = panelOpen }, [panelOpen])
+  const gymCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const gymInstr = allGym.find(g => g.id === instrumento)
   const cursoId = gymInstr?.cursoId ?? instrumento
@@ -303,6 +367,24 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
 
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
 
+  const handleVideoEnd = useCallback(() => {
+    if (!videoActivo?.url) return
+    completeResource(videoActivo.url, 'video').then(result => {
+      if (result && !result.ya_completado) {
+        setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+        if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+      }
+    })
+  }, [videoActivo?.url, completeResource, updateUser])
+
+  const handleOpenResource = useCallback(async (url: string, tipo: string) => {
+    const result = await completeResource(url, tipo)
+    if (result && !result.ya_completado) {
+      setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
+      if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+    }
+  }, [completeResource, updateUser])
+
   // 3s after tapete is dismissed, show fallback if tapete hasn't triggered
   useEffect(() => {
     if (tapeteHintOpen || panelOpen || isTrainning) return
@@ -324,7 +406,19 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
-    if (name === 'isTrainning') flushSync(() => setIsTrainning(isTrue))
+    if (name === 'isTrainning') {
+      flushSync(() => setIsTrainning(isTrue))
+      if (isTrue) {
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        if (!panelOpenRef.current) {
+          setTapeteHintOpen(false)
+          setPanelOpen(true)
+        }
+      } else {
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        gymCloseRef.current = setTimeout(() => { setPanelOpen(false); setSeccionActiva(null) }, 600)
+      }
+    }
     if (name === 'isOutingGym') flushSync(() => setIsOutingGym(isTrue))
   }, [])
 
@@ -343,6 +437,8 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
       {/* Spline siempre montado — RotateScreen lo cubre en portrait como overlay */}
       <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
       {isMobile && isPortrait && <RotateScreen />}
+
+      <SplineTouchControls />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
@@ -388,21 +484,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
         )}
       </AnimatePresence>
 
-      {/* ── Botón Entrenar: siempre visible cuando el panel está cerrado ── */}
-      <AnimatePresence>
-        {!panelOpen && !salidaOpen && (
-          <motion.button key="trainning-btn"
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
-            transition={{ duration: 0.3, ease: 'easeOut' }}
-            whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(61,184,250,0.55)' }} whileTap={{ scale: 0.95 }}
-            onClick={() => setPanelOpen(true)}
-            className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, padding: '14px 36px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(61,184,250,0.4)', letterSpacing: '0.02em' }}
-          >
-            🏋️ Entrenar →
-          </motion.button>
-        )}
-      </AnimatePresence>
+
 
       {/* ── isOutingGym → salida ── */}
       <AnimatePresence>
@@ -413,7 +495,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
             whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }} whileTap={{ scale: 0.95 }}
             onClick={() => setSalidaOpen(true)}
             className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
-            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, padding: '14px 36px', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(236,72,138,0.4)', letterSpacing: '0.02em' }}
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 16px)', padding: 'clamp(8px, 2vw, 14px) clamp(18px, 5vw, 36px)', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(236,72,138,0.4)', letterSpacing: '0.02em' }}
           >
             ← Salir del Gym
           </motion.button>
@@ -460,7 +542,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                         initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
                         whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
                         onClick={() => setModuloActivo(mod)}
-                        className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-left w-full cursor-pointer"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                       >
                         <div className="flex items-center gap-4">
@@ -512,7 +594,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                         initial={{ opacity: 0, x: -12 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.045 }}
                         whileHover={{ x: 4 }} whileTap={{ scale: 0.98 }}
                         onClick={() => setSeccionActiva(sec)}
-                        className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+                        className="flex items-center justify-between rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-left w-full cursor-pointer"
                         style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
                       >
                         <div className="flex items-center gap-4">
@@ -567,6 +649,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                             key={i}
                             recurso={recurso}
                             ytId={ytId}
+                            completed={isCompleted(recurso.url)}
                             onClick={() => setVideoActivo({ url: recurso.url, label: recurso.label })}
                           />
                         )
@@ -577,7 +660,9 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                           key={i}
                           recurso={recurso}
                           index={i}
+                          completed={isCompleted(recurso.url)}
                           onClick={() => {
+                            handleOpenResource(recurso.url, recurso.tipo)
                             setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
                           }}
                         />
@@ -624,7 +709,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
               <motion.button
                 whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
                 onClick={() => router.push('/escuela')}
-                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer mb-4"
+                className="w-full rounded-2xl flex items-center gap-4 px-4 py-3 sm:px-5 sm:py-4 cursor-pointer mb-4"
                 style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none' }}
               >
                 <span style={{ fontSize: 24 }}>🗺️</span>
@@ -679,46 +764,23 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
       </AnimatePresence>
 
       {/* ════════════════════════════════════════
-          OVERLAY — YOUTUBE PLAYER
+          VIDEO PLAYER WITH CARDS
       ════════════════════════════════════════ */}
       <AnimatePresence>
         {videoActivo && (
-          <>
-            <motion.div key="video-backdrop"
-              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-              transition={{ duration: 0.25 }}
-              onClick={() => setVideoActivo(null)}
-              className="absolute inset-0 z-50"
-              style={{ background: 'rgba(5,5,18,0.92)', backdropFilter: 'blur(16px)' }} />
-            <motion.div key="video-player"
-              initial={{ opacity: 0, scale: 0.94 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.94 }}
-              transition={{ type: 'spring', damping: 26, stiffness: 280 }}
-              className="absolute z-50 flex items-center justify-center"
-              style={{ inset: 0, padding: '24px 16px', pointerEvents: 'none' }}
-            >
-              <div className="w-full flex flex-col gap-3" style={{ maxWidth: 720, pointerEvents: 'auto' }}>
-                <div className="flex items-center justify-between">
-                  {videoActivo.label && (
-                    <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>
-                      {videoActivo.label}
-                    </p>
-                  )}
-                  <motion.button whileHover={{ scale: 1.1, rotate: 90 }} onClick={() => setVideoActivo(null)}
-                    className="ml-auto w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
-                    style={{ background: 'rgba(255,255,255,0.1)', border: '1px solid rgba(255,255,255,0.15)', color: '#fff', fontSize: 14 }}>
-                    <X size={14} strokeWidth={1.5} />
-                  </motion.button>
-                </div>
-                <div className="w-full rounded-3xl overflow-hidden"
-                  style={{ aspectRatio: '16/9', boxShadow: '0 0 80px rgba(61,184,250,0.2)', border: '1px solid rgba(255,255,255,0.08)' }}>
-                  <iframe
-                    src={`https://www.youtube.com/embed/${getYouTubeId(videoActivo.url)}?autoplay=1&rel=0`}
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen className="w-full h-full" style={{ border: 'none', display: 'block' }} />
-                </div>
-              </div>
-            </motion.div>
-          </>
+          <motion.div key="video-backdrop" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            className="absolute inset-0 z-50 flex items-center justify-center"
+            style={{ background: 'rgba(5,5,18,0.92)', backdropFilter: 'blur(16px)', padding: '24px 16px' }}>
+            <div className="w-full" style={{ maxWidth: 720 }}>
+              <VideoPlayerWithCards
+                videoUrl={videoActivo.url}
+                label={videoActivo.label}
+                onClose={() => setVideoActivo(null)}
+                onVideoEnd={handleVideoEnd}
+              />
+            </div>
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -733,6 +795,12 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
             tipo={externalActivo.tipo}
             onClose={() => setExternalActivo(null)}
           />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {toast && (
+          <PtsToast key={toast.id} pts={toast.pts} subioNivel={toast.subioNivel} onDone={() => setToast(null)} />
         )}
       </AnimatePresence>
 

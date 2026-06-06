@@ -4,6 +4,7 @@ export interface Recurso {
   url: string
   label?: string
   tipo: TipoRecurso
+  puntos?: number
 }
 
 export interface Seccion {

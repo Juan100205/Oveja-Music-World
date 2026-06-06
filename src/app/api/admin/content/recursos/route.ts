@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!adminGuard(req)) return NextResponse.json({ error: 'Sin permisos' }, { status: 403 })
 
   const body = await req.json()
-  const { seccion_id, url, tipo, label, interacciones } = body
+  const { seccion_id, url, tipo, label, puntos, interacciones } = body
 
   const TIPOS_VALIDOS = ['video', 'drive', 'juego', 'pdf', 'imagen', 'herramienta', 'otro']
   const urlTrimmed = url?.trim() ?? ''
@@ -41,6 +41,7 @@ export async function POST(req: NextRequest) {
       url: urlTrimmed,
       tipo,
       label: label?.trim() || null,
+      puntos: typeof puntos === 'number' ? puntos : null,
       orden: count ?? 0,
       interacciones: Array.isArray(interacciones) ? interacciones : [],
     })

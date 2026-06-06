@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import type { VideoCard } from '@/types'
+import type { VideoCard, InteractionPoint } from '@/types'
 
 
 // ── Helpers ────────────────────────────────────────────────────
@@ -25,9 +25,9 @@ function ContinuarBtn({ onClick }: { onClick: () => void }) {
       whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
       onClick={onClick}
       style={{
-        padding: '12px 28px', borderRadius: 999, border: 'none',
+        padding: '10px 22px', borderRadius: 999, border: 'none',
         background: 'linear-gradient(135deg, var(--om-pink), var(--om-purple))',
-        color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+        color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
         cursor: 'pointer',
       }}
     >
@@ -63,9 +63,9 @@ function CardBoton({ texto, botonLabel, onDone }: { texto: string; botonLabel: s
         whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
         onClick={onDone}
         style={{
-          padding: '12px 28px', borderRadius: 999, border: 'none',
+          padding: '10px 22px', borderRadius: 999, border: 'none',
           background: 'linear-gradient(135deg, var(--om-pink), var(--om-purple))',
-          color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15,
+          color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
           cursor: 'pointer',
         }}
       >
@@ -332,11 +332,27 @@ export default function VideoPlayerWithCards({
   // Keep cardsRef in sync
   useEffect(() => { cardsRef.current = cards }, [cards])
 
-  // Load cards for this video
+  // Load cards + legacy interaction points for this video
   useEffect(() => {
-    fetch(`/api/video-cards?url=${encodeURIComponent(videoUrl)}`)
-      .then(r => r.json())
-      .then(({ cards }) => setCards(cards ?? []))
+    const url = encodeURIComponent(videoUrl)
+    Promise.all([
+      fetch(`/api/video-cards?url=${url}`).then(r => r.json()),
+      fetch(`/api/content/interactions?url=${url}`).then(r => r.json()),
+    ])
+      .then(([cardsRes, interRes]) => {
+        const videoCards: VideoCard[] = cardsRes.cards ?? []
+        const legacyPoints: InteractionPoint[] = interRes.interacciones ?? []
+        // Convert legacy interaction points to text cards
+        const legacyCards: VideoCard[] = legacyPoints.map(p => ({
+          id: p.id,
+          tiempo: p.at_seconds,
+          tipo: 'texto' as const,
+          texto: p.mensaje,
+        }))
+        // Merge & sort by timestamp
+        const merged = [...videoCards, ...legacyCards].sort((a, b) => a.tiempo - b.tiempo)
+        setCards(merged)
+      })
       .catch(() => {})
   }, [videoUrl])
 

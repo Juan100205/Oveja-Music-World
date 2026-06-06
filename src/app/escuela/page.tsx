@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { ArrowLeft, ChevronRight, Settings, LogOut, X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
+import SplineTouchControls from '@/components/spline/SplineTouchControls'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
@@ -278,7 +279,7 @@ function ModulosList({
           whileHover={{ x: 4 }}
           whileTap={{ scale: 0.98 }}
           onClick={() => onSelect(modulo)}
-          className="flex items-center justify-between rounded-2xl px-5 py-4 text-left w-full cursor-pointer"
+          className="flex items-center justify-between rounded-2xl px-4 py-3 sm:px-5 sm:py-4 text-left w-full cursor-pointer"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)' }}
         >
           <div className="flex items-center gap-4">
@@ -473,6 +474,8 @@ export default function MapaPage() {
         onVariableChange={handleVariableChange}
       />
       {isMobile && isPortrait && <RotateScreen />}
+
+      <SplineTouchControls />
 
       <TapeteCard show={showTapeteHint} onDismiss={dismissTapeteHint} sala="mapa" />
 
@@ -765,16 +768,16 @@ export default function MapaPage() {
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => setClasesOpen(true)}
-              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-4 cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', boxShadow: '0 0 28px rgba(61,184,250,0.3)' }}
+              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-3 sm:py-4 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 15px)', color: '#fff', boxShadow: '0 0 28px rgba(61,184,250,0.3)' }}
             >
               <span>📚</span> Clases
             </motion.button>
             <motion.button
               whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}
               onClick={() => setGymOpen(true)}
-              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-4 cursor-pointer"
-              style={{ background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff', boxShadow: '0 0 28px rgba(236,72,138,0.3)' }}
+              className="flex-1 flex items-center justify-center gap-3 rounded-2xl py-3 sm:py-4 cursor-pointer"
+              style={{ background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', border: 'none', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 15px)', color: '#fff', boxShadow: '0 0 28px rgba(236,72,138,0.3)' }}
             >
               <span>🏋️</span> Gym
             </motion.button>
