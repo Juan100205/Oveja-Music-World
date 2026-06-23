@@ -37,6 +37,10 @@ function VisorContent() {
   const label = params.get('label') ?? 'Recurso'
   const tipo  = params.get('tipo')  ?? 'otro'
   const embedUrl = getEmbedUrl(url, tipo)
+  const isScratch = embedUrl.includes('scratch.mit.edu')
+  const sandbox = isScratch
+    ? 'allow-scripts allow-popups allow-forms allow-presentation allow-same-origin allow-storage-access-by-user-activation'
+    : 'allow-scripts allow-popups allow-forms allow-presentation'
 
   return (
     <main
@@ -120,6 +124,7 @@ function VisorContent() {
             style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
             allowFullScreen
+            sandbox={sandbox}
           />
         )}
       </div>

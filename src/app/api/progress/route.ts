@@ -40,14 +40,17 @@ export async function POST(req: NextRequest) {
   const db = getSupabaseAdmin()
 
   // Validar que la URL corresponde a un recurso real del currículo y leer puntos config
+  // Normalizar: trim y decodificar para evitar discrepancias por whitespace/encoding
+  let normalizedUrl = body.url.trim()
+  try { normalizedUrl = decodeURIComponent(normalizedUrl) } catch { /* ya está en formato plano */ }
   const { data: recurso } = await db
     .from('recursos')
     .select('id, puntos')
-    .eq('url', body.url)
+    .eq('url', normalizedUrl)
     .maybeSingle()
 
   if (!recurso) {
-    return NextResponse.json({ error: 'Recurso no encontrado' }, { status: 404 })
+    return NextResponse.json({ error: 'Recurso no encontrado', url: body.url }, { status: 404 })
   }
 
   const puntos = recurso.puntos ?? (PUNTOS_POR_TIPO[body.tipo] ?? 5)
