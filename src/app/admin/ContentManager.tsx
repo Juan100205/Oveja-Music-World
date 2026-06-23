@@ -424,7 +424,7 @@ function RecursoModal({
       fd.append('file', file)
       const res = await fetch('/api/admin/content/upload', {
         method: 'POST',
-        headers: authHeaders,
+        headers: { Authorization: authHeaders.Authorization },
         body: fd,
       })
       const data = await res.json()
