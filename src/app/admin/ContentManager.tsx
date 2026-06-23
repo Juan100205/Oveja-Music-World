@@ -7,7 +7,7 @@ import {
   Music2,
   Trash2, Pencil, ChevronRight, ChevronDown, Plus, X, Check,
   Play, FolderOpen, Gamepad2, FileText, Image, Wrench, Link, LayoutList,
-  Zap, Clock,
+  Zap, Clock, Upload,
   type LucideIcon,
 } from 'lucide-react'
 import VideoCardEditor from './VideoCardEditor'
@@ -385,7 +385,9 @@ function RecursoModal({
   const [label, setLabel] = useState(recurso?.label ?? '')
   const [puntos, setPuntos] = useState<string>(recurso?.puntos ? String(recurso.puntos) : '')
   const [saving, setSaving] = useState(false)
+  const [uploading, setUploading] = useState(false)
   const [err,    setErr]    = useState<string | null>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
 
   // ── Interaction points state ───────────────────────────────
   const [interactions, setInteractions] = useState<InteractionPoint[]>(
@@ -412,6 +414,27 @@ function RecursoModal({
     ])
     setNewAt('')
     setNewMensaje('')
+  }
+
+  const handleUpload = async (file: File) => {
+    setErr(null)
+    setUploading(true)
+    try {
+      const fd = new FormData()
+      fd.append('file', file)
+      const res = await fetch('/api/admin/content/upload', {
+        method: 'POST',
+        headers: authHeaders,
+        body: fd,
+      })
+      const data = await res.json()
+      if (!res.ok) { setErr(data.error ?? 'Error al subir archivo'); return }
+      setUrl(data.url)
+    } catch {
+      setErr('Error de red al subir archivo')
+    } finally {
+      setUploading(false)
+    }
   }
 
   const removeInteraction = (id: string) =>
@@ -478,17 +501,46 @@ function RecursoModal({
             <label style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', display: 'block', marginBottom: 6 }}>
               URL <span style={{ color: '#ec488a' }}>*</span>
             </label>
-            <input
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://..."
-              style={{
-                width: '100%', background: 'rgba(255,255,255,0.06)',
-                border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
-                padding: '10px 14px', color: '#fff',
-                fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none',
-              }}
-            />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input
+                value={url}
+                onChange={e => setUrl(e.target.value)}
+                placeholder="https://..."
+                style={{
+                  flex: 1, background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)', borderRadius: 10,
+                  padding: '10px 14px', color: '#fff',
+                  fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none',
+                }}
+              />
+              <input
+                ref={fileRef}
+                type="file"
+                accept=".pdf,.png,.jpg,.jpeg,.webp,.gif,.svg,.mp4,.webm,.zip"
+                onChange={e => { const f = e.target.files?.[0]; if (f) handleUpload(f); e.target.value = '' }}
+                style={{ display: 'none' }}
+              />
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                onClick={() => fileRef.current?.click()}
+                disabled={uploading}
+                style={{
+                  flexShrink: 0, padding: '10px 14px', borderRadius: 10,
+                  background: 'rgba(155,84,249,0.15)',
+                  border: '1px solid rgba(155,84,249,0.4)',
+                  color: '#c084ff', cursor: uploading ? 'not-allowed' : 'pointer',
+                  fontFamily: 'var(--font-body)', fontSize: 12, opacity: uploading ? 0.6 : 1,
+                  display: 'flex', alignItems: 'center', gap: 6,
+                }}
+              >
+                {uploading ? (
+                  <>⏳ Subiendo...</>
+                ) : (
+                  <><Upload size={14} /> Subir archivo</>
+                )}
+              </motion.button>
+            </div>
           </div>
 
           {/* Tipo */}

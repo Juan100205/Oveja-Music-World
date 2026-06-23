@@ -317,7 +317,7 @@ function incrementTutorialCount(userId: string): void {
 // ══════════════════════════════════════════════════════════════
 export default function MapaPage() {
   const router = useRouter()
-  const { user, logout, token } = useAuth()
+  const { user, logout, token, refreshUser } = useAuth()
 
   // Spline hover
   const [overGym, setOverGym] = useState(false)
@@ -354,6 +354,9 @@ export default function MapaPage() {
     const dismissed = localStorage.getItem('tapete_dismissed_mapa')
     if (!dismissed) setShowTapeteHint(true)
   }, [])
+
+  // Refresh user data from server so admin-assigned instruments appear immediately
+  useEffect(() => { refreshUser() }, [refreshUser])
 
   const [showTutorial, setShowTutorial] = useState(false)
 

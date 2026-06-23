@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Recurso no encontrado' }, { status: 404 })
   }
 
-  // Verificar si ya fue completado
+  // Verificar si el usuario ya completó este recurso
   const { data: existing } = await db
     .from('completions')
     .select('id')

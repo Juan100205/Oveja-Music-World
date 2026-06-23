@@ -64,10 +64,11 @@ function makeReq(body?: unknown) {
 /**
  * Configura mocks para una sesión POST /progress exitosa.
  * Simula:
- *   1. completions check (maybeSingle) → existing
- *   2. completions insert
- *   3. users select (puntos, nivel) → userData
- *   4. users update
+ *   1. recursos lookup (maybeSingle) → resource found
+ *   2. completions check (maybeSingle) → existing
+ *   3. completions insert
+ *   4. users select (puntos, nivel) → userData
+ *   5. users update
  */
 function setupProgressMock(opts: {
   existing?:  boolean           // ¿ya estaba completado?
@@ -75,6 +76,9 @@ function setupProgressMock(opts: {
   userNivel:  number            // nivel actual del usuario
 }) {
   const { existing = false, userPuntos, userNivel } = opts
+
+  mockFrom
+    .mockReturnValueOnce(makeChain({ data: { id: 'r-1', puntos: null }, error: null })) // recursos lookup → found
 
   if (existing) {
     // Cuando ya existe, solo se hace la verificación — la ruta retorna temprano
@@ -166,13 +170,14 @@ describe('POST /api/progress — puntos por tipo', () => {
     })
   })
 
-  it('tipo desconocido fallback a 5 puntos', async () => {
+  it('tipo desconocido retorna 400', async () => {
     setupProgressMock({ userPuntos: 0, userNivel: 1 })
 
     const res  = await postProgress(makeReq({ url: 'https://test.com/raro', tipo: 'raro' }))
     const body = await res.json()
 
-    expect(body.puntos_ganados).toBe(5)
+    expect(res.status).toBe(400)
+    expect(body.error).toMatch(/tipo/i)
   })
 })
 

@@ -15,8 +15,18 @@ function getDriveEmbedUrl(url: string): string {
     .replace(/\/edit(\?.*)?$/, '/preview')
 }
 
+function getScratchEmbedId(url: string): string | null {
+  const m = url.match(/scratch\.mit\.edu\/projects\/(\d+)/)
+  return m ? m[1] : null
+}
+
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
+  if (tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url)) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
+  if (tipo === 'juego') {
+    const scratchId = getScratchEmbedId(url)
+    if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
+  }
   return url
 }
 
@@ -93,7 +103,7 @@ function VisorContent() {
             flexShrink: 0,
           }}
         >
-          ↗ Abrir en Drive
+          ↗ Abrir en nueva pestaña
         </a>
       </div>
 

@@ -24,6 +24,7 @@ jest.mock('@/lib/auth', () => ({
 
 interface DbSetup {
   existingCompletion: unknown   // result of maybySingle (completions check)
+  recursoResult:     unknown   // result of maybySingle (recursos lookup)
   userData:           unknown   // result of single (users select)
   insertResult:       unknown   // result of insert
   updateResult:       unknown   // result of update chain
@@ -31,6 +32,7 @@ interface DbSetup {
 
 let dbSetup: DbSetup = {
   existingCompletion: { data: null, error: null },
+  recursoResult:     { data: { id: 'r-1', puntos: null }, error: null },
   userData:           { data: { puntos: 0, nivel: 1 }, error: null },
   insertResult:       { data: null, error: null },
   updateResult:       { data: null, error: null },
@@ -39,8 +41,8 @@ let dbSetup: DbSetup = {
 function buildSupabaseChain() {
   let currentTable = ''
   let afterUpdate  = false
+  let maybeSingleCall = 0
 
-  // Declare chain first so methods can reference it
   const chain: Record<string, jest.Mock> = {
     from: jest.fn().mockImplementation((table: string) => {
       currentTable = table
@@ -58,9 +60,15 @@ function buildSupabaseChain() {
       return chain
     }),
     maybySingle: jest.fn(), // alias guard
-    maybeSingle: jest.fn().mockImplementation(() =>
-      Promise.resolve(dbSetup.existingCompletion)
-    ),
+    maybeSingle: jest.fn().mockImplementation(() => {
+      maybeSingleCall++
+      // First maybeSingle is for recursos lookup
+      if (maybeSingleCall === 1) {
+        return Promise.resolve(dbSetup.recursoResult)
+      }
+      // Subsequent maybeSingle calls are for completions check
+      return Promise.resolve(dbSetup.existingCompletion)
+    }),
     single: jest.fn().mockImplementation(() => {
       if (currentTable === 'users') return Promise.resolve(dbSetup.userData)
       return Promise.resolve({ data: null, error: null })
@@ -105,6 +113,7 @@ describe('POST /api/progress — ecosistema de puntos', () => {
     mockVerifyToken.mockReturnValue(VALID_PAYLOAD)
     dbSetup = {
       existingCompletion: { data: null,                      error: null },
+      recursoResult:      { data: { id: 'r-1', puntos: null }, error: null },
       userData:           { data: { puntos: 0, nivel: 1 }, error: null },
       insertResult:       { data: null,                      error: null },
       updateResult:       { data: null,                      error: null },

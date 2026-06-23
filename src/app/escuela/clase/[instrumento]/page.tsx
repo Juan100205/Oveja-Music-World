@@ -58,8 +58,18 @@ function getDriveEmbedUrl(url: string): string {
   return url.replace(/\/view(\?.*)?$/, '/preview').replace(/\/edit(\?.*)?$/, '/preview')
 }
 
+function getScratchEmbedId(url: string): string | null {
+  const m = url.match(/scratch\.mit\.edu\/projects\/(\d+)/)
+  return m ? m[1] : null
+}
+
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
+  if (tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url)) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
+  if (tipo === 'juego') {
+    const scratchId = getScratchEmbedId(url)
+    if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
+  }
   return url
 }
 
@@ -236,7 +246,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const clase = CLASES_CONFIG.find(c => c.id === instrumento)
 
   const { isCompleted, completeResource } = useProgress()
-  const { user, token, updateUser } = useAuth()
+  const { user, token, updateUser, refreshUser } = useAuth()
 
   const { isMobile, isPortrait } = useOrientation()
   const [isInClass,      setIsInClass]     = useState(false)
@@ -257,6 +267,8 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const toastCountRef = useRef(0)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
+
+  useEffect(() => { refreshUser() }, [refreshUser])
 
   // Refs espejo para usar en handleVariableChange sin dependencias inestables
   const seccionesOpenRef = useRef(false)

@@ -21,6 +21,7 @@ interface UseAuthReturn extends AuthState {
   register: (credentials: RegisterCredentials) => Promise<{ ok: boolean; error?: string }>
   logout: () => void
   updateUser: (patch: Partial<Omit<User, 'password_hash'>>) => void
+  refreshUser: () => Promise<void>
   isAuthenticated: boolean
 }
 
@@ -111,12 +112,31 @@ export function useAuth(): UseAuthReturn {
     }
   }, [])
 
+  const refreshUser = useCallback(async () => {
+    const storedToken = localStorage.getItem('token')
+    if (!storedToken) return
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${storedToken}` },
+      })
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.user) {
+        localStorage.setItem('user', JSON.stringify(data.user))
+        setState(prev => ({ ...prev, user: data.user }))
+      }
+    } catch {
+      // silencioso
+    }
+  }, [])
+
   return {
     ...state,
     login,
     register,
     logout,
     updateUser,
+    refreshUser,
     isAuthenticated: !!state.token && !!state.user,
   }
 }

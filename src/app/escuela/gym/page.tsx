@@ -1,11 +1,16 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import SplineScene from '@/components/spline/SplineScene'
+import dynamic from 'next/dynamic'
+import type { Application } from '@splinetool/runtime'
+
+const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 import TapeteCard from '@/components/ui/TapeteCard'
+import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import { useAuth } from '@/hooks/useAuth'
+import { useProgress } from '@/hooks/useProgress'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import type { GymInstrumento } from '@/data/gym'
 import type { Modulo, Seccion } from '@/data/cursos'
@@ -31,7 +36,9 @@ function getYouTubeId(url: string): string | null {
 
 export default function GymPage() {
   const router = useRouter()
-  const { token } = useAuth()
+  const { token, user, refreshUser } = useAuth()
+  useEffect(() => { refreshUser() }, [refreshUser])
+  const { isCompleted } = useProgress()
   const { gym: allGym } = useInstrumentos(token)
 
   const [menuOpen,          setMenuOpen]          = useState(false)
@@ -40,7 +47,54 @@ export default function GymPage() {
   const [seccionActiva,     setSeccionActiva]      = useState<Seccion | null>(null)
   const [videoActivo,       setVideoActivo]        = useState<{ url: string; label?: string } | null>(null)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
+  const [isTrainning,   setIsTrainning]   = useState(false)
+  const [isOutingGym,   setIsOutingGym]   = useState(false)
+  const [salidaOpen,    setSalidaOpen]    = useState(false)
   const dismissTapeteHint = useCallback(() => setTapeteHintOpen(false), [])
+  const menuOpenRef = useRef(false)
+  useEffect(() => { menuOpenRef.current = menuOpen }, [menuOpen])
+  const gymCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const splineAppRef = useRef<Application | null>(null)
+  const prevVarsRef = useRef<Record<string, unknown>>({})
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  const handleVariableChange = useCallback((name: string, value: unknown) => {
+    const isTrue = value === true || String(value).toLowerCase() === 'true'
+    if (name === 'isTrainning') {
+      setIsTrainning(isTrue)
+      if (isTrue) {
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        if (!menuOpenRef.current) {
+          setTapeteHintOpen(false)
+          setMenuOpen(true)
+        }
+      } else {
+        if (gymCloseRef.current) clearTimeout(gymCloseRef.current)
+        gymCloseRef.current = setTimeout(() => { setMenuOpen(false); setInstrActivo(null); setModuloActivo(null); setSeccionActiva(null) }, 600)
+      }
+    }
+    if (name === 'isOutingGym') setIsOutingGym(isTrue)
+  }, [])
+
+  const handleSplineLoad = useCallback((splineApp: Application) => {
+    splineAppRef.current = splineApp
+    prevVarsRef.current = { ...splineApp.getVariables() as Record<string, unknown> }
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(() => {
+      if (!splineAppRef.current) return
+      const current = splineAppRef.current.getVariables() as Record<string, unknown>
+      for (const key in current) {
+        if (current[key] !== prevVarsRef.current[key]) {
+          handleVariableChange(key, current[key])
+          prevVarsRef.current[key] = current[key]
+        }
+      }
+    }, 100)
+  }, [handleVariableChange])
+
+  useEffect(() => {
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [])
 
   const cerrarTodo = () => {
     setMenuOpen(false)
@@ -52,7 +106,14 @@ export default function GymPage() {
   return (
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
-      <SplineScene scene={SCENE_GYM} />
+      <Spline scene={SCENE_GYM} onLoad={handleSplineLoad} />
+
+      <LevelProgressPanel
+        puntos={user?.puntos ?? 0}
+        nivel={user?.nivel ?? 1}
+        modulo={null}
+        isCompleted={isCompleted}
+      />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
@@ -76,32 +137,39 @@ export default function GymPage() {
         ← Mapa
       </motion.button>
 
-      {/* ── Botón Entrenar ── */}
+      {/* ── Hint: pisa el tapete ── */}
       <AnimatePresence>
-        {!menuOpen && (
-          <motion.button
-            key="entrenar-btn"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 16 }}
-            whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(61,184,250,0.55)' }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => setMenuOpen(true)}
-            className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
+        {!isTrainning && !menuOpen && !tapeteHintOpen && (
+          <motion.p
+            key="hint-tapete-gym"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: [0, 0.55, 0.35, 0.55] }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 3, repeat: Infinity, repeatType: 'mirror', ease: 'easeInOut' }}
+            className="absolute bottom-8 left-1/2 -translate-x-1/2 z-20 pointer-events-none select-none"
             style={{
-              fontFamily: 'var(--font-display)',
-              fontWeight: 700,
-              fontSize: 16,
-              padding: '14px 36px',
-              borderRadius: 999,
-              border: 'none',
-              background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)',
-              color: '#fff',
-              boxShadow: '0 0 32px rgba(61,184,250,0.4)',
-              letterSpacing: '0.02em',
+              fontFamily: 'var(--font-body)', fontSize: 13,
+              letterSpacing: '0.12em', textTransform: 'uppercase',
+              color: '#3db8fa', whiteSpace: 'nowrap',
             }}
           >
-            🏋️ Entrenar →
+            pisa el tapete para iniciar
+          </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* ── isOutingGym → salida ── */}
+      <AnimatePresence>
+        {isOutingGym && !menuOpen && !salidaOpen && (
+          <motion.button key="outing-btn"
+            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 16 }}
+            transition={{ duration: 0.3, ease: 'easeOut' }}
+            whileHover={{ scale: 1.06, boxShadow: '0 0 48px rgba(236,72,138,0.55)' }} whileTap={{ scale: 0.95 }}
+            onClick={() => setSalidaOpen(true)}
+            className="absolute bottom-10 left-1/2 -translate-x-1/2 z-20 cursor-pointer"
+            style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 'clamp(12px, 3.2vw, 16px)', padding: 'clamp(8px, 2vw, 14px) clamp(18px, 5vw, 36px)', borderRadius: 999, border: 'none', background: 'linear-gradient(135deg, var(--om-pink) 0%, var(--om-purple) 100%)', color: '#fff', boxShadow: '0 0 32px rgba(236,72,138,0.4)', letterSpacing: '0.02em' }}
+          >
+            ← Salir del Gym
           </motion.button>
         )}
       </AnimatePresence>
@@ -457,6 +525,46 @@ export default function GymPage() {
               )}
 
             </AnimatePresence>
+          </>
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          PANEL SALIDA
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {salidaOpen && (
+          <>
+            <motion.div key="salida-backdrop"
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }} onClick={() => setSalidaOpen(false)}
+              className="absolute inset-0 z-40"
+              style={{ background: 'rgba(10,10,26,0.75)', backdropFilter: 'blur(10px)' }} />
+            <motion.div key="salida-panel"
+              initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 28, stiffness: 300 }}
+              className="absolute bottom-0 left-0 right-0 z-50 rounded-t-3xl"
+              style={{ background: 'rgba(12,12,28,0.98)', backdropFilter: 'blur(24px)', borderTop: '1px solid rgba(255,255,255,0.07)', padding: '20px 20px 32px' }}
+            >
+              <div className="w-10 h-1 rounded-full mx-auto mb-5" style={{ background: 'rgba(255,255,255,0.18)' }} />
+              <div className="flex items-center justify-between mb-6">
+                <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 18, color: '#fff' }}>¿Salir del Gym?</h2>
+                <button onClick={() => setSalidaOpen(false)} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
+                  style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', fontSize: 14 }}>✕</button>
+              </div>
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.97 }}
+                onClick={() => router.push('/escuela')}
+                className="w-full rounded-2xl flex items-center gap-4 px-5 py-4 cursor-pointer"
+                style={{ background: 'linear-gradient(135deg, var(--om-blue) 0%, var(--om-purple) 100%)', border: 'none' }}
+              >
+                <span style={{ fontSize: 24 }}>🗺️</span>
+                <div className="text-left">
+                  <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>Volver al Mapa</p>
+                  <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>Salir al mapa principal</p>
+                </div>
+              </motion.button>
+            </motion.div>
           </>
         )}
       </AnimatePresence>

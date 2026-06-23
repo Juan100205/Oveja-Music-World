@@ -5,9 +5,12 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { X, ArrowLeft } from 'lucide-react'
-import SplineScene from '@/components/spline/SplineScene'
-import SplineTouchControls from '@/components/spline/SplineTouchControls'
+import dynamic from 'next/dynamic'
+import type { Application } from '@splinetool/runtime'
+
+const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
+import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
 import { useAuth } from '@/hooks/useAuth'
@@ -16,7 +19,7 @@ import { useOrientation } from '@/hooks/useOrientation'
 import { useProgress } from '@/hooks/useProgress'
 import { PUNTOS_POR_TIPO } from '@/types'
 import type { GymInstrumento } from '@/data/gym'
-import type { Seccion, Recurso } from '@/data/cursos'
+import type { Seccion, Recurso, Modulo } from '@/data/cursos'
 
 interface ModuloGym {
   id: string
@@ -77,8 +80,18 @@ function getDriveEmbedUrl(url: string): string {
     .replace(/\/edit(\?.*)?$/, '/preview')
 }
 
+function getScratchEmbedId(url: string): string | null {
+  const m = url.match(/scratch\.mit\.edu\/projects\/(\d+)/)
+  return m ? m[1] : null
+}
+
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
+  if (tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url)) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
+  if (tipo === 'juego') {
+    const scratchId = getScratchEmbedId(url)
+    if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
+  }
   return url
 }
 
@@ -310,7 +323,8 @@ function IframeViewer({ url, label, tipo, onClose }: {
 export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: string } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
-  const { token, user, updateUser } = useAuth()
+  const { token, user, updateUser, refreshUser } = useAuth()
+  useEffect(() => { refreshUser() }, [refreshUser])
   const { gym: allGym } = useInstrumentos(token)
 
   // Solo DB
@@ -328,7 +342,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
-  const [tapeteHintOpen, setTapeteHintOpen] = useState(!moduloIdInicial)
+  const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -336,6 +350,9 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
   const panelOpenRef = useRef(false)
   useEffect(() => { panelOpenRef.current = panelOpen }, [panelOpen])
   const gymCloseRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const splineAppRef = useRef<Application | null>(null)
+  const prevVarsRef = useRef<Record<string, unknown>>({})
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   const gymInstr = allGym.find(g => g.id === instrumento)
   const cursoId = gymInstr?.cursoId ?? instrumento
@@ -359,7 +376,6 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
         if (moduloIdInicial) {
           const mod = mods.find(m => m.id === moduloIdInicial) ?? null
           setModuloActivo(mod)
-          if (mod) setPanelOpen(true)
         }
       })
       .catch(() => {})
@@ -422,6 +438,29 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
     if (name === 'isOutingGym') flushSync(() => setIsOutingGym(isTrue))
   }, [])
 
+  const handleSplineLoad = useCallback((splineApp: Application) => {
+    splineAppRef.current = splineApp
+    prevVarsRef.current = { ...splineApp.getVariables() as Record<string, unknown> }
+
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(() => {
+      if (!splineAppRef.current) return
+      const current = splineAppRef.current.getVariables() as Record<string, unknown>
+      for (const key in current) {
+        if (current[key] !== prevVarsRef.current[key]) {
+          handleVariableChange(key, current[key])
+          prevVarsRef.current[key] = current[key]
+        }
+      }
+    }, 100)
+  }, [handleVariableChange])
+
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+    }
+  }, [])
+
   const cerrarPanel = () => {
     setPanelOpen(false)
     setSeccionActiva(null)
@@ -435,10 +474,15 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
     <main style={{ width: '100vw', height: '100dvh', background: '#0a0a1a', overflow: 'hidden', position: 'relative' }}>
 
       {/* Spline siempre montado — RotateScreen lo cubre en portrait como overlay */}
-      <SplineScene scene={SCENE_GYM} onVariableChange={handleVariableChange} silentOnError />
+      <Spline scene={SCENE_GYM} onLoad={handleSplineLoad} />
       {isMobile && isPortrait && <RotateScreen />}
 
-      <SplineTouchControls />
+      <LevelProgressPanel
+        puntos={user?.puntos ?? 0}
+        nivel={user?.nivel ?? 1}
+        modulo={moduloActivo as Modulo | null}
+        isCompleted={isCompleted}
+      />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />
 
