@@ -22,7 +22,6 @@ function getScratchEmbedId(url: string): string | null {
 
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
-  if (tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url)) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
   if (tipo === 'juego') {
     const scratchId = getScratchEmbedId(url)
     if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
@@ -109,12 +108,20 @@ function VisorContent() {
 
       {/* ── Contenido ── */}
       <div style={{ flex: 1, overflow: 'hidden', background: '#fff' }}>
-        <iframe
-          src={embedUrl}
-          style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
-          allowFullScreen
-        />
+        {tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url) ? (
+          <object data={url} type="application/pdf"
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#666', padding: 40, textAlign: 'center' }}>
+              No se pudo mostrar el PDF. <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#3db8fa' }}>Abrir en nueva pestaña</a>
+            </p>
+          </object>
+        ) : (
+          <iframe src={embedUrl}
+            style={{ width: '100%', height: '100%', border: 'none', display: 'block' }}
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen"
+            allowFullScreen
+          />
+        )}
       </div>
     </main>
   )

@@ -65,7 +65,6 @@ function getScratchEmbedId(url: string): string | null {
 
 function getEmbedUrl(url: string, tipo: string): string {
   if (tipo === 'drive' || url.includes('drive.google.com')) return getDriveEmbedUrl(url)
-  if (tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url)) return `https://docs.google.com/gview?url=${encodeURIComponent(url)}&embedded=true`
   if (tipo === 'juego') {
     const scratchId = getScratchEmbedId(url)
     if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
@@ -204,9 +203,17 @@ function IframeViewer({ url, label, tipo, onClose }: { url: string; label?: stri
             </motion.button>
           </div>
           <div className="flex-1 rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.08)', background: '#fff', minHeight: 0 }}>
-            <iframe src={embedUrl} className="w-full h-full" style={{ border: 'none', display: 'block' }}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen
-              sandbox="allow-scripts allow-popups allow-forms allow-presentation" />
+            {tipo === 'pdf' || /\.pdf(#|\?|$)/i.test(url) ? (
+              <object data={url} type="application/pdf" className="w-full h-full" style={{ border: 'none', display: 'block' }}>
+                <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: '#666', padding: 40, textAlign: 'center' }}>
+                  No se pudo mostrar el PDF. <a href={url} target="_blank" rel="noopener noreferrer" style={{ color: '#3db8fa' }}>Abrir en nueva pestaña</a>
+                </p>
+              </object>
+            ) : (
+              <iframe src={embedUrl} className="w-full h-full" style={{ border: 'none', display: 'block' }}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; fullscreen" allowFullScreen
+                sandbox="allow-scripts allow-popups allow-forms allow-presentation" />
+            )}
           </div>
         </div>
       </motion.div>
