@@ -50,21 +50,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Recurso no encontrado' }, { status: 404 })
   }
 
-  // Verificar si el usuario ya completó este recurso
-  const { data: existing } = await db
-    .from('completions')
-    .select('id')
-    .eq('user_id', payload.sub)
-    .eq('resource_url', body.url)
-    .maybeSingle()
-
-  if (existing) {
-    return NextResponse.json({ ya_completado: true, puntos_ganados: 0 })
-  }
-
   const puntos = recurso.puntos ?? (PUNTOS_POR_TIPO[body.tipo] ?? 5)
 
-  // Registrar completion
+  // Registrar completion (permite duplicados — el alumno gana puntos cada vez que practica)
   await db.from('completions').insert({
     user_id:      payload.sub,
     resource_url: body.url,

@@ -9,7 +9,7 @@
  *   3. subio_nivel: true cuando se cruza umbral
  *   4. Todos los umbrales: L1→L2 (100pts), L2→L3 (300pts), L3→L4 (600pts), L4→L5 (1000pts)
  *   5. No sube más allá de nivel 5
- *   6. Recursos duplicados no generan puntos
+ *   6. Recursos duplicados también generan puntos (repetición permitida)
  *   7. Distintos tipos de recursos generan distintos puntos
  */
 
@@ -63,34 +63,23 @@ function makeReq(body?: unknown) {
 
 /**
  * Configura mocks para una sesión POST /progress exitosa.
- * Simula:
+ * Simula (la ruta siempre ejecuta todos los pasos, incluso en repeticiones):
  *   1. recursos lookup (maybeSingle) → resource found
- *   2. completions check (maybeSingle) → existing
- *   3. completions insert
- *   4. users select (puntos, nivel) → userData
- *   5. users update
+ *   2. completions insert
+ *   3. users select (puntos, nivel) → userData
+ *   4. users update
  */
 function setupProgressMock(opts: {
-  existing?:  boolean           // ¿ya estaba completado?
   userPuntos: number            // puntos actuales del usuario
   userNivel:  number            // nivel actual del usuario
 }) {
-  const { existing = false, userPuntos, userNivel } = opts
+  const { userPuntos, userNivel } = opts
 
   mockFrom
-    .mockReturnValueOnce(makeChain({ data: { id: 'r-1', puntos: null }, error: null })) // recursos lookup → found
-
-  if (existing) {
-    // Cuando ya existe, solo se hace la verificación — la ruta retorna temprano
-    mockFrom
-      .mockReturnValueOnce(makeChain({ data: { id: 'c-1' }, error: null }))  // completion check → found
-  } else {
-    mockFrom
-      .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // completion check → not found
-      .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // insert completion
-      .mockReturnValueOnce(makeChain({ data: { puntos: userPuntos, nivel: userNivel }, error: null })) // user select
-      .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // user update
-  }
+    .mockReturnValueOnce(makeChain({ data: { id: 'r-1', puntos: null }, error: null })) // recursos lookup
+    .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // insert completion
+    .mockReturnValueOnce(makeChain({ data: { puntos: userPuntos, nivel: userNivel }, error: null })) // user select
+    .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // user update
 }
 
 afterEach(() => jest.resetAllMocks())
@@ -184,22 +173,23 @@ describe('POST /api/progress — puntos por tipo', () => {
 // ══════════════════════════════════════════════════════════════
 // DUPLICADOS — no genera puntos al ver 2 veces
 // ══════════════════════════════════════════════════════════════
-describe('POST /api/progress — duplicados', () => {
+describe('POST /api/progress — duplicados (se permiten repeticiones con puntos)', () => {
   beforeEach(() => authAs('u-1'))
 
-  it('ya_completado: true y puntos_ganados: 0 si el recurso ya se completó', async () => {
-    setupProgressMock({ existing: true, userPuntos: 80, userNivel: 1 })
+  it('otorga puntos aunque el recurso ya se haya completado antes', async () => {
+    setupProgressMock({ userPuntos: 80, userNivel: 1 })
 
     const res  = await postProgress(makeReq({ url: 'https://yt.com/visto', tipo: 'video' }))
     const body = await res.json()
 
     expect(res.status).toBe(200)
-    expect(body.ya_completado).toBe(true)
-    expect(body.puntos_ganados).toBe(0)
+    expect(body.ya_completado).toBe(false)
+    expect(body.puntos_ganados).toBe(20)
+    expect(body.total_puntos).toBe(100)
   })
 
-  it('ver el mismo video 2 veces no duplica puntos (primera vez ok)', async () => {
-    setupProgressMock({ existing: false, userPuntos: 0, userNivel: 1 })
+  it('otorga 20 pts en primera vez (comportamiento normal)', async () => {
+    setupProgressMock({ userPuntos: 0, userNivel: 1 })
 
     const res  = await postProgress(makeReq({ url: 'https://yt.com/nuevo', tipo: 'video' }))
     const body = await res.json()

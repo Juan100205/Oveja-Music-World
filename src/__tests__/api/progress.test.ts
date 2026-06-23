@@ -143,16 +143,18 @@ describe('POST /api/progress — ecosistema de puntos', () => {
     expect(res.status).toBe(400)
   })
 
-  // ── Duplicate prevention ──────────────────────────────────────
-  it('retorna ya_completado=true y 0 puntos si el recurso ya fue completado', async () => {
+  // ── Duplicate — se permiten repeticiones con puntos ───────────
+  it('otorga puntos aunque el recurso ya haya sido completado (repetición)', async () => {
     dbSetup.existingCompletion = { data: { id: 'comp-1' }, error: null }
+    dbSetup.userData = { data: { puntos: 50, nivel: 2 }, error: null }
 
     const res  = await POST(makeRequest({ url: 'https://youtu.be/abc', tipo: 'video' }))
     const body = await res.json()
 
     expect(res.status).toBe(200)
-    expect(body.ya_completado).toBe(true)
-    expect(body.puntos_ganados).toBe(0)
+    expect(body.ya_completado).toBe(false)
+    expect(body.puntos_ganados).toBe(20)
+    expect(body.total_puntos).toBe(70)
   })
 
   // ── First completion - video ──────────────────────────────────
