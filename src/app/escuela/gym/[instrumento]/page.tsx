@@ -338,7 +338,14 @@ function IframeViewer({ url, label, tipo, onClose }: {
 export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: string } = {}) {
   const { instrumento } = useParams<{ instrumento: string }>()
   const router = useRouter()
-  const { token, user, updateUser, refreshUser } = useAuth()
+  const { token, user, loading, isAuthenticated, updateUser, refreshUser } = useAuth()
+
+  // Auth guard: redirect to login if not authenticated
+  useEffect(() => {
+    if (loading) return
+    if (!isAuthenticated) { router.replace('/login'); return }
+  }, [loading, isAuthenticated, router])
+
   useEffect(() => { refreshUser() }, [refreshUser])
   const { gym: allGym } = useInstrumentos(token)
 

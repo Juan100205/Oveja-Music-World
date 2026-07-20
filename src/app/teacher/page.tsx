@@ -76,7 +76,7 @@ function NivelBar({ nivel, puntos }: { nivel: number; puntos: number }) {
 // ══════════════════════════════════════════════════════════════
 export default function TeacherPage() {
   usePageScroll()
-  const { user, token, logout } = useAuth()
+  const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
   const { clases } = useInstrumentos(token ?? null)
   const [tab, setTab] = useState<'clases' | 'estudiantes'>('clases')
@@ -90,13 +90,14 @@ export default function TeacherPage() {
   const [saving, setSaving] = useState<string | null>(null)
   const [saveError, setSaveError] = useState<Record<string, string>>({})
 
-  // Guard: solo docentes y admins
+  // Guard: redirigir a login si no hay sesión, o a escuela si no es teacher/admin
   useEffect(() => {
-    if (!user) return
-    if (user.role !== 'teacher' && user.role !== 'admin') {
+    if (loading) return
+    if (!isAuthenticated) { router.replace('/login'); return }
+    if (user && user.role !== 'teacher' && user.role !== 'admin') {
       router.replace('/escuela')
     }
-  }, [user, router])
+  }, [loading, isAuthenticated, user, router])
 
   const fetchStudents = useCallback(async () => {
     if (!token) return

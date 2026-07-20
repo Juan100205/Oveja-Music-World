@@ -119,14 +119,20 @@ export function useAuth(): UseAuthReturn {
       const res = await fetch('/api/auth/me', {
         headers: { Authorization: `Bearer ${storedToken}` },
       })
-      if (!res.ok) return
+      if (!res.ok) {
+        // Token expirado, inválido o usuario eliminado → cerrar sesión
+        localStorage.removeItem('token')
+        localStorage.removeItem('user')
+        setState({ user: null, token: null, loading: false, error: null })
+        return
+      }
       const data = await res.json()
       if (data.user) {
         localStorage.setItem('user', JSON.stringify(data.user))
         setState(prev => ({ ...prev, user: data.user }))
       }
     } catch {
-      // silencioso
+      // silencioso — sin conexión, se mantiene la sesión local
     }
   }, [])
 

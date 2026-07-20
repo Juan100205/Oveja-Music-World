@@ -262,7 +262,13 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const clase = CLASES_CONFIG.find(c => c.id === instrumento)
 
   const { isCompleted, completeResource } = useProgress()
-  const { user, token, updateUser, refreshUser } = useAuth()
+  const { user, token, loading, isAuthenticated, updateUser, refreshUser } = useAuth()
+
+  // Auth guard: redirect to login if not authenticated
+  useEffect(() => {
+    if (loading) return
+    if (!isAuthenticated) { router.replace('/login'); return }
+  }, [loading, isAuthenticated, router])
 
   const { isMobile, isPortrait } = useOrientation()
   const [isInClass,      setIsInClass]     = useState(false)

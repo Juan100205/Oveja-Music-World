@@ -317,7 +317,13 @@ function incrementTutorialCount(userId: string): void {
 // ══════════════════════════════════════════════════════════════
 export default function MapaPage() {
   const router = useRouter()
-  const { user, logout, token, refreshUser } = useAuth()
+  const { user, loading, logout, token, isAuthenticated, refreshUser } = useAuth()
+
+  // Auth guard: redirect to login if not authenticated
+  useEffect(() => {
+    if (loading) return
+    if (!isAuthenticated) { router.replace('/login'); return }
+  }, [loading, isAuthenticated, router])
 
   // Spline hover
   const [overGym, setOverGym] = useState(false)

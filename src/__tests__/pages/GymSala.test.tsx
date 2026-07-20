@@ -45,7 +45,7 @@ jest.mock('next/navigation', () => ({
 }))
 
 jest.mock('@/hooks/useAuth', () => ({
-  useAuth: () => ({ token: 'test-token', user: { id: 'u1', role: 'student' }, logout: jest.fn() }),
+  useAuth: () => ({ token: 'test-token', user: { id: 'u1', role: 'student' }, loading: false, isAuthenticated: true, logout: jest.fn(), refreshUser: jest.fn() }),
 }))
 
 jest.mock('@/hooks/useInstrumentos', () => ({

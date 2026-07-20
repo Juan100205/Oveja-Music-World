@@ -53,6 +53,8 @@ jest.mock('@/hooks/useAuth', () => ({
   useAuth: () => ({
     get user()  { return mockTeacherUser },
     get token() { return mockToken },
+    loading: false,
+    isAuthenticated: true,
     logout: jest.fn(),
   }),
 }))
