@@ -49,11 +49,7 @@ export async function POST(req: NextRequest) {
     .eq('url', normalizedUrl)
     .maybeSingle()
 
-  if (!recurso) {
-    return NextResponse.json({ error: 'Recurso no encontrado', url: body.url }, { status: 404 })
-  }
-
-  const puntos = recurso.puntos ?? (PUNTOS_POR_TIPO[body.tipo] ?? 5)
+  const puntos = recurso?.puntos ?? (PUNTOS_POR_TIPO[body.tipo] ?? 5)
 
   // Registrar completion (permite duplicados — el alumno gana puntos cada vez que practica)
   await db.from('completions').insert({

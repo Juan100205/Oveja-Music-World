@@ -10,6 +10,7 @@ import type { Application } from '@splinetool/runtime'
 
 const Spline = dynamic(() => import('@splinetool/react-spline'), { ssr: false })
 import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
+import WaitingScreen from '@/components/ui/WaitingScreen'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
@@ -42,12 +43,12 @@ const TIPO_LABEL: Record<string, string> = {
 }
 
 const TIPO_MODO: Record<string, string> = {
-  drive: 'Abre en ventana de Google',
-  juego: 'Abre en la app',
+  drive: 'Se abre en nueva pestaña',
+  juego: 'Se abre en nueva pestaña',
   pdf: 'Abre en la app',
-  imagen: 'Abre en la app',
-  herramienta: 'Abre en la app',
-  otro: 'Abre en la app',
+  imagen: 'Se abre en nueva pestaña',
+  herramienta: 'Se abre en nueva pestaña',
+  otro: 'Se abre en nueva pestaña',
 }
 
 
@@ -92,6 +93,10 @@ function getEmbedUrl(url: string, tipo: string): string {
     if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
   }
   return url
+}
+
+function isLocalPdf(url: string): boolean {
+  return /\.pdf(\?|#|$)/i.test(url) && !url.includes('supabase.co/storage/')
 }
 
 // ── Video thumbnail card ───────────────────────────────────────
@@ -352,6 +357,7 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
   const [seccionActiva,  setSeccionActiva]  = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]    = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
+  const [esperaActiva, setEsperaActiva]   = useState<{ url: string; label?: string; tipo: string } | null>(null)
   const [tapeteHintOpen, setTapeteHintOpen] = useState(true)
   const [fallbackVisible, setFallbackVisible] = useState(false)
   const fallbackTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -716,8 +722,12 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
                           index={i}
                           completed={isCompleted(recurso.url)}
                           onClick={() => {
-                            handleOpenResource(recurso.url, recurso.tipo)
-                            setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            if (isLocalPdf(recurso.url)) {
+                              setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            } else {
+                              window.open(recurso.url, '_blank')
+                              setEsperaActiva({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            }
                           }}
                         />
                       )
@@ -848,6 +858,23 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
             label={externalActivo.label}
             tipo={externalActivo.tipo}
             onClose={() => setExternalActivo(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          OVERLAY — PANTALLA DE ESPERA
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {esperaActiva && (
+          <WaitingScreen
+            label={esperaActiva.label}
+            tipo={esperaActiva.tipo}
+            onComplete={() => {
+              handleOpenResource(esperaActiva.url, esperaActiva.tipo)
+              setEsperaActiva(null)
+            }}
+            onClose={() => setEsperaActiva(null)}
           />
         )}
       </AnimatePresence>

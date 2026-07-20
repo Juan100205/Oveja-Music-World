@@ -18,6 +18,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { PUNTOS_POR_TIPO } from '@/types'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
+import WaitingScreen from '@/components/ui/WaitingScreen'
 
 const SCENE_CLASSROOM = 'https://prod.spline.design/646pGt79P6qgQp6p/scene.splinecode'
 
@@ -32,9 +33,9 @@ const TIPO_LABEL: Record<string, string> = {
 }
 
 const TIPO_MODO: Record<string, string> = {
-  drive: 'Abre en la app', juego: 'Abre en la app',
-  pdf: 'Abre en la app', imagen: 'Abre en la app',
-  herramienta: 'Abre en la app', otro: 'Abre en la app',
+  drive: 'Se abre en nueva pestaña', juego: 'Se abre en nueva pestaña',
+  pdf: 'Abre en la app', imagen: 'Se abre en nueva pestaña',
+  herramienta: 'Se abre en nueva pestaña', otro: 'Se abre en nueva pestaña',
 }
 
 const TIPO_COLOR: Record<string, string> = {
@@ -70,6 +71,10 @@ function getEmbedUrl(url: string, tipo: string): string {
     if (scratchId) return `https://scratch.mit.edu/projects/${scratchId}/embed`
   }
   return url
+}
+
+function isLocalPdf(url: string): boolean {
+  return /\.pdf(\?|#|$)/i.test(url) && !url.includes('supabase.co/storage/')
 }
 
 // ── Video thumbnail card ───────────────────────────────────────
@@ -273,6 +278,7 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const [seccionActiva,  setSeccionActiva] = useState<Seccion | null>(null)
   const [videoActivo,    setVideoActivo]   = useState<{ url: string; label?: string } | null>(null)
   const [externalActivo, setExternalActivo] = useState<{ url: string; label?: string; tipo: string } | null>(null)
+  const [esperaActiva, setEsperaActiva]   = useState<{ url: string; label?: string; tipo: string } | null>(null)
   const [salidaOpen,     setSalidaOpen]    = useState(false)
   const [toast, setToast] = useState<{ pts: number; subioNivel: boolean; id: number } | null>(null)
   const toastCountRef = useRef(0)
@@ -602,8 +608,12 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
                       return (
                         <ExternalCard key={i} recurso={recurso} index={i} completed={isCompleted(recurso.url)}
                           onClick={() => {
-                            handleOpenResource(recurso.url, recurso.tipo)
-                            setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            if (isLocalPdf(recurso.url)) {
+                              setExternalActivo({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            } else {
+                              window.open(recurso.url, '_blank')
+                              setEsperaActiva({ url: recurso.url, label: recurso.label, tipo: recurso.tipo })
+                            }
                           }} />
                       )
                     })}
@@ -714,6 +724,23 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
         {externalActivo && (
           <IframeViewer url={externalActivo.url} label={externalActivo.label} tipo={externalActivo.tipo}
             onClose={() => setExternalActivo(null)} />
+        )}
+      </AnimatePresence>
+
+      {/* ════════════════════════════════════════
+          OVERLAY — PANTALLA DE ESPERA
+      ════════════════════════════════════════ */}
+      <AnimatePresence>
+        {esperaActiva && (
+          <WaitingScreen
+            label={esperaActiva.label}
+            tipo={esperaActiva.tipo}
+            onComplete={() => {
+              handleOpenResource(esperaActiva.url, esperaActiva.tipo)
+              setEsperaActiva(null)
+            }}
+            onClose={() => setEsperaActiva(null)}
+          />
         )}
       </AnimatePresence>
 

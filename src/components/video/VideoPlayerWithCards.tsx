@@ -326,6 +326,12 @@ export default function VideoPlayerWithCards({
   const shownCardsRef    = useRef<Set<string>>(new Set())
   const cardsRef         = useRef<VideoCard[]>([])
 
+  // Refs for latest callbacks — avoids stale closures in YouTube onStateChange
+  const onVideoEndRef = useRef(onVideoEnd)
+  useEffect(() => { onVideoEndRef.current = onVideoEnd }, [onVideoEnd])
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose }, [onClose])
+
   const [cards, setCards]           = useState<VideoCard[]>([])
   const [activeCard, setActiveCard] = useState<VideoCard | null>(null)
 
@@ -393,12 +399,12 @@ export default function VideoPlayerWithCards({
           if (e.data === window.YT.PlayerState.PAUSED)   stopPolling()
           if (e.data === window.YT.PlayerState.ENDED) {
             stopPolling()
-            onVideoEnd?.()
+            onVideoEndRef.current?.()
           }
         },
       },
     })
-  }, [ytId, startPolling, stopPolling, onVideoEnd])
+  }, [ytId, startPolling, stopPolling])
 
   useEffect(() => {
     if (window.YT?.Player) {
@@ -434,7 +440,7 @@ export default function VideoPlayerWithCards({
         key="vp-backdrop"
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         transition={{ duration: 0.2 }}
-        onClick={onClose}
+        onClick={() => onCloseRef.current?.()}
         style={{
           position: 'absolute', inset: 0, zIndex: 50,
           background: 'rgba(5,5,18,0.95)', backdropFilter: 'blur(20px)',
@@ -474,7 +480,7 @@ export default function VideoPlayerWithCards({
           </p>
           <motion.button
             whileHover={{ scale: 1.1, rotate: 90 }} whileTap={{ scale: 0.9 }}
-            onClick={onClose}
+            onClick={() => onCloseRef.current?.()}
             style={{
               width: 34, height: 34, borderRadius: '50%', border: '1px solid rgba(255,255,255,0.15)',
               background: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: 14,

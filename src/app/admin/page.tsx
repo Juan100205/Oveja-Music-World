@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText, Search } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 import { usePageScroll } from '@/hooks/usePageScroll'
@@ -128,6 +128,7 @@ export default function AdminPage() {
   const [changePwdSaving,  setChangePwdSaving]  = useState(false)
   const [changePwdError,   setChangePwdError]   = useState<string | null>(null)
   const [showLogout, setShowLogout] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   // ── Instrumentos ───────────────────────────────────────────
   const [instrumentos,    setInstrumentos]    = useState<Instrumento[]>([])
@@ -406,6 +407,14 @@ export default function AdminPage() {
 
   if (loading || !isAuthenticated || user?.role !== 'admin') return null
 
+  const q = searchQuery.trim().toLowerCase()
+  const filteredUsers = q
+    ? users.filter(u =>
+        (u.nombre?.toLowerCase().includes(q)) ||
+        (u.email.toLowerCase().includes(q))
+      )
+    : users
+
   // ── Render ─────────────────────────────────────────────────
   return (
     <main style={{ height: '100vh', overflowY: 'auto', background: '#0a0a1a', color: '#fff' }}>
@@ -437,7 +446,7 @@ export default function AdminPage() {
               Panel Admin
             </h1>
             <p className="admin-subtitle" style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {activeTab === 'usuarios' ? `${users.length} usuarios` : activeTab === 'contenido' ? 'Gestión de contenido' : activeTab === 'manual' ? 'Manual de uso' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
+              {activeTab === 'usuarios' ? (searchQuery.trim() ? `${filteredUsers.length}/${users.length} usuarios` : `${users.length} usuarios`) : activeTab === 'contenido' ? 'Gestión de contenido' : activeTab === 'manual' ? 'Manual de uso' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
@@ -948,6 +957,42 @@ export default function AdminPage() {
       {activeTab === 'usuarios' && (
       <div style={{ padding: '20px', display: 'flex', flexDirection: 'column', gap: 12, maxWidth: 800, margin: '0 auto' }}>
 
+        {/* ── Buscador de usuarios ── */}
+        {!fetching && users.length > 0 && (
+          <div style={{
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 16, padding: '10px 16px',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <Search size={16} color="rgba(255,255,255,0.4)" />
+            <input
+              type="text"
+              placeholder="Buscar por nombre o email..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                flex: 1, background: 'none', border: 'none', outline: 'none',
+                color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14,
+              }}
+            />
+            {searchQuery && (
+              <motion.button
+                whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                onClick={() => setSearchQuery('')}
+                style={{
+                  background: 'rgba(255,255,255,0.1)', border: 'none',
+                  borderRadius: 999, width: 24, height: 24,
+                  color: 'rgba(255,255,255,0.5)', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                }}
+              >
+                <X size={12} />
+              </motion.button>
+            )}
+          </div>
+        )}
+
         {fetching ? (
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)', fontSize: 14 }}>
             Cargando usuarios...
@@ -956,8 +1001,12 @@ export default function AdminPage() {
           <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)', fontSize: 14 }}>
             No hay usuarios todavía
           </div>
+        ) : filteredUsers.length === 0 ? (
+          <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)', fontSize: 14 }}>
+            No se encontraron usuarios para &ldquo;{searchQuery}&rdquo;
+          </div>
         ) : (
-          users.map(u => {
+          filteredUsers.map(u => {
             const badge = roleBadge(u.role)
             const isSaving = saving === u.id
             return (
