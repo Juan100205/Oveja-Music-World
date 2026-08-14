@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { calcularNivel } from '@/lib/gamification'
+import { loadNivelesConfig } from '@/lib/niveles'
 import { PUNTOS_POR_TIPO } from '@/types'
 
 export async function GET(req: NextRequest) {
@@ -37,6 +38,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Tipo no válido' }, { status: 400 })
   }
 
+  // Instrumento opcional — si llega, los puntos se acumulan por separado
+  // en `puntos_por_instrumento` y el nivel se calcula con la config de
+  // ese instrumento. Si no llega, se conserva el comportamiento global.
+  const instrumento = typeof body.instrumento === 'string' && body.instrumento.trim()
+    ? body.instrumento.trim()
+    : null
+
   const db = getSupabaseAdmin()
 
   // Validar que la URL corresponde a un recurso real del currículo y leer puntos config
@@ -63,25 +71,45 @@ export async function POST(req: NextRequest) {
   // Sumar puntos al usuario
   const { data: user } = await db
     .from('users')
-    .select('puntos, nivel')
+    .select('puntos, nivel, puntos_por_instrumento')
     .eq('id', payload.sub)
     .single()
 
   if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
-  const nuevosPuntos = user.puntos + puntos
-  const nuevoNivel = calcularNivel(nuevosPuntos)
+  const puntosPorInstrumento = (user.puntos_por_instrumento as Record<string, number> | null) ?? {}
+  const nuevosPuntos = (user.puntos ?? 0) + puntos
+
+  const configNiveles = await loadNivelesConfig(instrumento)
+  const nuevosPuntosInstrumento = instrumento
+    ? (puntosPorInstrumento[instrumento] ?? 0) + puntos
+    : nuevosPuntos
+  const nuevoNivel = calcularNivel(nuevosPuntosInstrumento, configNiveles)
+
+  const nivelAnterior = instrumento
+    ? calcularNivel(puntosPorInstrumento[instrumento] ?? 0, configNiveles)
+    : user.nivel
+
+  const update = instrumento
+    ? {
+        puntos: nuevosPuntos,
+        nivel:  calcularNivel(nuevosPuntos, await loadNivelesConfig()),
+        puntos_por_instrumento: { ...puntosPorInstrumento, [instrumento]: nuevosPuntosInstrumento },
+      }
+    : { puntos: nuevosPuntos, nivel: nuevoNivel }
 
   await db
     .from('users')
-    .update({ puntos: nuevosPuntos, nivel: nuevoNivel })
+    .update(update)
     .eq('id', payload.sub)
 
   return NextResponse.json({
     ya_completado: false,
     puntos_ganados: puntos,
     total_puntos: nuevosPuntos,
+    puntos_instrumento: nuevosPuntosInstrumento,
+    instrumento,
     nivel: nuevoNivel,
-    subio_nivel: nuevoNivel > user.nivel,
+    subio_nivel: nuevoNivel > nivelAnterior,
   })
 }

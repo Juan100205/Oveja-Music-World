@@ -50,6 +50,7 @@ function buildSupabaseChain() {
       return chain
     }),
     select: jest.fn().mockImplementation(() => chain),
+    is: jest.fn().mockImplementation(() => chain),
     eq: jest.fn().mockImplementation(() => {
       if (afterUpdate) return Promise.resolve(dbSetup.updateResult)
       return chain

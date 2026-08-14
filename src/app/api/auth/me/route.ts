@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const db = getSupabaseAdmin()
   const { data: user, error } = await db
     .from('users')
-    .select('id, email, role, nivel, puntos, nombre, created_at, cursos_acceso, clases_acceso')
+    .select('id, email, role, nivel, puntos, puntos_por_instrumento, nombre, created_at, cursos_acceso, clases_acceso')
     .eq('id', payload.sub)
     .single()
 
@@ -20,5 +20,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
   }
 
-  return NextResponse.json({ user })
+  return NextResponse.json({
+    user: {
+      ...user,
+      puntos_por_instrumento: (user.puntos_por_instrumento as Record<string, number> | null) ?? {},
+    },
+  })
 }

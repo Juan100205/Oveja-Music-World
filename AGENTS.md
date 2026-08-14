@@ -88,6 +88,21 @@ JWT_SECRET
 
 5-level system: Principiante (0pts) → Aprendiz (100) → Intermedio (300) → Avanzado (600) → Maestro (1000). Each video watched awards 20 pts (`PUNTOS_POR_VIDEO`). Level config lives in `LEVEL_CONFIG` in `src/types/index.ts`.
 
+**Configurable levels (DB priority + static fallback)**: the admin panel tab "Niveles" (`/admin`) and the teacher panel tab "Niveles" (`/teacher`) edit how many points each level requires. The config is stored in the `config_niveles` table. **Per-instrument levels**: `config_niveles` has a nullable `instrumento_id` column — `NULL` rows are the *global* config, non-null rows override it for a specific instrument. Server-side level math always loads it via `loadNivelesConfig(instrumentoId?)` (`src/lib/niveles.ts`): if an instrument is given it reads that instrument's rows first, falls back to global rows, then to `LEVEL_CONFIG`. Without an instrument it reads global rows only.
+
+- Migration `supabase/migrations/005_niveles_instrumento.sql` adds `instrumento_id` + `users.puntos_por_instrumento JSONB NOT NULL DEFAULT '{}'` (dict `{instrumentoId: puntos}`). `users.puntos` stays the global total (ranking/legacy); `users.nivel` is recomputed against the global config. Run both `004_niveles.sql` and `005_niveles_instrumento.sql` in the Supabase SQL Editor.
+- `GET/PUT /api/admin/niveles?instrumento=<id>` — admin reads/replaces the config for an instrument (empty `?instrumento=` = global). PUT validates (≥2 levels, contiguous from 1, level 1 = 0 pts, strictly increasing integer points, non-empty names) and replaces via delete+insert (global deletes with `.is('instrumento_id', null)`).
+- `GET/PUT /api/teacher/niveles?instrumento=<id>` — same behavior but scoped to the teacher's own instruments (`teacherGuard` + `canAccess`: admin passes always, teacher only if the instrument's `cursoId` ∈ their `cursos_acceso`). `instrumento` param is required (400 if missing).
+- `GET /api/niveles?instrumento=<id>` — any authenticated user reads the config (used by `useNivelesConfig(token, instrumento?)` hook, client fallback to `LEVEL_CONFIG`).
+- **Per-instrument points**: `POST /api/progress` accepts an optional `instrumento`. When present, points accumulate in `users.puntos_por_instrumento[instrumento]` and the level is computed with that instrument's config (response adds `puntos_instrumento` and `instrumento`). When absent it keeps the global behavior (backward compatible). `GET /api/users/me?instrumento=<id>` computes `gamification` from that instrument's bucket + config.
+- Classroom/gym pages (`/escuela/clase/[instrumento]`, `/escuela/gym/[instrumento]`) pass their `instrumento` to `useProgress.completeResource(url, tipo, instrumento)` and show the instrument's level via `LevelProgressPanel` (prop `instrumento`).
+- Gamification helpers accept an optional `config: LevelConfig[]` param (default `LEVEL_CONFIG`): `calcularNivel`, `calcularPuntosParaSiguienteNivel`, `calcularProgreso` (clamped to 0–100).
+- UI consumers: `LevelBar`, `LevelProgressPanel` (via `useNivelesConfig`), the `/admin` users list/level bars (uses the global config via a separate `fetchNivelesGlobal`), and the shared `NivelesEditor` component (`src/components/gamification/NivelesEditor.tsx`, props `{ token, apiBase, instruments, allowGlobal }`) used by both admin (`apiBase="/api/admin/niveles"`, `allowGlobal=true`) and teacher (`apiBase="/api/teacher/niveles"`, `allowGlobal=false`).
+
+### API tests infra
+
+`npm run test:api` uses `jest.config.api.ts` (plain Jest, node env) with `ts-jest` (`isolatedModules`) — `next/server` is a real ESM module that extends the native `Request`/`Response`, so `jest.setup.api.ts` replaces them with mocks that implement `url`, `headers` (`.get`/`.entries`), `json()`/`text()`, `body`, `status`, `ok` via `Object.defineProperty` (getter-only prototype props would throw otherwise). `.env.local` is loaded via `dotenv` in the setup file.
+
 ### Design system
 
 Dark theme (`#0a0a1a`) for all classroom/map pages, light (`#f7f9ff`) for auth pages.

@@ -15,6 +15,8 @@ import { CURSOS } from '@/data/cursos'
 import type { Seccion, Recurso, Modulo } from '@/data/cursos'
 import { useProgress } from '@/hooks/useProgress'
 import { useAuth } from '@/hooks/useAuth'
+import { useNivelesConfig } from '@/hooks/useNivelesConfig'
+import { calcularNivel } from '@/lib/gamification'
 import { PUNTOS_POR_TIPO } from '@/types'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
@@ -264,6 +266,10 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
   const { isCompleted, completeResource } = useProgress()
   const { user, token, loading, isAuthenticated, updateUser, refreshUser } = useAuth()
 
+  const configInstrumento = useNivelesConfig(token ?? null, instrumento)
+  const puntosInstrumento = user?.puntos_por_instrumento?.[instrumento] ?? 0
+  const nivelInstrumento  = calcularNivel(puntosInstrumento, configInstrumento)
+
   // Auth guard: redirect to login if not authenticated
   useEffect(() => {
     if (loading) return
@@ -306,21 +312,35 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
 
   const handleVideoEnd = useCallback(() => {
     if (!videoActivo?.url) return
-    completeResource(videoActivo.url, 'video').then(result => {
+    completeResource(videoActivo.url, 'video', instrumento).then(result => {
       if (result && !result.ya_completado) {
         setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-        if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+        if (result.total_puntos !== undefined) {
+          const prev = user?.puntos_por_instrumento ?? {}
+          updateUser({
+            puntos: result.total_puntos,
+            nivel: result.nivel,
+            puntos_por_instrumento: { ...prev, [instrumento]: result.puntos_instrumento ?? prev[instrumento] ?? 0 },
+          })
+        }
       }
     })
-  }, [videoActivo?.url, completeResource, updateUser])
+  }, [videoActivo?.url, completeResource, updateUser, user, instrumento])
 
   const handleOpenResource = useCallback(async (url: string, tipo: string) => {
-    const result = await completeResource(url, tipo)
+    const result = await completeResource(url, tipo, instrumento)
     if (result && !result.ya_completado) {
       setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-      if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+      if (result.total_puntos !== undefined) {
+        const prev = user?.puntos_por_instrumento ?? {}
+        updateUser({
+          puntos: result.total_puntos,
+          nivel: result.nivel,
+          puntos_por_instrumento: { ...prev, [instrumento]: result.puntos_instrumento ?? prev[instrumento] ?? 0 },
+        })
+      }
     }
-  }, [completeResource, updateUser])
+  }, [completeResource, updateUser, user, instrumento])
 
   const handleVariableChange = useCallback((name: string, value: unknown) => {
     const isTrue = value === true || String(value).toLowerCase() === 'true'
@@ -419,10 +439,11 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
       <SplineTouchControls />
 
       <LevelProgressPanel
-        puntos={user?.puntos ?? 0}
-        nivel={user?.nivel ?? 1}
+        puntos={puntosInstrumento}
+        nivel={nivelInstrumento}
         modulo={moduloActivo ?? null}
         isCompleted={isCompleted}
+        instrumento={instrumento}
       />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="clase" />

@@ -7,6 +7,7 @@ export interface User {
   role: UserRole
   nivel: number
   puntos: number
+  puntos_por_instrumento?: Record<string, number>
   nombre?: string
   created_at: string
   cursos_acceso?: string[]

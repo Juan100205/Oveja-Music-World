@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { extractTokenFromHeader, verifyToken } from '@/lib/auth'
 import { getSupabaseAdmin } from '@/lib/supabase'
 import { calcularNivel, calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
+import { loadNivelesConfig } from '@/lib/niveles'
 
 export async function GET(req: NextRequest) {
   const token = extractTokenFromHeader(req.headers.get('authorization') ?? '')
@@ -14,18 +15,24 @@ export async function GET(req: NextRequest) {
 
   const { data: user, error } = await db
     .from('users')
-    .select('id, email, role, nivel, puntos, nombre, created_at')
+    .select('id, email, role, nivel, puntos, puntos_por_instrumento, nombre, created_at')
     .eq('id', payload.sub)
     .single()
 
   if (error || !user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
+  const instrumento = req.nextUrl.searchParams.get('instrumento')
+  const configNiveles = await loadNivelesConfig(instrumento)
+
+  const puntosPorInstrumento = (user.puntos_por_instrumento as Record<string, number> | null) ?? {}
+  const puntos = instrumento ? (puntosPorInstrumento[instrumento] ?? 0) : user.puntos
+
   return NextResponse.json({
-    user,
+    user: { ...user, puntos_por_instrumento: puntosPorInstrumento },
     gamification: {
-      nivel: calcularNivel(user.puntos),
-      progreso: calcularProgreso(user.puntos),
-      puntos_para_siguiente: calcularPuntosParaSiguienteNivel(user.puntos),
+      nivel: calcularNivel(puntos, configNiveles),
+      progreso: calcularProgreso(puntos, configNiveles),
+      puntos_para_siguiente: calcularPuntosParaSiguienteNivel(puntos, configNiveles),
     },
   })
 }
@@ -56,8 +63,10 @@ export async function PATCH(req: NextRequest) {
 
   if (!user) return NextResponse.json({ error: 'Usuario no encontrado' }, { status: 404 })
 
+  const configNiveles = await loadNivelesConfig()
+
   const nuevosPuntos = user.puntos + puntosGanados
-  const nuevoNivel = calcularNivel(nuevosPuntos)
+  const nuevoNivel = calcularNivel(nuevosPuntos, configNiveles)
 
   const { data: updated } = await db
     .from('users')
@@ -70,6 +79,6 @@ export async function PATCH(req: NextRequest) {
     puntos: updated?.puntos,
     nivel: updated?.nivel,
     subio_nivel: nuevoNivel > payload.nivel,
-    progreso: calcularProgreso(nuevosPuntos),
+    progreso: calcularProgreso(nuevosPuntos, configNiveles),
   })
 }

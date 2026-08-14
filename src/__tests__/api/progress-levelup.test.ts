@@ -37,7 +37,7 @@ import { POST as postProgress, GET as getProgress } from '@/app/api/progress/rou
 // ── Helpers ────────────────────────────────────────────────────
 function makeChain(resolved: unknown) {
   const c: Record<string, unknown> = {}
-  ;['select','insert','update','delete','eq','order','limit'].forEach(m => {
+  ;['select','insert','update','delete','eq','order','limit','is'].forEach(m => {
     c[m] = jest.fn().mockReturnValue(c)
   })
   c.single      = jest.fn().mockResolvedValue(resolved)
@@ -67,7 +67,8 @@ function makeReq(body?: unknown) {
  *   1. recursos lookup (maybeSingle) → resource found
  *   2. completions insert
  *   3. users select (puntos, nivel) → userData
- *   4. users update
+ *   4. config_niveles select → vacío → fallback a LEVEL_CONFIG estático
+ *   5. users update
  */
 function setupProgressMock(opts: {
   userPuntos: number            // puntos actuales del usuario
@@ -79,6 +80,7 @@ function setupProgressMock(opts: {
     .mockReturnValueOnce(makeChain({ data: { id: 'r-1', puntos: null }, error: null })) // recursos lookup
     .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // insert completion
     .mockReturnValueOnce(makeChain({ data: { puntos: userPuntos, nivel: userNivel }, error: null })) // user select
+    .mockReturnValueOnce(makeChain({ data: [], error: null }))                                // config_niveles (vacío → fallback estático)
     .mockReturnValueOnce(makeChain({ data: null, error: null }))                             // user update
 }
 

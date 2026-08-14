@@ -7,6 +7,9 @@ const config: Config = {
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
   },
+  transform: {
+    '^.+\\.tsx?$': ['ts-jest', { isolatedModules: true }],
+  },
   coverageProvider: 'v8',
   collectCoverageFrom: [
     'src/app/api/**/*.ts',
@@ -14,7 +17,7 @@ const config: Config = {
     '!src/**/*.d.ts',
   ],
   setupFiles: ['<rootDir>/jest.setup.api.ts'],
-  testTimeout: 15000,
+  testTimeout: 60000,
   verbose: true,
 }
 

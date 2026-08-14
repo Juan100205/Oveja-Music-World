@@ -18,6 +18,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
 import { useProgress } from '@/hooks/useProgress'
+import { useNivelesConfig } from '@/hooks/useNivelesConfig'
+import { calcularNivel } from '@/lib/gamification'
 import { PUNTOS_POR_TIPO } from '@/types'
 import type { GymInstrumento } from '@/data/gym'
 import type { Seccion, Recurso, Modulo } from '@/data/cursos'
@@ -354,6 +356,10 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
 
   const { isMobile, isPortrait } = useOrientation()
   const { isCompleted, completeResource } = useProgress()
+
+  const configInstrumento = useNivelesConfig(token ?? null, instrumento)
+  const puntosInstrumento = user?.puntos_por_instrumento?.[instrumento] ?? 0
+  const nivelInstrumento  = calcularNivel(puntosInstrumento, configInstrumento)
   const [toast, setToast] = useState<{ pts: number; subioNivel: boolean; id: number } | null>(null)
   const toastCountRef = useRef(0)
   const [isTrainning,    setIsTrainning]    = useState(false)
@@ -408,21 +414,35 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
 
   const handleVideoEnd = useCallback(() => {
     if (!videoActivo?.url) return
-    completeResource(videoActivo.url, 'video').then(result => {
+    completeResource(videoActivo.url, 'video', instrumento).then(result => {
       if (result && !result.ya_completado) {
         setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-        if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+        if (result.total_puntos !== undefined) {
+          const prev = user?.puntos_por_instrumento ?? {}
+          updateUser({
+            puntos: result.total_puntos,
+            nivel: result.nivel,
+            puntos_por_instrumento: { ...prev, [instrumento]: result.puntos_instrumento ?? prev[instrumento] ?? 0 },
+          })
+        }
       }
     })
-  }, [videoActivo?.url, completeResource, updateUser])
+  }, [videoActivo?.url, completeResource, updateUser, user, instrumento])
 
   const handleOpenResource = useCallback(async (url: string, tipo: string) => {
-    const result = await completeResource(url, tipo)
+    const result = await completeResource(url, tipo, instrumento)
     if (result && !result.ya_completado) {
       setToast({ pts: result.puntos_ganados, subioNivel: result.subio_nivel ?? false, id: ++toastCountRef.current })
-      if (result.total_puntos !== undefined) updateUser({ puntos: result.total_puntos, nivel: result.nivel })
+      if (result.total_puntos !== undefined) {
+        const prev = user?.puntos_por_instrumento ?? {}
+        updateUser({
+          puntos: result.total_puntos,
+          nivel: result.nivel,
+          puntos_por_instrumento: { ...prev, [instrumento]: result.puntos_instrumento ?? prev[instrumento] ?? 0 },
+        })
+      }
     }
-  }, [completeResource, updateUser])
+  }, [completeResource, updateUser, user, instrumento])
 
   // 3s after tapete is dismissed, show fallback if tapete hasn't triggered
   useEffect(() => {
@@ -501,10 +521,11 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
       {isMobile && isPortrait && <RotateScreen />}
 
       <LevelProgressPanel
-        puntos={user?.puntos ?? 0}
-        nivel={user?.nivel ?? 1}
+        puntos={puntosInstrumento}
+        nivel={nivelInstrumento}
         modulo={moduloActivo as Modulo | null}
         isCompleted={isCompleted}
+        instrumento={instrumento}
       />
 
       <TapeteCard show={tapeteHintOpen} onDismiss={dismissTapeteHint} sala="gym" />

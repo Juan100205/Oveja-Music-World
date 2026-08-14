@@ -333,11 +333,15 @@ export default function MapaPage() {
   const [clasesOpen, setClasesOpen] = useState(false)
   const [claseSeleccionada, setClaseSeleccionada] = useState<ClaseConfig | null>(null)
   const [modulosDb, setModulosDb] = useState<Record<string, Modulo[]>>({})
+  const [modulosError, setModulosError] = useState(false)
+  const [modulosReload, setModulosReload] = useState(0)
 
   // Panel gym
   const [gymOpen, setGymOpen] = useState(false)
   const [gymInstrSeleccionado, setGymInstrSeleccionado] = useState<GymInstrumento | null>(null)
   const [gymDbModulos, setGymDbModulos] = useState<Record<string, Modulo[]>>({})
+  const [gymError, setGymError] = useState(false)
+  const [gymReload, setGymReload] = useState(0)
 
   // Logout
   const [showLogout, setShowLogout] = useState(false)
@@ -422,17 +426,19 @@ export default function MapaPage() {
       .then(r => r.ok ? r.json() : null)
       .then((data: { modulos?: Modulo[] } | null) => {
         const modulos = data?.modulos
-        if (!Array.isArray(modulos)) return
+        if (!Array.isArray(modulos)) { setModulosError(true); return }
         setModulosDb(prev => ({ ...prev, [cursoId]: modulos }))
+        setModulosError(false)
       })
-      .catch(() => { /* fallback silencioso a datos estaticos */ })
-  }, [token, claseSeleccionada?.cursoId, modulosDb])
+      .catch(() => setModulosError(true))
+  }, [token, claseSeleccionada?.cursoId, modulosDb, modulosReload])
 
   // Fetch gym modules from DB when an instrument is selected
   useEffect(() => {
     if (!token || !gymInstrSeleccionado) return
     const cursoId = gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id
     if (gymDbModulos[cursoId]) return
+
     fetch(`/api/content?id=${cursoId}`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.ok ? r.json() : null)
       .then(data => {
@@ -443,17 +449,21 @@ export default function MapaPage() {
             secciones: (m.secciones ?? []).filter((s: Seccion) => s.zona !== 'clase'),
           }))
           .filter((m: Modulo) => m.secciones.length > 0)
-        if (mods.length > 0) {
-          setGymDbModulos(prev => ({ ...prev, [cursoId]: mods }))
-        }
+        setGymDbModulos(prev => ({ ...prev, [cursoId]: mods }))
+        setGymError(false)
       })
-      .catch(() => {})
-  }, [token, gymInstrSeleccionado?.id]) // eslint-disable-line react-hooks/exhaustive-deps
+      .catch(() => setGymError(true))
+  }, [token, gymInstrSeleccionado?.id, gymReload]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Solo DB — excluir módulos de gym (zona='gym'); zona=null o 'clase' aparecen en clase
   const modulosClaseVista = claseSeleccionada
     ? (modulosDb[claseSeleccionada.cursoId] ?? []).filter(m => m.zona !== 'gym')
     : []
+
+  // En carga mientras el fetch a la DB no haya poblado el curso y no haya error
+  const modulosCargando = !!claseSeleccionada?.cursoId
+    && !modulosDb[claseSeleccionada.cursoId]
+    && !modulosError
 
   const { dbClases, dbGym, loading: instrLoading } = useInstrumentos(token ?? null)
 
@@ -461,6 +471,10 @@ export default function MapaPage() {
   const gymModulosVista = gymInstrSeleccionado
     ? gymDbModulos[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id] ?? []
     : []
+
+  const gymCargando = !!gymInstrSeleccionado
+    && !gymDbModulos[gymInstrSeleccionado.cursoId ?? gymInstrSeleccionado.id]
+    && !gymError
 
   // Filtrar por acceso — admins ven todo
   const isAdmin = user?.role === 'admin'
@@ -552,7 +566,21 @@ export default function MapaPage() {
                     <button onClick={cerrarClases} className="w-9 h-9 flex items-center justify-center rounded-full cursor-pointer"
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
-                  {modulosClaseVista.length === 0
+                  {modulosCargando ? (
+                    <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>
+                      Cargando mundo…
+                    </p>
+                  ) : modulosError ? (
+                    <div className="text-center py-10">
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>
+                        No se pudo cargar el contenido
+                      </p>
+                      <button onClick={() => setModulosReload(r => r + 1)} className="cursor-pointer"
+                        style={{ padding: '9px 22px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13 }}>
+                        Reintentar
+                      </button>
+                    </div>
+                  ) : modulosClaseVista.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
                     : <ModulosList
                       modulos={modulosClaseVista}
@@ -747,7 +775,21 @@ export default function MapaPage() {
                       style={{ background: 'rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.6)', border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={14} strokeWidth={1.5} /></button>
                   </div>
 
-                  {gymModulosVista.length === 0
+                  {gymCargando ? (
+                    <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.4)' }}>
+                      Cargando mundo…
+                    </p>
+                  ) : gymError ? (
+                    <div className="text-center py-10">
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.4)', marginBottom: 12 }}>
+                        No se pudo cargar el contenido
+                      </p>
+                      <button onClick={() => setGymReload(r => r + 1)} className="cursor-pointer"
+                        style={{ padding: '9px 22px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.2)', background: 'rgba(255,255,255,0.08)', color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13 }}>
+                        Reintentar
+                      </button>
+                    </div>
+                  ) : gymModulosVista.length === 0
                     ? <p className="text-center py-10" style={{ fontFamily: 'var(--font-body)', fontSize: 14, color: 'rgba(255,255,255,0.3)' }}>Contenido próximamente</p>
                     : <ModulosList
                         modulos={gymModulosVista}

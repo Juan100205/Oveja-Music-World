@@ -7,6 +7,8 @@ interface CompleteResult {
   ya_completado: boolean
   puntos_ganados: number
   total_puntos?: number
+  puntos_instrumento?: number
+  instrumento?: string | null
   nivel?: number
   subio_nivel?: boolean
 }
@@ -30,7 +32,7 @@ export function useProgress() {
   }, [isAuthenticated, token])
 
   const completeResource = useCallback(
-    async (url: string, tipo: string): Promise<CompleteResult | null> => {
+    async (url: string, tipo: string, instrumento?: string): Promise<CompleteResult | null> => {
       if (!token) return null
       try {
         const res = await fetch('/api/progress', {
@@ -39,7 +41,7 @@ export function useProgress() {
             'Content-Type': 'application/json',
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ url, tipo }),
+          body: JSON.stringify({ url, tipo, ...(instrumento ? { instrumento } : {}) }),
         })
         if (!res.ok) {
           const err = await res.json().catch(() => ({ error: res.statusText }))

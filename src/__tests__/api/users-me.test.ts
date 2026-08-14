@@ -34,7 +34,7 @@ import { GET, PATCH } from '@/app/api/users/me/route'
 
 function makeChain(resolved: unknown) {
   const c: Record<string, unknown> = {}
-  ;['select','update','eq','order'].forEach(m => { c[m] = jest.fn().mockReturnValue(c) })
+  ;['select','update','eq','order','is'].forEach(m => { c[m] = jest.fn().mockReturnValue(c) })
   c.single      = jest.fn().mockResolvedValue(resolved)
   c.maybeSingle = jest.fn().mockResolvedValue(resolved)
   c.then  = (res: (v: unknown) => unknown, rej: (e: unknown) => unknown) =>
@@ -205,6 +205,78 @@ describe('GET /api/users/me — respuesta', () => {
 })
 
 // ══════════════════════════════════════════════════════════════
+// GET /api/users/me — por instrumento
+// ══════════════════════════════════════════════════════════════
+describe('GET /api/users/me — por instrumento', () => {
+  beforeEach(() => authAs('u-1'))
+
+  function makeGetReqWithInstrumento(instrumento: string) {
+    return new NextRequest(`http://localhost/api/users/me?instrumento=${instrumento}`, {
+      headers: { Authorization: 'Bearer tok' },
+    })
+  }
+
+  it('con ?instrumento= calcula la gamificación con los puntos de ese instrumento', async () => {
+    const user = {
+      ...USER_DB,
+      puntos: 1000, // los globales NO deben usarse
+      puntos_por_instrumento: { piano: 0, guitarra: 50 },
+    }
+    mockFrom.mockImplementation((table: string) =>
+      table === 'users' ? makeChain({ data: user, error: null }) : makeChain({ data: [], error: null })
+    )
+
+    const res  = await GET(makeGetReqWithInstrumento('piano'))
+    const body = await res.json()
+
+    expect(res.status).toBe(200)
+    expect(body.gamification.nivel).toBe(1)          // piano tiene 0 pts
+    expect(body.gamification.progreso).toBe(0)
+    expect(body.gamification.puntos_para_siguiente).toBe(100)
+    expect(body.user.puntos_por_instrumento).toEqual({ piano: 0, guitarra: 50 })
+  })
+
+  it('con ?instrumento= usa la config de niveles de ESE instrumento', async () => {
+    const user = {
+      ...USER_DB,
+      puntos: 1000,
+      puntos_por_instrumento: { bateria: 60 },
+    }
+    const instrConfig = [
+      { nivel: 1, puntos_requeridos: 0,   nombre: 'A' },
+      { nivel: 2, puntos_requeridos: 50,  nombre: 'B' },
+      { nivel: 3, puntos_requeridos: 100, nombre: 'C' },
+    ]
+    mockFrom.mockImplementation((table: string) =>
+      table === 'users' ? makeChain({ data: user, error: null }) : makeChain({ data: instrConfig, error: null })
+    )
+
+    const res  = await GET(makeGetReqWithInstrumento('bateria'))
+    const body = await res.json()
+
+    // 60 pts con umbrales 0/50/100 → nivel 2, progreso 20% (60→100)
+    expect(body.gamification.nivel).toBe(2)
+    expect(body.gamification.puntos_para_siguiente).toBe(40)
+    expect(body.gamification.progreso).toBe(20)
+  })
+
+  it('consulta config_niveles con eq(instrumento_id, <instrumento>)', async () => {
+    const user = { ...USER_DB, puntos_por_instrumento: {} }
+    mockFrom.mockImplementation((table: string) =>
+      table === 'users' ? makeChain({ data: user, error: null }) : makeChain({ data: [], error: null })
+    )
+
+    await GET(makeGetReqWithInstrumento('canto'))
+
+    const configFromCalls = mockFrom.mock.calls.filter(c => c[0] === 'config_niveles')
+    expect(configFromCalls.length).toBeGreaterThan(0)
+    // La primera query a config_niveles debe ser la del instrumento (eq instrumento_id)
+    const eq = mockFrom.mock.results[1].value.eq
+    expect(eq).toHaveBeenCalledWith('instrumento_id', 'canto')
+  })
+})
+
+// ══════════════════════════════════════════════════════════════
 // PATCH /api/users/me — agregar puntos
 // ══════════════════════════════════════════════════════════════
 describe('PATCH /api/users/me — auth', () => {
@@ -240,10 +312,10 @@ describe('PATCH /api/users/me — éxito', () => {
   beforeEach(() => authAs('u-1', 1))
 
   it('200 agrega puntos y retorna nuevo total', async () => {
-    // user select → 80 puntos
+    // user select → 80 puntos, config_niveles vacío (fallback estático), user update
     mockFrom
       .mockReturnValueOnce(makeChain({ data: { puntos: 80 }, error: null }))
-      // user update → nuevo estado
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))
       .mockReturnValueOnce(makeChain({ data: { id: 'u-1', puntos: 100, nivel: 2 }, error: null }))
 
     const res  = await PATCH(makePatchReq({ puntos: 20 }))
@@ -258,6 +330,7 @@ describe('PATCH /api/users/me — éxito', () => {
     // token nivel = 1, puntos actuales = 80, ganamos 20 → total 100 → nivel 2
     mockFrom
       .mockReturnValueOnce(makeChain({ data: { puntos: 80 }, error: null }))
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))
       .mockReturnValueOnce(makeChain({ data: { id: 'u-1', puntos: 100, nivel: 2 }, error: null }))
 
     const res  = await PATCH(makePatchReq({ puntos: 20 }))
@@ -271,6 +344,7 @@ describe('PATCH /api/users/me — éxito', () => {
     authAs('u-1', 2)  // token ya dice nivel 2
     mockFrom
       .mockReturnValueOnce(makeChain({ data: { puntos: 120 }, error: null }))
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))
       .mockReturnValueOnce(makeChain({ data: { id: 'u-1', puntos: 140, nivel: 2 }, error: null }))
 
     const res  = await PATCH(makePatchReq({ puntos: 20 }))
@@ -282,6 +356,7 @@ describe('PATCH /api/users/me — éxito', () => {
   it('retorna campo progreso en la respuesta', async () => {
     mockFrom
       .mockReturnValueOnce(makeChain({ data: { puntos: 80 }, error: null }))
+      .mockReturnValueOnce(makeChain({ data: [], error: null }))
       .mockReturnValueOnce(makeChain({ data: { id: 'u-1', puntos: 100, nivel: 2 }, error: null }))
 
     const res  = await PATCH(makePatchReq({ puntos: 20 }))

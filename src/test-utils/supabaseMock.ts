@@ -39,6 +39,7 @@ export function createDbMock(directDefault: { data: unknown; error: unknown; cou
     delete:      jest.fn(() => chain),
     eq:          jest.fn(() => chain),
     neq:         jest.fn(() => chain),
+    is:          jest.fn(() => chain),
     order:       jest.fn(() => chain),
     limit:       jest.fn(() => chain),
     single:      jest.fn().mockResolvedValue({ data: null, error: null }),

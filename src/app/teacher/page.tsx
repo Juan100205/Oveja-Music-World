@@ -3,11 +3,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { GraduationCap, Users, BookOpen, LogOut } from 'lucide-react'
+import { GraduationCap, Users, BookOpen, LogOut, TrendingUp, Globe } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from '@/app/admin/ContentManager'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { usePageScroll } from '@/hooks/usePageScroll'
+import { NivelesEditor } from '@/components/gamification/NivelesEditor'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface Student {
@@ -78,8 +79,8 @@ export default function TeacherPage() {
   usePageScroll()
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
-  const { clases } = useInstrumentos(token ?? null)
-  const [tab, setTab] = useState<'clases' | 'estudiantes'>('clases')
+  const { clases, gym } = useInstrumentos(token ?? null)
+  const [tab, setTab] = useState<'clases' | 'estudiantes' | 'niveles'>('clases')
   const [students, setStudents] = useState<Student[]>([])
   const [loadingStudents, setLoadingStudents] = useState(false)
   const [errorStudents, setErrorStudents] = useState<string | null>(null)
@@ -174,9 +175,23 @@ export default function TeacherPage() {
 
   if (!user || (user.role !== 'teacher' && user.role !== 'admin')) return null
 
+  // Instrumentos del docente: los que tienen un curso que imparte (admin: todos)
+  const isAdmin = user.role === 'admin'
+  const allowedCursoIds = isAdmin ? null : (user.cursos_acceso ?? [])
+  const seenIds = new Set<string>()
+  const myInstruments = [...clases, ...gym]
+    .filter(i => allowedCursoIds === null || (i.cursoId !== undefined && allowedCursoIds.includes(i.cursoId)))
+    .filter(i => {
+      if (seenIds.has(i.id)) return false
+      seenIds.add(i.id)
+      return true
+    })
+    .map(i => ({ id: i.id, nombre: i.nombre, emoji: i.emoji }))
+
   const tabs = [
     { id: 'clases',       label: 'Mis Clases',      Icon: BookOpen },
     { id: 'estudiantes',  label: 'Mis Estudiantes',  Icon: Users },
+    { id: 'niveles',      label: 'Niveles',          Icon: TrendingUp },
   ] as const
 
   return (
@@ -216,6 +231,19 @@ export default function TeacherPage() {
             </button>
           ))}
         </div>
+
+        {/* Ver Mundo */}
+        <button
+          onClick={() => router.push('/escuela')}
+          style={{
+            background: 'rgba(236,72,138,0.15)', border: '1px solid rgba(236,72,138,0.35)',
+            borderRadius: 8, padding: '5px 12px', color: '#ec488a',
+            fontFamily: 'var(--font-body)', fontSize: 12, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 6, flexShrink: 0,
+          }}
+        >
+          <Globe size={13} strokeWidth={1.5} /> <span className="teacher-world-label">Ver Mundo</span>
+        </button>
 
         {/* Logout */}
         <button
@@ -536,6 +564,35 @@ export default function TeacherPage() {
                   )
                 })}
               </div>
+            )}
+          </motion.div>
+        )}
+
+        {tab === 'niveles' && (
+          <motion.div
+            key="niveles"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.15 }}
+            style={{ padding: '24px 16px', maxWidth: 640, margin: '0 auto' }}
+          >
+            <div style={{ marginBottom: 24 }}>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 20, fontWeight: 700, margin: 0 }}>
+                Niveles por instrumento
+              </h2>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.35)', marginTop: 4 }}>
+                Edita los puntos que se necesitan para cada nivel de tus instrumentos
+              </p>
+            </div>
+
+            {token && (
+              <NivelesEditor
+                token={token}
+                apiBase="/api/teacher/niveles"
+                instruments={myInstruments}
+                allowGlobal={false}
+              />
             )}
           </motion.div>
         )}

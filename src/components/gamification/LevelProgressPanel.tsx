@@ -3,8 +3,8 @@
 import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { X } from 'lucide-react'
-import { LEVEL_CONFIG } from '@/types'
 import { calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
+import { useNivelesConfig } from '@/hooks/useNivelesConfig'
 import type { Modulo } from '@/data/cursos'
 import { useAuth } from '@/hooks/useAuth'
 
@@ -40,10 +40,12 @@ interface Props {
   nivel: number
   modulo: Modulo | null
   isCompleted: (url: string) => boolean
+  instrumento?: string | null
 }
 
-export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props) {
+export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted, instrumento }: Props) {
   const { token } = useAuth()
+  const config            = useNivelesConfig(token ?? null, instrumento)
   const [open, setOpen]           = useState(false)
   const [tab, setTab]             = useState<'progreso' | 'ranking'>('progreso')
   const [ranking, setRanking]     = useState<RankingEntry[]>([])
@@ -77,10 +79,10 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
 
   const idx           = Math.max(0, Math.min(nivel - 1, BADGE.length - 1))
   const badge         = BADGE[idx]
-  const currentConfig = LEVEL_CONFIG.find(c => c.nivel === nivel)
-  const nextConfig    = LEVEL_CONFIG.find(c => c.nivel === nivel + 1)
-  const progreso      = calcularProgreso(puntos)
-  const ptsFaltantes  = calcularPuntosParaSiguienteNivel(puntos)
+  const currentConfig = config.find(c => c.nivel === nivel)
+  const nextConfig    = config.find(c => c.nivel === nivel + 1)
+  const progreso      = calcularProgreso(puntos, config)
+  const ptsFaltantes  = calcularPuntosParaSiguienteNivel(puntos, config)
 
   // ── Secciones del módulo (sin gym) ───────────────────────────
   const secciones     = modulo?.secciones.filter(s => s.zona !== 'gym') ?? []
@@ -216,7 +218,7 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
                       {currentConfig?.nombre ?? `Nivel ${nivel}`}
                     </p>
                     <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.45)', marginTop: 3 }}>
-                      Nivel {nivel} de {LEVEL_CONFIG.length}
+                      Nivel {nivel} de {config.length}
                     </p>
                   </div>
                   <div style={{ textAlign: 'right', flexShrink: 0 }}>
@@ -379,7 +381,7 @@ export function LevelProgressPanel({ puntos, nivel, modulo, isCompleted }: Props
                   Insignias
                 </h3>
                 <div className="grid grid-cols-5 gap-2">
-                  {LEVEL_CONFIG.map((lc, i) => {
+                  {config.map((lc, i) => {
                     const earned = nivel >= lc.nivel
                     const b      = BADGE[i]
                     return (

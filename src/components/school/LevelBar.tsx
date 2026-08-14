@@ -2,7 +2,8 @@
 
 import { motion } from 'framer-motion'
 import { calcularNivel, calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
-import { LEVEL_CONFIG } from '@/types'
+import { useNivelesConfig } from '@/hooks/useNivelesConfig'
+import { useAuth } from '@/hooks/useAuth'
 
 interface LevelBarProps {
   puntos: number
@@ -11,10 +12,12 @@ interface LevelBarProps {
 const NIVEL_COLORS = ['#3db8fa', '#9b54f9', '#ec488a', '#ffa737', '#ffb251']
 
 export default function LevelBar({ puntos }: LevelBarProps) {
-  const nivel       = calcularNivel(puntos)
-  const progreso    = calcularProgreso(puntos)
-  const faltantes   = calcularPuntosParaSiguienteNivel(puntos)
-  const nombreNivel = LEVEL_CONFIG.find(c => c.nivel === nivel)?.nombre ?? ''
+  const { token } = useAuth()
+  const config     = useNivelesConfig(token ?? null)
+  const nivel       = calcularNivel(puntos, config)
+  const progreso    = calcularProgreso(puntos, config)
+  const faltantes   = calcularPuntosParaSiguienteNivel(puntos, config)
+  const nombreNivel = config.find(c => c.nivel === nivel)?.nombre ?? ''
   const color       = NIVEL_COLORS[(nivel - 1) % NIVEL_COLORS.length]
 
   return (

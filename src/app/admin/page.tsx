@@ -3,12 +3,12 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText, Search } from 'lucide-react'
+import { ArrowLeft, Users, BookOpen, UserPlus, X, AlertTriangle, LogOut, Trash2, Music, Pencil, KeyRound, FileText, Search, TrendingUp, RotateCcw } from 'lucide-react'
 import { useAuth } from '@/hooks/useAuth'
 import ContentManager from './ContentManager'
 import { usePageScroll } from '@/hooks/usePageScroll'
-import { LEVEL_CONFIG } from '@/types'
-import { calcularNivel, calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
+import { LEVEL_CONFIG, type LevelConfig } from '@/types'
+import { calcularProgreso, calcularPuntosParaSiguienteNivel } from '@/lib/gamification'
 
 // ── Tipos ──────────────────────────────────────────────────────
 interface AdminUser {
@@ -116,7 +116,7 @@ export default function AdminPage() {
   const { user, token, loading, isAuthenticated, logout } = useAuth()
   const router = useRouter()
 
-  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido' | 'instrumentos' | 'manual'>('usuarios')
+  const [activeTab,   setActiveTab]   = useState<'usuarios' | 'contenido' | 'instrumentos' | 'niveles' | 'manual'>('usuarios')
   const [users,      setUsers]      = useState<AdminUser[]>([])
   const [fetching,   setFetching]   = useState(true)
   const [saving,     setSaving]     = useState<string | null>(null)
@@ -129,6 +129,111 @@ export default function AdminPage() {
   const [changePwdError,   setChangePwdError]   = useState<string | null>(null)
   const [showLogout, setShowLogout] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+
+  // ── Niveles ──────────────────────────────────────────────────
+  const [niveles,          setNiveles]          = useState<LevelConfig[]>(LEVEL_CONFIG)
+  const [nivelesGlobal,    setNivelesGlobal]    = useState<LevelConfig[]>(LEVEL_CONFIG)
+  const [nivelesInstrumento, setNivelesInstrumento] = useState<string>('')
+  const [fetchingNiveles,  setFetchingNiveles]  = useState(false)
+  const [savingNiveles,    setSavingNiveles]    = useState(false)
+  const [nivelesError,     setNivelesError]     = useState<string | null>(null)
+  const [nivelesSaved,     setNivelesSaved]     = useState(false)
+  const [hasFetchedNivelesGlobal,setHasFetchedNivelesGlobal]= useState(false)
+
+  // Config global para las barras de nivel de la lista de usuarios
+  const fetchNivelesGlobal = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await fetch('/api/admin/niveles', { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (res.ok && Array.isArray(data.niveles) && data.niveles.length > 0) {
+        setNivelesGlobal(data.niveles)
+      }
+    } catch { /* fallback al estático */ }
+    finally {
+      setHasFetchedNivelesGlobal(true)
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin' && !hasFetchedNivelesGlobal && token) {
+      fetchNivelesGlobal()
+    }
+  }, [isAuthenticated, user, hasFetchedNivelesGlobal, token, fetchNivelesGlobal])
+
+  const fetchNiveles = useCallback(async (instrumento: string) => {
+    if (!token) return
+    setFetchingNiveles(true)
+    try {
+      const qs = instrumento ? `?instrumento=${encodeURIComponent(instrumento)}` : ''
+      const res = await fetch(`/api/admin/niveles${qs}`, { headers: { Authorization: `Bearer ${token}` } })
+      const data = await res.json()
+      if (res.ok && Array.isArray(data.niveles) && data.niveles.length > 0) {
+        setNiveles(data.niveles)
+      }
+    } catch { /* fallback al estático */ }
+    finally {
+      setFetchingNiveles(false)
+    }
+  }, [token])
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role === 'admin' && activeTab === 'niveles') {
+      setNivelesError(null)
+      setNivelesSaved(false)
+      fetchNiveles(nivelesInstrumento)
+    }
+  }, [isAuthenticated, user, activeTab, nivelesInstrumento, fetchNiveles])
+
+  const nivelesDirty = JSON.stringify(niveles) !== JSON.stringify(LEVEL_CONFIG)
+
+  const handleSaveNiveles = async () => {
+    setNivelesError(null)
+    setNivelesSaved(false)
+
+    const sorted = [...niveles].sort((a, b) => a.nivel - b.nivel)
+    if (sorted.length < 2) { setNivelesError('Se necesitan al menos 2 niveles'); return }
+    if (sorted[0]?.puntos_requeridos !== 0) { setNivelesError('El nivel 1 debe requerir 0 puntos'); return }
+    if (sorted.some((l, i) => l.nivel !== i + 1)) { setNivelesError('Los niveles deben ser contiguos desde 1'); return }
+    if (sorted.some(l => !l.nombre.trim())) { setNivelesError('Todos los niveles necesitan un nombre'); return }
+    for (let i = 1; i < sorted.length; i++) {
+      if (!Number.isInteger(sorted[i].puntos_requeridos) || sorted[i].puntos_requeridos < 0) {
+        setNivelesError('Los puntos deben ser números enteros mayores o iguales a 0'); return
+      }
+      if (sorted[i].puntos_requeridos <= sorted[i - 1].puntos_requeridos) {
+        setNivelesError('Los puntos deben ser estrictamente crecientes entre niveles'); return
+      }
+    }
+
+    setSavingNiveles(true)
+    try {
+      const qs = nivelesInstrumento ? `?instrumento=${encodeURIComponent(nivelesInstrumento)}` : ''
+      const res = await fetch(`/api/admin/niveles${qs}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ niveles: sorted }),
+      })
+      const data = await res.json()
+      if (!res.ok) { setNivelesError(data.error); return }
+      setNiveles(data.niveles)
+      setNivelesSaved(true)
+    } catch {
+      setNivelesError('Error de conexión')
+    } finally {
+      setSavingNiveles(false)
+    }
+  }
+
+  const handleResetNiveles = () => {
+    setNivelesError(null)
+    setNivelesSaved(false)
+    setNiveles(LEVEL_CONFIG.map(l => ({ ...l })))
+  }
+
+  const updateNivel = (idx: number, patch: Partial<LevelConfig>) => {
+    setNivelesSaved(false)
+    setNiveles(prev => prev.map((l, i) => (i === idx ? { ...l, ...patch } : l)))
+  }
 
   // ── Instrumentos ───────────────────────────────────────────
   const [instrumentos,    setInstrumentos]    = useState<Instrumento[]>([])
@@ -446,7 +551,7 @@ export default function AdminPage() {
               Panel Admin
             </h1>
             <p className="admin-subtitle" style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.35)', marginTop: 1 }}>
-              {activeTab === 'usuarios' ? (searchQuery.trim() ? `${filteredUsers.length}/${users.length} usuarios` : `${users.length} usuarios`) : activeTab === 'contenido' ? 'Gestión de contenido' : activeTab === 'manual' ? 'Manual de uso' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
+              {activeTab === 'usuarios' ? (searchQuery.trim() ? `${filteredUsers.length}/${users.length} usuarios` : `${users.length} usuarios`) : activeTab === 'contenido' ? 'Gestión de contenido' : activeTab === 'niveles' ? `${niveles.length} niveles` : activeTab === 'manual' ? 'Manual de uso' : `${instrumentos.length} instrumento${instrumentos.length !== 1 ? 's' : ''}`}
             </p>
           </div>
         </div>
@@ -458,7 +563,7 @@ export default function AdminPage() {
           border: '1px solid rgba(255,255,255,0.08)',
           borderRadius: 12, padding: 4,
         }}>
-          {(['usuarios', 'contenido', 'instrumentos', 'manual'] as const).map(tab => (
+          {(['usuarios', 'contenido', 'instrumentos', 'niveles', 'manual'] as const).map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -475,6 +580,7 @@ export default function AdminPage() {
             >
               {tab === 'usuarios'     ? <><Users    size={14} strokeWidth={1.5} /> Usuarios</>
              : tab === 'contenido'   ? <><BookOpen  size={14} strokeWidth={1.5} /> Contenido</>
+             : tab === 'niveles'     ? <><TrendingUp size={14} strokeWidth={1.5} /> Niveles</>
              : tab === 'manual'      ? <><FileText  size={14} strokeWidth={1.5} /> Manual</>
              :                         <><Music     size={14} strokeWidth={1.5} /> Instrumentos</>
               }
@@ -712,6 +818,205 @@ export default function AdminPage() {
                   </motion.div>
                 )
               })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Tab: Niveles ──────────────────────────────────────── */}
+      {activeTab === 'niveles' && (
+        <div style={{ padding: '24px 20px', maxWidth: 640, margin: '0 auto' }}>
+          {/* Header + acciones */}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
+            <div>
+              <h2 style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 16, color: '#fff', margin: 0 }}>
+                Configuración de niveles
+              </h2>
+              <p style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '4px 0 0' }}>
+                Define cuántos puntos se necesitan para subir de nivel y el nombre de cada uno.
+              </p>
+            </div>
+            {nivelesDirty && (
+              <motion.button
+                whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.96 }}
+                onClick={handleResetNiveles}
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 6,
+                  padding: '8px 14px', borderRadius: 999, cursor: 'pointer',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  color: 'rgba(255,255,255,0.55)',
+                  fontFamily: 'var(--font-body)', fontSize: 12,
+                }}
+              >
+                <RotateCcw size={13} strokeWidth={1.5} /> Restablecer
+              </motion.button>
+            )}
+          </div>
+
+          {/* Selector de instrumento */}
+          <div style={{ marginBottom: 18 }}>
+            <label style={{
+              display: 'block',
+              fontFamily: 'var(--font-body)', fontSize: 12,
+              color: 'rgba(255,255,255,0.45)', letterSpacing: '0.04em', marginBottom: 8,
+            }}>
+              Instrumento
+            </label>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              <button
+                onClick={() => setNivelesInstrumento('')}
+                style={{
+                  padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
+                  fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+                  border: `1px solid ${nivelesInstrumento === '' ? 'var(--om-purple)' : 'rgba(255,255,255,0.14)'}`,
+                  background: nivelesInstrumento === '' ? 'rgba(155,84,249,0.18)' : 'rgba(255,255,255,0.04)',
+                  color: nivelesInstrumento === '' ? 'var(--om-purple)' : 'rgba(255,255,255,0.55)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                🌐 Global (predeterminado)
+              </button>
+              {instrumentos.filter(i => i.activo !== false).map(i => (
+                <button
+                  key={i.id}
+                  onClick={() => setNivelesInstrumento(i.id)}
+                  style={{
+                    padding: '8px 16px', borderRadius: 999, cursor: 'pointer',
+                    fontFamily: 'var(--font-body)', fontSize: 13, fontWeight: 600,
+                    border: `1px solid ${nivelesInstrumento === i.id ? 'var(--om-purple)' : 'rgba(255,255,255,0.14)'}`,
+                    background: nivelesInstrumento === i.id ? 'rgba(155,84,249,0.18)' : 'rgba(255,255,255,0.04)',
+                    color: nivelesInstrumento === i.id ? 'var(--om-purple)' : 'rgba(255,255,255,0.55)',
+                    transition: 'all 0.15s',
+                  }}
+                >
+                  {i.emoji} {i.nombre}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontFamily: 'var(--font-body)', fontSize: 11, color: 'rgba(255,255,255,0.3)', margin: '8px 0 0' }}>
+              {nivelesInstrumento === ''
+                ? 'Aplica a todos los instrumentos que no tengan su propia configuración.'
+                : `Configuración exclusiva del instrumento. Si no la editas, usa la global.`}
+            </p>
+          </div>
+
+          {fetchingNiveles ? (
+            <div style={{ textAlign: 'center', padding: '60px 0', color: 'rgba(255,255,255,0.3)', fontFamily: 'var(--font-body)' }}>
+              Cargando niveles...
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {[...niveles].sort((a, b) => a.nivel - b.nivel).map((l, i) => {
+                const prev = [...niveles].sort((a, b) => a.nivel - b.nivel)[i - 1]
+                const okPoints = Number.isInteger(l.puntos_requeridos) && l.puntos_requeridos >= 0 &&
+                  (i === 0 ? l.puntos_requeridos === 0 : l.puntos_requeridos > (prev?.puntos_requeridos ?? -1))
+                const okNombre = l.nombre.trim().length > 0
+                const nivelColor = ['#34d399', '#facc15', '#3db8fa', '#ffa737', '#9b54f9'][(l.nivel - 1) % 5]
+
+                return (
+                  <motion.div
+                    key={l.nivel}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    style={{
+                      display: 'flex', alignItems: 'center', gap: 14,
+                      padding: '14px 16px', borderRadius: 14,
+                      background: 'rgba(255,255,255,0.03)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
+                  >
+                    {/* Badge nivel */}
+                    <div style={{
+                      minWidth: 58, textAlign: 'center', flexShrink: 0,
+                      background: `${nivelColor}1a`, border: `1px solid ${nivelColor}44`,
+                      borderRadius: 10, padding: '8px 6px',
+                    }}>
+                      <p style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13, color: nivelColor, margin: 0 }}>
+                        Nv.{l.nivel}
+                      </p>
+                    </div>
+
+                    {/* Nombre */}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <input
+                        value={l.nombre}
+                        onChange={e => updateNivel(i, { nombre: e.target.value })}
+                        placeholder="Nombre del nivel"
+                        style={{
+                          width: '100%', boxSizing: 'border-box',
+                          background: 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${okNombre ? 'rgba(255,255,255,0.12)' : 'rgba(236,72,138,0.5)'}`,
+                          borderRadius: 10, padding: '9px 12px',
+                          color: '#fff', fontFamily: 'var(--font-body)', fontSize: 13, outline: 'none',
+                        }}
+                      />
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0' }}>
+                        {i === 0 ? 'Punto de partida' : `${prev?.puntos_requeridos ?? 0} pts acumulados + ${l.puntos_requeridos - (prev?.puntos_requeridos ?? 0)} pts para llegar`}
+                      </p>
+                    </div>
+
+                    {/* Puntos requeridos */}
+                    <div style={{ flexShrink: 0 }}>
+                      <input
+                        type="number"
+                        min={0}
+                        disabled={l.nivel === 1}
+                        value={l.puntos_requeridos}
+                        onChange={e => updateNivel(i, { puntos_requeridos: parseInt(e.target.value, 10) || 0 })}
+                        style={{
+                          width: 96, textAlign: 'center', boxSizing: 'border-box',
+                          background: 'rgba(255,255,255,0.06)',
+                          border: `1px solid ${okPoints ? 'rgba(255,255,255,0.12)' : 'rgba(236,72,138,0.5)'}`,
+                          borderRadius: 10, padding: '9px 8px',
+                          color: l.nivel === 1 ? 'rgba(255,255,255,0.3)' : '#fff',
+                          fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14, outline: 'none',
+                          opacity: l.nivel === 1 ? 0.6 : 1,
+                        }}
+                      />
+                      <p style={{ fontFamily: 'var(--font-body)', fontSize: 9, color: 'rgba(255,255,255,0.3)', margin: '4px 0 0', textAlign: 'center' }}>
+                        pts
+                      </p>
+                    </div>
+                  </motion.div>
+                )
+              })}
+
+              {nivelesError && (
+                <p style={{
+                  fontFamily: 'var(--font-body)', fontSize: 13, color: '#ff7eb3',
+                  background: 'rgba(236,72,138,0.08)', border: '1px solid rgba(236,72,138,0.25)',
+                  borderRadius: 10, padding: '10px 14px', margin: 0,
+                }}>
+                  {nivelesError}
+                </p>
+              )}
+
+              {nivelesSaved && (
+                <p style={{
+                  fontFamily: 'var(--font-body)', fontSize: 13, color: '#34d399',
+                  background: 'rgba(52,211,153,0.08)', border: '1px solid rgba(52,211,153,0.25)',
+                  borderRadius: 10, padding: '10px 14px', margin: 0,
+                }}>
+                  Configuración guardada. Se aplica al calcular el nivel al completar recursos.
+                </p>
+              )}
+
+              <motion.button
+                whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                onClick={handleSaveNiveles}
+                disabled={savingNiveles}
+                style={{
+                  marginTop: 8, padding: '13px 0', borderRadius: 999,
+                  border: 'none', cursor: savingNiveles ? 'not-allowed' : 'pointer',
+                  background: savingNiveles ? 'rgba(155,84,249,0.3)' : 'linear-gradient(135deg, #ec488a, #9b54f9)',
+                  color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 14,
+                  opacity: nivelesDirty ? 1 : 0.55,
+                  boxShadow: nivelesDirty ? '0 0 24px rgba(236,72,138,0.3)' : 'none',
+                }}
+              >
+                {savingNiveles ? 'Guardando...' : nivelesDirty ? 'Guardar cambios' : 'Sin cambios'}
+              </motion.button>
             </div>
           )}
         </div>
@@ -1102,7 +1407,7 @@ export default function AdminPage() {
                       </span>
                     </div>
                     <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.5)' }}>
-                      {LEVEL_CONFIG.find(c => c.nivel === u.nivel)?.nombre ?? ''}
+                      {nivelesGlobal.find(c => c.nivel === u.nivel)?.nombre ?? ''}
                     </span>
                     <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 5 }}>
                       <span style={{ fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 15, color: '#fff' }}>
@@ -1119,7 +1424,7 @@ export default function AdminPage() {
                   }}>
                     <motion.div
                       initial={{ width: 0 }}
-                      animate={{ width: `${calcularProgreso(u.puntos)}%` }}
+                      animate={{ width: `${calcularProgreso(u.puntos, nivelesGlobal)}%` }}
                       transition={{ duration: 0.8, ease: 'easeOut' }}
                       style={{
                         height: '100%', borderRadius: 999,
@@ -1128,7 +1433,7 @@ export default function AdminPage() {
                     />
                   </div>
                   {(() => {
-                    const falta = calcularPuntosParaSiguienteNivel(u.puntos)
+                    const falta = calcularPuntosParaSiguienteNivel(u.puntos, nivelesGlobal)
                     return falta > 0 ? (
                       <p style={{ fontFamily: 'var(--font-body)', fontSize: 10, color: 'rgba(255,255,255,0.25)', marginTop: 3 }}>
                         {falta} pts para siguiente nivel
