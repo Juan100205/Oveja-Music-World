@@ -35,7 +35,7 @@ jest.mock('next/navigation', () => ({
   useRouter: () => ({ push: mockPush, replace: jest.fn() }),
 }))
 
-type MockUser = { role: string; clases_acceso?: string[] } | null
+type MockUser = { role: string; clases_acceso?: string[]; cursos_acceso?: string[] } | null
 let mockUser: MockUser = { role: 'admin', clases_acceso: ['guitarra'] }
 
 jest.mock('@/hooks/useAuth', () => ({
@@ -186,6 +186,26 @@ describe('MapaPage — renderizado base', () => {
     mockUser = { role: 'student', clases_acceso: [] }
     render(<MapaPage />)
     expect(screen.queryByText('Admin')).not.toBeInTheDocument()
+  })
+
+  it('muestra botón "Docente" al usuario con role=teacher', () => {
+    mockUser = { role: 'teacher', cursos_acceso: ['curso-guitarra'] }
+    render(<MapaPage />)
+    expect(screen.getByText('Docente')).toBeInTheDocument()
+  })
+
+  it('botón "Docente" navega a /teacher', () => {
+    mockPush.mockClear()
+    mockUser = { role: 'teacher', cursos_acceso: ['curso-guitarra'] }
+    render(<MapaPage />)
+    fireEvent.click(screen.getByText('Docente'))
+    expect(mockPush).toHaveBeenCalledWith('/teacher')
+  })
+
+  it('NO muestra botón Panel a usuario student', () => {
+    mockUser = { role: 'student', clases_acceso: [] }
+    render(<MapaPage />)
+    expect(screen.queryByText('Docente')).not.toBeInTheDocument()
   })
 })
 

@@ -4,10 +4,11 @@ import { useState, useCallback, useEffect, useRef } from 'react'
 import { flushSync } from 'react-dom'
 import { AnimatePresence, motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import { ArrowLeft, ChevronRight, Settings, LogOut, X } from 'lucide-react'
+import { ArrowLeft, ChevronRight, LogOut, X } from 'lucide-react'
 import SplineScene from '@/components/spline/SplineScene'
 import SplineTouchControls from '@/components/spline/SplineTouchControls'
 import TapeteCard from '@/components/ui/TapeteCard'
+import PanelButton from '@/components/ui/PanelButton'
 import RotateScreen from '@/components/ui/RotateScreen'
 import type { ClaseConfig } from '@/data/clases'
 import type { Modulo, Seccion } from '@/data/cursos'
@@ -598,28 +599,7 @@ export default function MapaPage() {
 
       {/* ── Botones top-right ── */}
       <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
-        {user?.role === 'admin' && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.85 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.5 }}
-            whileHover={{ scale: 1.08, boxShadow: '0 0 24px rgba(155,84,249,0.6)' }}
-            whileTap={{ scale: 0.94 }}
-            onClick={() => router.push('/admin')}
-            className="cursor-pointer"
-            style={{
-              background: 'linear-gradient(135deg, #9b54f9, #ec488a)',
-              border: 'none', borderRadius: 999,
-              padding: '9px 18px',
-              color: '#fff', fontFamily: 'var(--font-display)', fontWeight: 700, fontSize: 13,
-              boxShadow: '0 0 16px rgba(155,84,249,0.4)',
-              display: 'flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <Settings size={14} strokeWidth={1.5} />
-            <span>Admin</span>
-          </motion.button>
-        )}
+        <PanelButton user={user} />
 
         <motion.button
           initial={{ opacity: 0, scale: 0.85 }}

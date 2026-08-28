@@ -7,8 +7,10 @@ import { getSupabaseAdmin } from '@/lib/supabase'
  *
  * Permite a un profesor (o admin) actualizar:
  *   - nivel      (entero 1–5)
- *   - puntos     (entero >= 0)
- *   - clases_acceso (string[])
+ *
+ * Solo el administrador puede actualizar:
+ *   - puntos         (entero >= 0)
+ *   - clases_acceso  (string[])
  *
  * Seguridad:
  *   - Requiere rol teacher o admin (teacherGuard)
@@ -61,6 +63,18 @@ export async function PATCH(
     return NextResponse.json({ error: 'Body inválido' }, { status: 400 })
   }
 
+  // Solo el admin puede tocar puntos y asignación de cursos.
+  const isAdmin = guard.payload.role === 'admin'
+  if (!isAdmin) {
+    const forbidden = ['puntos', 'clases_acceso'].filter(f => f in body)
+    if (forbidden.length > 0) {
+      return NextResponse.json(
+        { error: 'Solo el administrador puede modificar puntos y asignar cursos' },
+        { status: 403 }
+      )
+    }
+  }
+
   const updates: Record<string, unknown> = {}
 
   if ('nivel' in body) {
@@ -74,7 +88,7 @@ export async function PATCH(
     updates.nivel = nivel
   }
 
-  if ('puntos' in body) {
+  if (isAdmin && 'puntos' in body) {
     const puntos = body.puntos
     if (!Number.isInteger(puntos) || puntos < 0) {
       return NextResponse.json(
@@ -85,7 +99,7 @@ export async function PATCH(
     updates.puntos = puntos
   }
 
-  if ('clases_acceso' in body) {
+  if (isAdmin && 'clases_acceso' in body) {
     const clases = body.clases_acceso
     if (!Array.isArray(clases) || clases.some(c => typeof c !== 'string')) {
       return NextResponse.json(

@@ -14,6 +14,7 @@ import WaitingScreen from '@/components/ui/WaitingScreen'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import TapeteCard from '@/components/ui/TapeteCard'
 import RotateScreen from '@/components/ui/RotateScreen'
+import PanelButton from '@/components/ui/PanelButton'
 import { useAuth } from '@/hooks/useAuth'
 import { useInstrumentos } from '@/hooks/useInstrumentos'
 import { useOrientation } from '@/hooks/useOrientation'
@@ -539,6 +540,11 @@ export default function GymSalaPage({ moduloIdInicial }: { moduloIdInicial?: str
       >
         ← Mapa
       </motion.button>
+
+      {/* ── Botón fijo Panel (teacher/admin) top-right ── */}
+      <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
+        <PanelButton user={user} delay={0.3} />
+      </div>
 
       {/* ── Nombre instrumento + sección activa (top center) ── */}
       {gymInstr && (

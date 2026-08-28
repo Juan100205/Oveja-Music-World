@@ -6,9 +6,9 @@
  *  - Lista de alumnos (tab Mis Estudiantes)
  *  - Fila expandible con panel de edición
  *  - Botones +/- de nivel (rango 1–5)
- *  - Botones +10/-10 de puntos y campo directo
- *  - Chips de clases_acceso toggleables
- *  - Botón Guardar → PATCH API
+ *  - El profesor NO puede editar puntos (solo admin)
+ *  - El profesor NO puede asignar cursos/chips de clases_acceso (solo admin)
+ *  - Botón Guardar → PATCH API (solo envía nivel)
  *  - Update optimista + revert en error
  *  - Estado loading durante save
  */
@@ -324,15 +324,16 @@ describe('TeacherPage — controles de nivel', () => {
 })
 
 // ══════════════════════════════════════════════════════════════
-// SUITE 5 — Controles de puntos
+// SUITE 5 — El profesor NO puede editar puntos ni asignar cursos
+// (solo el administrador lo hace desde /admin)
 // ══════════════════════════════════════════════════════════════
-describe('TeacherPage — controles de puntos', () => {
-  async function openPanel() {
+describe('TeacherPage — restricciones del profesor', () => {
+  async function openPanel(studentIdx = 0) {
     setupFetch()
     render(<TeacherPage />)
     await act(async () => { fireEvent.click(screen.getByText(/mis estudiantes/i)) })
     await waitFor(() => screen.getByText('Ana García'))
-    fireEvent.click(screen.getAllByRole('button', { name: /editar/i })[0])
+    fireEvent.click(screen.getAllByRole('button', { name: /editar/i })[studentIdx])
   }
 
   beforeEach(() => {
@@ -340,97 +341,28 @@ describe('TeacherPage — controles de puntos', () => {
     mockFetch.mockClear()
   })
 
-  it('muestra los puntos actuales en el input', async () => {
-    await openPanel()
-    expect(screen.getByTestId('puntos-input-stu-1')).toHaveValue(150)
+  it('NO muestra los controles de puntos', async () => {
+    await openPanel(0)
+    expect(screen.queryByTestId('puntos-input-stu-1')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('puntos-up-stu-1')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('puntos-down-stu-1')).not.toBeInTheDocument()
   })
 
-  it('+10 suma 10 puntos al draft', async () => {
-    await openPanel()
-    fireEvent.click(screen.getByTestId('puntos-up-stu-1'))
-    expect(screen.getByTestId('puntos-input-stu-1')).toHaveValue(160)
+  it('NO muestra chips para asignar cursos (clases_acceso)', async () => {
+    await openPanel(0)
+    expect(screen.queryByTestId('clase-chip-piano')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('clase-chip-guitarra')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('clase-chip-bateria')).not.toBeInTheDocument()
   })
 
-  it('-10 resta 10 puntos al draft', async () => {
-    await openPanel()
-    fireEvent.click(screen.getByTestId('puntos-down-stu-1'))
-    expect(screen.getByTestId('puntos-input-stu-1')).toHaveValue(140)
-  })
-
-  it('-10 no baja de 0', async () => {
-    setupFetch([{ ...STUDENTS[0], puntos: 5 }])
-    render(<TeacherPage />)
-    await act(async () => { fireEvent.click(screen.getByText(/mis estudiantes/i)) })
-    await waitFor(() => screen.getByText('Ana García'))
-    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
-    fireEvent.click(screen.getByTestId('puntos-down-stu-1'))
-    expect(screen.getByTestId('puntos-input-stu-1')).toHaveValue(0)
-  })
-
-  it('se puede escribir un valor directamente en el input', async () => {
-    await openPanel()
-    const input = screen.getByTestId('puntos-input-stu-1')
-    fireEvent.change(input, { target: { value: '999' } })
-    expect(input).toHaveValue(999)
-  })
-
-  it('input no acepta valores negativos (queda en 0)', async () => {
-    await openPanel()
-    const input = screen.getByTestId('puntos-input-stu-1')
-    fireEvent.change(input, { target: { value: '-50' } })
-    expect(Number((input as HTMLInputElement).value)).toBeGreaterThanOrEqual(0)
+  it('los puntos del alumno siguen visibles como dato de solo lectura', async () => {
+    await openPanel(0)
+    expect(screen.getByText(/150 pts/i)).toBeInTheDocument()
   })
 })
 
 // ══════════════════════════════════════════════════════════════
-// SUITE 6 — Chips de clases_acceso
-// ══════════════════════════════════════════════════════════════
-describe('TeacherPage — chips clases_acceso', () => {
-  async function openPanel() {
-    setupFetch([{ ...STUDENTS[0], clases_acceso: ['piano'] }])
-    render(<TeacherPage />)
-    await act(async () => { fireEvent.click(screen.getByText(/mis estudiantes/i)) })
-    await waitFor(() => screen.getByText('Ana García'))
-    fireEvent.click(screen.getByRole('button', { name: /editar/i }))
-  }
-
-  beforeEach(() => {
-    mockTeacherUser = { role: 'teacher', cursos_acceso: ['piano'] }
-    mockFetch.mockClear()
-  })
-
-  it('muestra chips de todos los instrumentos disponibles', async () => {
-    await openPanel()
-    expect(screen.getByTestId('clase-chip-piano')).toBeInTheDocument()
-    expect(screen.getByTestId('clase-chip-guitarra')).toBeInTheDocument()
-    expect(screen.getByTestId('clase-chip-bateria')).toBeInTheDocument()
-  })
-
-  it('chip activo si alumno tiene acceso', async () => {
-    await openPanel()
-    expect(screen.getByTestId('clase-chip-piano')).toHaveAttribute('data-active', 'true')
-  })
-
-  it('chip inactivo si alumno no tiene acceso', async () => {
-    await openPanel()
-    expect(screen.getByTestId('clase-chip-guitarra')).toHaveAttribute('data-active', 'false')
-  })
-
-  it('clicar chip inactivo lo activa', async () => {
-    await openPanel()
-    fireEvent.click(screen.getByTestId('clase-chip-guitarra'))
-    expect(screen.getByTestId('clase-chip-guitarra')).toHaveAttribute('data-active', 'true')
-  })
-
-  it('clicar chip activo lo desactiva', async () => {
-    await openPanel()
-    fireEvent.click(screen.getByTestId('clase-chip-piano'))
-    expect(screen.getByTestId('clase-chip-piano')).toHaveAttribute('data-active', 'false')
-  })
-})
-
-// ══════════════════════════════════════════════════════════════
-// SUITE 7 — Guardar cambios (PATCH API)
+// SUITE 6 — Guardar cambios (PATCH API)
 // ══════════════════════════════════════════════════════════════
 describe('TeacherPage — guardar cambios', () => {
   beforeEach(() => {
@@ -439,15 +371,13 @@ describe('TeacherPage — guardar cambios', () => {
   })
 
   async function openAndEdit() {
-    setupFetchPatch({ ...STUDENTS[0], nivel: 3, puntos: 300 })
+    setupFetchPatch({ ...STUDENTS[0], nivel: 3 })
     render(<TeacherPage />)
     await act(async () => { fireEvent.click(screen.getByText(/mis estudiantes/i)) })
     await waitFor(() => screen.getByText('Ana García'))
     fireEvent.click(screen.getAllByRole('button', { name: /editar/i })[0])
     // Cambiar nivel de 2 → 3
     fireEvent.click(screen.getByTestId('nivel-up-stu-1'))
-    // Cambiar puntos 150 → 300
-    fireEvent.change(screen.getByTestId('puntos-input-stu-1'), { target: { value: '300' } })
   }
 
   it('botón Guardar está presente en el panel', async () => {
@@ -475,7 +405,7 @@ describe('TeacherPage — guardar cambios', () => {
     })
   })
 
-  it('Guardar envía nivel y puntos actualizados en el body', async () => {
+  it('Guardar envía el nivel actualizado en el body', async () => {
     await openAndEdit()
     await act(async () => {
       fireEvent.click(screen.getByRole('button', { name: /guardar/i }))
@@ -485,7 +415,20 @@ describe('TeacherPage — guardar cambios', () => {
       expect(call).toBeDefined()
       const body = JSON.parse(call![1].body)
       expect(body.nivel).toBe(3)
-      expect(body.puntos).toBe(300)
+    })
+  })
+
+  it('Guardar NO envía puntos ni clases_acceso', async () => {
+    await openAndEdit()
+    await act(async () => {
+      fireEvent.click(screen.getByRole('button', { name: /guardar/i }))
+    })
+    await waitFor(() => {
+      const call = mockFetch.mock.calls.find(c => c[0].includes('stu-1') && c[1]?.method === 'PATCH')
+      expect(call).toBeDefined()
+      const body = JSON.parse(call![1].body)
+      expect(body.puntos).toBeUndefined()
+      expect(body.clases_acceso).toBeUndefined()
     })
   })
 

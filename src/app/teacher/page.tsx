@@ -24,8 +24,6 @@ interface Student {
 
 interface Draft {
   nivel: number
-  puntos: number
-  clases: string[]
 }
 
 // ── Helpers visuales ───────────────────────────────────────────
@@ -130,8 +128,6 @@ export default function TeacherPage() {
       ...prev,
       [s.id]: {
         nivel:  s.nivel,
-        puntos: s.puntos,
-        clases: s.clases_acceso ? [...s.clases_acceso] : [],
       },
     }))
   }
@@ -154,9 +150,7 @@ export default function TeacherPage() {
           Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
-          nivel:          draft.nivel,
-          puntos:         draft.puntos,
-          clases_acceso:  draft.clases,
+          nivel: draft.nivel,
         }),
       })
       const data = await res.json()
@@ -441,85 +435,6 @@ export default function TeacherPage() {
                           <span style={{ fontFamily: 'var(--font-body)', fontSize: 12, color: 'rgba(255,255,255,0.3)' }}>
                             {NIVEL_LABELS[draft.nivel]}
                           </span>
-                        </div>
-
-                        {/* Puntos */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', width: 60 }}>Puntos</span>
-                          <button
-                            data-testid={`puntos-down-${s.id}`}
-                            onClick={() => patchDraft(s.id, { puntos: Math.max(0, draft.puntos - 10) })}
-                            style={{
-                              width: 30, height: 30, borderRadius: 6,
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              background: 'rgba(255,255,255,0.05)',
-                              color: '#fff', cursor: 'pointer',
-                              fontFamily: 'var(--font-body)', fontSize: 13,
-                            }}
-                          >−10</button>
-                          <input
-                            data-testid={`puntos-input-${s.id}`}
-                            type="number"
-                            min={0}
-                            value={draft.puntos}
-                            onChange={e => {
-                              const v = parseInt(e.target.value, 10)
-                              patchDraft(s.id, { puntos: isNaN(v) ? 0 : Math.max(0, v) })
-                            }}
-                            style={{
-                              width: 80, padding: '4px 8px', borderRadius: 6,
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              background: 'rgba(255,255,255,0.05)',
-                              color: '#fff', fontFamily: 'var(--font-body)', fontSize: 14,
-                              textAlign: 'center',
-                            }}
-                          />
-                          <button
-                            data-testid={`puntos-up-${s.id}`}
-                            onClick={() => patchDraft(s.id, { puntos: draft.puntos + 10 })}
-                            style={{
-                              width: 30, height: 30, borderRadius: 6,
-                              border: '1px solid rgba(255,255,255,0.15)',
-                              background: 'rgba(255,255,255,0.05)',
-                              color: '#fff', cursor: 'pointer',
-                              fontFamily: 'var(--font-body)', fontSize: 13,
-                            }}
-                          >+10</button>
-                        </div>
-
-                        {/* Clases chips */}
-                        <div>
-                          <span style={{ fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.5)', display: 'block', marginBottom: 8 }}>
-                            Clases acceso
-                          </span>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                            {clases.map(c => {
-                              const active = draft.clases.includes(c.id)
-                              return (
-                                <button
-                                  key={c.id}
-                                  data-testid={`clase-chip-${c.id}`}
-                                  data-active={active ? 'true' : 'false'}
-                                  onClick={() => {
-                                    const next = active
-                                      ? draft.clases.filter(x => x !== c.id)
-                                      : [...draft.clases, c.id]
-                                    patchDraft(s.id, { clases: next })
-                                  }}
-                                  style={{
-                                    padding: '4px 12px', borderRadius: 20, cursor: 'pointer',
-                                    border: `1px solid ${active ? '#ec488a' : 'rgba(255,255,255,0.12)'}`,
-                                    background: active ? 'rgba(236,72,138,0.18)' : 'rgba(255,255,255,0.04)',
-                                    color: active ? '#ec488a' : 'rgba(255,255,255,0.4)',
-                                    fontFamily: 'var(--font-body)', fontSize: 12,
-                                    transition: 'all 0.15s',
-                                  }}
-                                >
-                                  {c.emoji} {c.nombre}
-                                </button>
-                              )
-                            })}
-                          </div>
                         </div>
 
                         {/* Error */}

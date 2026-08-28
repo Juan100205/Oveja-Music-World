@@ -8,12 +8,12 @@
  *  - 403 rol incorrecto (student)
  *  - 403 profesor intenta editar alumno fuera de sus cursos
  *  - 400 nivel fuera de rango (< 1 o > 5)
- *  - 400 puntos negativos
  *  - 400 body vacío / sin campos permitidos
- *  - 200 actualiza nivel
- *  - 200 actualiza puntos
- *  - 200 actualiza clases_acceso
- *  - 200 actualiza campos combinados
+ *  - 403 profesor intenta modificar puntos (solo admin)
+ *  - 403 profesor intenta asignar cursos (solo admin)
+ *  - 200 actualiza nivel (profesor)
+ *  - 200 actualiza puntos / clases_acceso (admin)
+ *  - 200 actualiza campos combinados (admin)
  *  - Admin puede editar cualquier alumno (sin restricción de cursos)
  */
 
@@ -220,11 +220,23 @@ describe('PATCH /api/teacher/students/[id] — validaciones', () => {
     expect(json.error).toMatch(/nivel/i)
   })
 
-  it('400 cuando puntos < 0', async () => {
-    const res = await PATCH(makeRequest({ puntos: -1 }), makeParams())
-    expect(res.status).toBe(400)
+  it('403 profesor no puede modificar puntos', async () => {
+    const res = await PATCH(makeRequest({ puntos: 500 }), makeParams())
+    expect(res.status).toBe(403)
     const json = await res.json()
-    expect(json.error).toMatch(/puntos/i)
+    expect(json.error).toMatch(/solo el administrador|403|puntos/i)
+  })
+
+  it('403 profesor no puede modificar puntos aunque envíe nivel válido', async () => {
+    const res = await PATCH(makeRequest({ nivel: 3, puntos: 500 }), makeParams())
+    expect(res.status).toBe(403)
+  })
+
+  it('403 profesor no puede asignar cursos (clases_acceso)', async () => {
+    const res = await PATCH(makeRequest({ clases_acceso: ['piano', 'bateria'] }), makeParams())
+    expect(res.status).toBe(403)
+    const json = await res.json()
+    expect(json.error).toMatch(/solo el administrador|403|clases_acceso/i)
   })
 
   it('400 body vacío', async () => {
@@ -237,7 +249,22 @@ describe('PATCH /api/teacher/students/[id] — validaciones', () => {
     expect(res.status).toBe(400)
   })
 
-  it('400 clases_acceso no es array', async () => {
+  it('400 cuando admin envía puntos negativos', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
+    const res = await PATCH(makeRequest({ puntos: -1 }), makeParams())
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/puntos/i)
+  })
+
+  it('400 cuando admin envía clases_acceso inválido', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
     const res = await PATCH(makeRequest({ clases_acceso: 'piano' }), makeParams())
     expect(res.status).toBe(400)
     const json = await res.json()
@@ -266,7 +293,11 @@ describe('PATCH /api/teacher/students/[id] — éxito', () => {
     expect(json.student.nivel).toBe(4)
   })
 
-  it('200 actualiza puntos correctamente', async () => {
+  it('200 admin actualiza puntos correctamente', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
     const updated = { ...MOCK_STUDENT, puntos: 500 }
     setupSupabaseMock({ updateData: updated })
 
@@ -276,7 +307,11 @@ describe('PATCH /api/teacher/students/[id] — éxito', () => {
     expect(json.student.puntos).toBe(500)
   })
 
-  it('200 actualiza clases_acceso correctamente', async () => {
+  it('200 admin actualiza clases_acceso correctamente', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
     const updated = { ...MOCK_STUDENT, clases_acceso: ['piano', 'bateria'] }
     setupSupabaseMock({ updateData: updated })
 
@@ -286,7 +321,11 @@ describe('PATCH /api/teacher/students/[id] — éxito', () => {
     expect(json.student.clases_acceso).toEqual(['piano', 'bateria'])
   })
 
-  it('200 actualiza nivel + puntos en una sola llamada', async () => {
+  it('200 admin actualiza nivel + puntos en una sola llamada', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
     const updated = { ...MOCK_STUDENT, nivel: 3, puntos: 300 }
     setupSupabaseMock({ updateData: updated })
 
@@ -297,7 +336,11 @@ describe('PATCH /api/teacher/students/[id] — éxito', () => {
     expect(json.student.puntos).toBe(300)
   })
 
-  it('200 acepta puntos = 0', async () => {
+  it('200 admin acepta puntos = 0', async () => {
+    mockTeacherGuard.mockResolvedValue({
+      payload: { sub: 'admin-1', role: 'admin' },
+      cursosAcceso: null,
+    })
     const updated = { ...MOCK_STUDENT, puntos: 0 }
     setupSupabaseMock({ updateData: updated })
 

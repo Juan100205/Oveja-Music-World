@@ -21,6 +21,7 @@ import { PUNTOS_POR_TIPO } from '@/types'
 import { LevelProgressPanel } from '@/components/gamification/LevelProgressPanel'
 import VideoPlayerWithCards from '@/components/video/VideoPlayerWithCards'
 import WaitingScreen from '@/components/ui/WaitingScreen'
+import PanelButton from '@/components/ui/PanelButton'
 
 const SCENE_CLASSROOM = 'https://prod.spline.design/646pGt79P6qgQp6p/scene.splinecode'
 
@@ -456,6 +457,11 @@ export default function ClasePage({ moduloIdInicial }: { moduloIdInicial?: strin
         style={{ background: 'rgba(10,10,26,0.6)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 999, padding: '8px 16px', fontFamily: 'var(--font-body)', fontSize: 13, color: 'rgba(255,255,255,0.7)' }}>
         ← Mapa
       </motion.button>
+
+      {/* ── Botón fijo Panel (teacher/admin) top-right ── */}
+      <div className="absolute top-5 right-5 z-20 flex items-center gap-2">
+        <PanelButton user={user} delay={0.3} />
+      </div>
 
       {/* ── Nombre del instrumento (top center) ── */}
       {claseInfo && (
